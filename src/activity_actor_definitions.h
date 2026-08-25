@@ -466,21 +466,18 @@ class pickup_activity_actor : public activity_actor
          */
         cata::optional<tripoint> starting_pos;
 
-        /**
-         * Names of the targets, refreshed each turn while their locations still
-         * resolve. Picking up several items spans multiple turns, and a target can
-         * stop existing in between, at which point its location can no longer name
-         * it. Diagnostics only, so this is rebuilt rather than saved.
-         */
-        std::vector<std::string> target_names; // NOLINT(cata-serialize)
+        /** Stable diagnostics and resolution state for each target. */
+        std::vector<std::string> target_names;
+        std::vector<std::string> target_descriptions;
+        std::vector<bool> target_was_valid;
+
+        void cache_target_metadata();
 
     public:
         pickup_activity_actor( const std::vector<item_location> &target_items,
                                const std::vector<int> &quantities,
                                const cata::optional<tripoint> &starting_pos,
-                               bool autopickup ) : target_items( target_items ),
-            quantities( quantities ), starting_pos( starting_pos ), stash_successful( true ),
-            autopickup( autopickup ) {}
+                               bool autopickup );
 
         /**
           * Used to check at the end of a pickup activity if the character was able

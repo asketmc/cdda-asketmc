@@ -18,13 +18,15 @@ namespace Pickup
  * Returns `false` if the player was presented a prompt and decided to cancel the pickup.
  * `true` in other cases.
  *
- * @param target_names optional names of the targets, consumed in step with
- * @ref targets.  Used only to describe a target whose item stopped existing
- * before we got to it, since such a location can no longer name itself.
+ * Optional metadata vectors are consumed in step with @ref targets. They
+ * distinguish targets that resolved earlier from malformed locations and
+ * retain safe diagnostics after an item or its owner disappears.
  */
 bool do_pickup( std::vector<item_location> &targets, std::vector<int> &quantities,
                 bool autopickup, bool &stash_successful,
-                std::vector<std::string> *target_names = nullptr );
+                std::vector<std::string> *target_names = nullptr,
+                std::vector<std::string> *target_descriptions = nullptr,
+                std::vector<bool> *target_was_valid = nullptr );
 bool query_thief();
 
 enum from_where : int {

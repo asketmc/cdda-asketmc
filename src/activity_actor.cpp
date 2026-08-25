@@ -1992,6 +1992,48 @@ static void cancel_pickup( Character &who )
     who.drop_invalid_inventory();
 }
 
+static std::string describe_pickup_target_location( const item_location &target )
+{
+    switch( target.where() ) {
+        case item_location::type::map: {
+            const tripoint pos = target.position();
+            return string_format( "on the ground at %d,%d,%d (%s)", pos.x, pos.y, pos.z,
+                                  get_map().name( pos ) );
+        }
+        case item_location::type::vehicle:
+            return "in a vehicle";
+        case item_location::type::character:
+            return "in a character's inventory";
+        case item_location::type::container:
+            return "in a container";
+        case item_location::type::invalid:
+            break;
+    }
+    return "at an invalid location";
+}
+
+pickup_activity_actor::pickup_activity_actor( const std::vector<item_location> &target_items,
+        const std::vector<int> &quantities, const cata::optional<tripoint> &starting_pos,
+        bool autopickup ) : target_items( target_items ), quantities( quantities ),
+    starting_pos( starting_pos ), stash_successful( true ), autopickup( autopickup )
+{
+    cache_target_metadata();
+}
+
+void pickup_activity_actor::cache_target_metadata()
+{
+    target_names.resize( target_items.size() );
+    target_descriptions.resize( target_items.size() );
+    target_was_valid.resize( target_items.size(), false );
+    for( size_t i = 0; i < target_items.size(); ++i ) {
+        if( target_items[i] ) {
+            target_names[i] = target_items[i]->tname();
+            target_descriptions[i] = describe_pickup_target_location( target_items[i] );
+            target_was_valid[i] = true;
+        }
+    }
+}
+
 void pickup_activity_actor::do_turn( player_activity &, Character &who )
 {
     // If we don't have target items bail out
@@ -2008,18 +2050,11 @@ void pickup_activity_actor::do_turn( player_activity &, Character &who )
         return;
     }
 
-    // Note what we are about to pick up while the locations still resolve, so a
-    // target that stops existing before its turn can still be named.
-    target_names.resize( target_items.size() );
-    for( size_t i = 0; i < target_items.size(); i++ ) {
-        if( target_names[i].empty() && target_items[i] ) {
-            target_names[i] = target_items[i]->tname();
-        }
-    }
+    cache_target_metadata();
 
     // False indicates that the player canceled pickup when met with some prompt
     const bool keep_going = Pickup::do_pickup( target_items, quantities, autopickup, stash_successful,
-                            &target_names );
+                            &target_names, &target_descriptions, &target_was_valid );
 
     // If there are items left we ran out of moves, so continue the activity
     // Otherwise, we are done.
@@ -2047,9 +2082,20 @@ void pickup_activity_actor::serialize( JsonOut &jsout ) const
 {
     jsout.start_object();
 
-    jsout.member( "target_items", target_items );
+    std::vector<item_location> serialized_targets = target_items;
+    for( size_t i = 0; i < serialized_targets.size(); ++i ) {
+        if( !serialized_targets[i] ) {
+            // A typed-but-dead item_location can otherwise serialize a fallback
+            // index and resolve to a different item after load.
+            serialized_targets[i] = item_location::nowhere;
+        }
+    }
+    jsout.member( "target_items", serialized_targets );
     jsout.member( "quantities", quantities );
     jsout.member( "starting_pos", starting_pos );
+    jsout.member( "target_names", target_names );
+    jsout.member( "target_descriptions", target_descriptions );
+    jsout.member( "target_was_valid", target_was_valid );
     jsout.member( "stash_successful", stash_successful );
     jsout.member( "autopickup", autopickup );
 
@@ -2065,9 +2111,13 @@ std::unique_ptr<activity_actor> pickup_activity_actor::deserialize( JsonValue &j
     data.read( "target_items", actor.target_items );
     data.read( "quantities", actor.quantities );
     data.read( "starting_pos", actor.starting_pos );
+    data.read( "target_names", actor.target_names );
+    data.read( "target_descriptions", actor.target_descriptions );
+    data.read( "target_was_valid", actor.target_was_valid );
     data.read( "stash_successful", actor.stash_successful );
     data.read( "autopickup", actor.autopickup );
 
+    actor.cache_target_metadata();
     return actor.clone();
 }
 

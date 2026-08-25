@@ -15,6 +15,7 @@ evidence remain in the linked reports and player patch notes.
 | Crafting, inventory, and repair performance | Integrated selected behavior | [BN #917](https://github.com/cataclysmbnteam/Cataclysm-BN/pull/917), [BN #1117](https://github.com/cataclysmbnteam/Cataclysm-BN/pull/1117), [BN #8221](https://github.com/cataclysmbnteam/Cataclysm-BN/pull/8221) |
 | Repairable EMP faults | Integrated | [CDDA 73bcb0a](https://github.com/CleverRaven/Cataclysm-DDA/commit/73bcb0a906b7a8d5b38257d9d11cf53b79f6aa83), [game EMP 6c45556](https://github.com/CleverRaven/Cataclysm-DDA/commit/6c4555671cd1d8ae102bd81d36d107058e5d1c8e) |
 | Contained NPC activity items | Fixed locally | [Patch notes](PATCHNOTES_ADDITIVE_0G.md) |
+| Multi-turn pickup target loss | Fixed locally; no donor code | [Patch notes](PATCHNOTES_ADDITIVE_0G.md) |
 | H3-H6 delivery ledger | Resolved; exclusions recorded | Reports above |
 
 Primary donor provenance is recorded per feature in the reports above and in

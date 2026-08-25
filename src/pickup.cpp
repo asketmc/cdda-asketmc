@@ -310,34 +310,11 @@ static bool pick_one_up( item_location &loc, int quantity, bool &got_water, bool
     return picked_up || !did_prompt;
 }
 
-// Describe where a lost pickup target used to be.  An item_location outlives the
-// item it points at, so its kind stays readable after the item is gone.  Only a
-// map location can also be asked for its position: it keeps its own coordinates,
-// whereas the others resolve a position through a vehicle, character or parent
-// item that may have been destroyed alongside the target.
-static std::string describe_lost_target( const item_location &target )
-{
-    switch( target.where() ) {
-        case item_location::type::map: {
-            const tripoint pos = target.position();
-            return string_format( "the ground at %d,%d,%d (%s)", pos.x, pos.y, pos.z,
-                                  get_map().name( pos ) );
-        }
-        case item_location::type::vehicle:
-            return "a vehicle";
-        case item_location::type::character:
-            return "a character's inventory";
-        case item_location::type::container:
-            return "a container";
-        case item_location::type::invalid:
-            break;
-    }
-    return "an invalid location";
-}
-
 bool Pickup::do_pickup( std::vector<item_location> &targets, std::vector<int> &quantities,
                         bool autopickup, bool &stash_successful,
-                        std::vector<std::string> *target_names )
+                        std::vector<std::string> *target_names,
+                        std::vector<std::string> *target_descriptions,
+                        std::vector<bool> *target_was_valid )
 {
     bool got_water = false;
     bool got_gas = false;
@@ -359,6 +336,16 @@ bool Pickup::do_pickup( std::vector<item_location> &targets, std::vector<int> &q
             target_name = target_names->back();
             target_names->pop_back();
         }
+        std::string target_description;
+        if( target_descriptions != nullptr && !target_descriptions->empty() ) {
+            target_description = target_descriptions->back();
+            target_descriptions->pop_back();
+        }
+        bool was_valid = false;
+        if( target_was_valid != nullptr && !target_was_valid->empty() ) {
+            was_valid = target_was_valid->back();
+            target_was_valid->pop_back();
+        }
         // Whether we pick the item up or not, we're done trying to do so,
         // so remove it from the list.
         targets.pop_back();
@@ -366,7 +353,7 @@ bool Pickup::do_pickup( std::vector<item_location> &targets, std::vector<int> &q
 
         if( !target ) {
             const std::string what = target_name.empty() ? "an unknown item" : target_name;
-            if( target.where() == item_location::type::invalid ) {
+            if( !was_valid ) {
                 // The location never pointed anywhere usable, so this is a real defect
                 // rather than an item that stopped existing while we worked.
                 debugmsg( "lost target item of ACT_PICKUP: %s had an invalid location", what );
@@ -376,7 +363,8 @@ bool Pickup::do_pickup( std::vector<item_location> &targets, std::vector<int> &q
                 // or terrain being deconstructed can all remove one in the meantime.
                 // D_MAIN because only that class is logged by default in a release build.
                 DebugLog( D_WARNING, D_MAIN ) << "lost target item of ACT_PICKUP: " << what
-                                              << " was on " << describe_lost_target( target );
+                                              << " was " << ( target_description.empty() ?
+                                                      "at a location that no longer resolves" : target_description );
                 lost_targets++;
             }
             continue;
