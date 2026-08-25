@@ -833,6 +833,8 @@ void npc::move()
 
     npc_action action = npc_undecided;
     activity_id interrupted_order = activity_id::NULL_ID();
+    player_activity interrupted_stashed_order;
+    player_activity interrupted_stashed_backlog;
 
     const item_location weapon = get_wielded_item();
     static const std::string no_target_str = "none";
@@ -948,6 +950,10 @@ void npc::move()
         if( protect_current_order && has_player_activity() ) {
             interrupted_order = activity.id();
         }
+        if( protect_current_order && has_stashed_activity() ) {
+            interrupted_stashed_order = get_stashed_activity();
+            interrupted_stashed_backlog = get_stashed_backlog_activity();
+        }
         action = address_needs( ai_cache.danger, protect_current_order );
         print_action( "address_needs %s", action );
 
@@ -1017,6 +1023,9 @@ void npc::move()
             }
             action = npc_goto_destination;
         } else if( is_camp_duty_ready() && attitude != NPCATT_ACTIVITY ) {
+            if( mission == NPC_MISSION_TRAVELLING ) {
+                return_to_assigned_camp();
+            }
             if( has_job() && calendar::once_every( 10_minutes ) && find_job_to_perform() ) {
                 action = npc_player_activity;
             } else {
@@ -1085,6 +1094,9 @@ void npc::move()
     if( interrupted_order && activity.id() != interrupted_order && !backlog.empty() &&
         backlog.front().id() == interrupted_order ) {
         backlog.front().auto_resume = true;
+    }
+    if( interrupted_stashed_order && !has_stashed_activity() ) {
+        set_stashed_activity( interrupted_stashed_order, interrupted_stashed_backlog );
     }
 }
 
@@ -2818,6 +2830,9 @@ bool npc::is_camp_duty_ready() const
 void npc::return_to_assigned_camp()
 {
     if( !assigned_camp ) {
+        return;
+    }
+    if( is_camp_duty_ready() && mission != NPC_MISSION_TRAVELLING ) {
         return;
     }
     const cata::optional<basecamp *> camp = overmap_buffer.find_camp( assigned_camp->xy() );

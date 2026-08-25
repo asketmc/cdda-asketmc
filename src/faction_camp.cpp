@@ -3135,9 +3135,19 @@ void basecamp::start_crafting_with_ui( const mission_id &miss_id )
         return;
     }
 
-    map &here = get_map();
-    form_storage_zones( here, get_player_character().get_location() );
-    if( !has_storage_for_craft( *making ) ) {
+    bool has_storage = false;
+    if( by_radio ) {
+        tinymap target_map;
+        target_map.load( project_to<coords::sm>( omt_pos ), false );
+        const tripoint_abs_ms storage_origin =
+            target_map.getglobal( target_map.getlocal( bb_pos ) );
+        has_storage = has_storage_for_craft( *making, target_map, storage_origin );
+    } else {
+        map &here = get_map();
+        has_storage = has_storage_for_craft( *making, here,
+                                             get_player_character().get_location() );
+    }
+    if( !has_storage ) {
         popup( _( "The camp has no empty liquid container in its storage zone for this craft." ) );
         return;
     }

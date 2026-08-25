@@ -559,6 +559,10 @@ void overmap_npc_move()
     }
     bool npcs_need_reload = false;
     for( npc *&elem : travelling_npcs ) {
+        if( elem->is_camp_duty_ready() ) {
+            elem->return_to_assigned_camp();
+            continue;
+        }
         if( elem->has_omt_destination() ) {
             if( !elem->omt_path.empty() ) {
                 if( rl_dist( elem->omt_path.back(), elem->global_omt_location() ) > 2 ) {
