@@ -132,11 +132,17 @@ TEST_CASE( "NPC camp mopping cleans its assigned zone", "[zones][npc][basecamp]"
     REQUIRE( here.add_field( target, field_fd_blood.id(), 1 ) );
 
     worker.assign_activity( player_activity( ACT_MULTIPLE_MOP ) );
-    for( int turn = 0; turn < 100 && here.terrain_moppable( tripoint_bub_ms( target ) ); ++turn ) {
+    int turns = 0;
+    while( worker.activity && turns++ < 100 ) {
         worker.moves += worker.get_speed();
-        worker.activity.do_turn( worker );
+        while( worker.moves > 0 && worker.activity ) {
+            worker.activity.do_turn( worker );
+        }
     }
+    CHECK( turns < 100 );
     CHECK( here.field_at( target ).find_field( field_fd_blood.id() ) == nullptr );
+    CHECK_FALSE( worker.activity );
+    CHECK( worker.backlog.empty() );
 }
 
 TEST_CASE( "zone unloading ammo belts", "[zones][items][ammo_belt][activities][unload]" )
