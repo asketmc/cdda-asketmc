@@ -5,6 +5,9 @@ The matching Windows Tiles+Sound package is published under GitHub Releases.
 
 ## Crash and rotation fixes
 
+- EMP-damaged electronics now receive repairable faults instead of permanent
+  breakage; game-style EMP rules can use temporary reboots with a small failure
+  chance.
 - Item-description recipe searches now filter learned, book, e-reader, and
   helper recipes while collecting them instead of building the full recipe set.
 - Automatic inventory-letter assignment gathers reserved keys once and ignores
