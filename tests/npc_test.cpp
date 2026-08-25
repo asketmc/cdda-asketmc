@@ -16,6 +16,8 @@
 #include "field_type.h"
 #include "game.h"
 #include "game_constants.h"
+#include "json.h"
+#include "json_loader.h"
 #include "line.h"
 #include "map.h"
 #include "map_helpers.h"
@@ -505,6 +507,75 @@ TEST_CASE( "npc environmental updates preserve turn semantics", "[npc][needs][te
         on_load_test( guy, 0_turns, 30_minutes );
 
         CHECK( guy.get_part_wetness( torso ) < before );
+    }
+
+    SECTION( "long catch-up stops evaporative cooling when drying finishes" ) {
+        npc bulk = create_model();
+        npc iterated = create_model();
+        w_point dry_weather = *get_weather().weather_precise;
+        dry_weather.temperature = units::from_fahrenheit( 90 );
+        dry_weather.humidity = 0;
+        dry_weather.windpower = 10;
+        for( npc *guy : { &bulk, &iterated } ) {
+            guy->set_all_parts_temp_cur( BODYTEMP_NORM );
+            guy->set_part_wetness( torso, guy->get_part_drench_capacity( torso ) );
+        }
+
+        bulk.update_body_wetness( dry_weather, 2_days );
+        int turns_until_dry = 0;
+        while( iterated.get_part_wetness( torso ) > 0 && turns_until_dry < to_turns<int>( 2_days ) ) {
+            iterated.update_body_wetness( dry_weather );
+            ++turns_until_dry;
+        }
+
+        CHECK( bulk.get_part_wetness( torso ) == 0 );
+        CHECK( iterated.get_part_wetness( torso ) == 0 );
+        CHECK( std::abs( bulk.get_part_temp_cur( torso ) -
+                         iterated.get_part_temp_cur( torso ) ) < 500 );
+    }
+
+    SECTION( "low-risk frostbite catch-up saturates at the frostnip ceiling" ) {
+        npc guy = create_model();
+        const bodypart_id hand( "hand_l" );
+        weather_manager &weather = get_weather();
+        weather.temperature = units::from_fahrenheit( 20 );
+        weather.weather_precise->temperature = units::from_fahrenheit( 20 );
+        weather.weather_precise->windpower = 0;
+        guy.set_all_parts_temp_cur( BODYTEMP_FREEZING );
+        guy.set_all_parts_temp_conv( BODYTEMP_FREEZING );
+        guy.set_part_frostbite_timer( hand, 1999 );
+
+        guy.update_bodytemp( 2_days );
+
+        CHECK( guy.get_part_frostbite_timer( hand ) <= 2000 );
+    }
+}
+
+TEST_CASE( "legacy NPC job priorities gain mopping without overwriting saves",
+           "[npc][save][jobs]" )
+{
+    const activity_id butcher( "ACT_MULTIPLE_BUTCHER" );
+    const activity_id mop( "ACT_MULTIPLE_MOP" );
+
+    SECTION( "missing mopping priority is inserted at zero" ) {
+        JsonValue json = json_loader::from_string(
+                             R"({"task_priorities":{"ACT_MULTIPLE_BUTCHER":7}})" );
+        job_data jobs;
+        jobs.deserialize( json );
+
+        CHECK( jobs.get_priority_of_job( butcher ) == 7 );
+        CHECK( jobs.get_priority_of_job( mop ) == 0 );
+        CHECK( jobs.set_task_priority( mop, 3 ) );
+    }
+
+    SECTION( "saved mopping priority is preserved" ) {
+        JsonValue json = json_loader::from_string(
+                             R"({"task_priorities":{"ACT_MULTIPLE_BUTCHER":4,"ACT_MULTIPLE_MOP":9}})" );
+        job_data jobs;
+        jobs.deserialize( json );
+
+        CHECK( jobs.get_priority_of_job( butcher ) == 4 );
+        CHECK( jobs.get_priority_of_job( mop ) == 9 );
     }
 }
 

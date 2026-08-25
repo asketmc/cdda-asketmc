@@ -140,6 +140,7 @@ void Character::update_body_wetness( const w_point &weather, const time_duration
                                          temp_mult / clothing_mult;
             const float turns_to_dry = to_turns<float>( drying );
 
+            const int wetness_before = get_part_wetness( bp );
             const int drench_cap = get_part_drench_capacity( bp );
             const float dry_per_turn = static_cast<float>( drench_cap ) / turns_to_dry;
             mod_part_wetness( bp, roll_remainder( dry_per_turn * elapsed_turns ) * -1 );
@@ -149,7 +150,10 @@ void Character::update_body_wetness( const w_point &weather, const time_duration
             // with current calcs a character moving towards 7500 heat will at most move 5 temperature points
             // down to not having a slowdown
             if( !bp->has_flag( json_flag_IGNORE_TEMP ) ) {
-                mod_part_temp_cur( bp, roll_remainder( 4 * clothing_mult * elapsed_turns ) * -1 );
+                const int wet_turns = dry_per_turn > 0.0f ?
+                                      std::min( elapsed_turns, static_cast<int>(
+                                                    std::ceil( wetness_before / dry_per_turn ) ) ) : 0;
+                mod_part_temp_cur( bp, roll_remainder( 4 * clothing_mult * wet_turns ) * -1 );
             }
         }
 
@@ -658,18 +662,20 @@ void Character::update_bodytemp( const time_duration &elapsed )
 
         const int temp_before = get_part_temp_cur( bp );
         const int cur_temp_conv = get_part_temp_conv( bp );
-        int temp_difference = temp_before - cur_temp_conv; // Negative if the player is warming up.
         // exp(-0.001) : half life of 60 minutes, exp(-0.002) : half life of 30 minutes,
         // exp(-0.003) : half life of 20 minutes, exp(-0.004) : half life of 15 minutes
-        int rounding_error = 0;
-        // If temp_diff is small, the player cannot warm up due to rounding errors. This fixes that.
-        if( temp_difference < 0 && temp_difference > -600 ) {
-            rounding_error = std::min( elapsed_turns, -temp_difference );
-        }
+        const auto converge_temperature = [elapsed_turns]( const int current, const int target ) {
+            const int difference = current - target;
+            // Preserve the legacy one-point cold-side correction, then clamp
+            // the closed form so catch-up can never pass its target.
+            const int rounding_error = difference < 0 && difference > -600 ? 1 : 0;
+            const int result = static_cast<int>( difference * std::exp( -0.002 * elapsed_turns ) +
+                                                target + rounding_error );
+            return std::max( std::min( current, target ),
+                             std::min( std::max( current, target ), result ) );
+        };
         if( temp_before != cur_temp_conv ) {
-            set_part_temp_cur( bp, static_cast<int>( temp_difference *
-                               std::exp( -0.002 * elapsed_turns ) + cur_temp_conv +
-                               rounding_error ) );
+            set_part_temp_cur( bp, converge_temperature( temp_before, cur_temp_conv ) );
         }
 
         // This statement checks if we should be wearing our bonus warmth.
@@ -678,16 +684,9 @@ void Character::update_bodytemp( const time_duration &elapsed )
             ( ( cur_temp_conv + clothing_warmth_adjusted_bonus ) < BODYTEMP_HOT ||
               get_part_temp_cur( bp ) < BODYTEMP_COLD ) ) {
             mod_part_temp_conv( bp, clothing_warmth_adjusted_bonus );
-            rounding_error = 0;
-            if( temp_difference < 0 && temp_difference > -600 ) {
-                rounding_error = std::min( elapsed_turns, -temp_difference );
-            }
             const int new_temp_conv = get_part_temp_conv( bp );
             if( temp_before != new_temp_conv ) {
-                temp_difference = get_part_temp_cur( bp ) - new_temp_conv;
-                set_part_temp_cur( bp, static_cast<int>( temp_difference *
-                                   std::exp( -0.002 * elapsed_turns ) + new_temp_conv +
-                                   rounding_error ) );
+                set_part_temp_cur( bp, converge_temperature( get_part_temp_cur( bp ), new_temp_conv ) );
             }
         }
         const int temp_after = get_part_temp_cur( bp );
@@ -849,7 +848,8 @@ void Character::update_frostbite( const bodypart_id &bp, const int FBwindPower,
                                             ( Ftemperature < 10 && Ftemperature >= -5 && FBwindPower < 20 &&
                                               -4 * Ftemperature + 3 * FBwindPower - 20 >= 0 ) ) ) {
             if( get_part_frostbite_timer( bp ) < 2000 ) {
-                mod_part_frostbite_timer( bp, 3 * elapsed_turns );
+                mod_part_frostbite_timer( bp, std::min( 3 * elapsed_turns,
+                                           2000 - get_part_frostbite_timer( bp ) ) );
             }
             if( one_in( 100 ) && !has_effect( effect_frostbite, bp.id() ) ) {
                 add_msg( m_warning, _( "Your %s will be frostnipped in the next few hours." ),

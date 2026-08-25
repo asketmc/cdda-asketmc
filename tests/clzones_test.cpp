@@ -87,6 +87,7 @@ TEST_CASE( "NPC loot sorting cannot use personal zones", "[zones][npc][activitie
 {
     clear_avatar();
     clear_map();
+    get_avatar().setpos( tripoint_zero );
     map &here = get_map();
     standard_npc worker( "zone worker", tripoint_zero );
     worker.set_fac( faction_your_followers );
