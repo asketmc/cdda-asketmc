@@ -1820,7 +1820,9 @@ void npc_follower_rules::deserialize( const JsonObject &data )
 
     // deserialize the flags so they can be changed between save games
     for( const auto &rule : ally_rule_strs ) {
-        bool tmpflag = false;
+        // Healing allies was the legacy behavior, so old saves which predate
+        // the explicit rule keep it enabled.
+        bool tmpflag = rule.second.rule == ally_rule::heal_others;
         // legacy to handle rules that were saved before overrides
         data.read( rule.first, tmpflag );
         if( tmpflag ) {
@@ -1834,12 +1836,14 @@ void npc_follower_rules::deserialize( const JsonObject &data )
         } else {
             clear_flag( rule.second.rule );
         }
+        tmpflag = false;
         data.read( "override_enable_" + rule.first, tmpflag );
         if( tmpflag ) {
             enable_override( rule.second.rule );
         } else {
             disable_override( rule.second.rule );
         }
+        tmpflag = false;
         data.read( "override_" + rule.first, tmpflag );
         if( tmpflag ) {
             set_override( rule.second.rule );

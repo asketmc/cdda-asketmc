@@ -111,6 +111,16 @@ without revealing locations or rare loot pools.
 
 These local survival actions are adapted to the 0.G needs cascade. The modern
 global behavior tree and mission scheduler are not included.
+- Followers start first aid only when safe.  A separate follower rule controls
+  whether they spend their supplies on allies, and interrupted work resumes
+  after treatment.
+- Followers with scurvy or anemia can use food or medicine containing the
+  missing vitamin.  They avoid repeatedly taking supplements after the
+  deficiency clears.
+- Very unpleasant or nausea-triggering food is avoided when alternatives
+  exist, but remains available when the follower would otherwise starve.
+- Weapon comparison now handles empty hands and non-guns deterministically;
+  ranged/melee coefficients and silent-weapon rules remain unchanged.
 
 ## Visuals, sound, fonts, and interface
 

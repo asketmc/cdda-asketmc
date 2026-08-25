@@ -2170,6 +2170,16 @@
   },
   {
     "type": "snippet",
+    "category": "<ally_rule_heal_others_true_text>",
+    "text": "<mypronoun> will use medical supplies on allies."
+  },
+  {
+    "type": "snippet",
+    "category": "<ally_rule_heal_others_false_text>",
+    "text": "<mypronoun> will save medical supplies for personal use."
+  },
+  {
+    "type": "snippet",
     "category": "<ally_rule_allow_pulp_true_text>",
     "text": "<mypronoun> will smash nearby zombie corpses."
   },
