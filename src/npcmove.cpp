@@ -5,6 +5,7 @@
 #include <climits>
 #include <cmath>
 #include <cstdlib>
+#include <functional>
 #include <iterator>
 #include <memory>
 #include <numeric>
@@ -41,14 +42,17 @@
 #include "game_constants.h"
 #include "gates.h"
 #include "gun_mode.h"
+#include "harvest.h"
 #include "item.h"
 #include "item_factory.h"
 #include "itype.h"
+#include "iexamine.h"
 #include "iuse.h"
 #include "iuse_actor.h"
 #include "line.h"
 #include "map.h"
 #include "map_iterator.h"
+#include "map_selector.h"
 #include "mapdata.h"
 #include "material.h"
 #include "messages.h"
@@ -75,10 +79,12 @@
 #include "value_ptr.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "vehicle_selector.h"
 #include "viewer.h"
 #include "visitable.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
+#include "weather.h"
 
 static const activity_id ACT_CRAFT( "ACT_CRAFT" );
 static const activity_id ACT_FIRSTAID( "ACT_FIRSTAID" );
@@ -131,6 +137,7 @@ static const itype_id itype_lsd( "lsd" );
 static const itype_id itype_oxygen_tank( "oxygen_tank" );
 static const itype_id itype_smoxygen_tank( "smoxygen_tank" );
 static const itype_id itype_thorazine( "thorazine" );
+static const itype_id itype_water_clean( "water_clean" );
 
 static const npc_class_id NC_EVAC_SHOPKEEP( "NC_EVAC_SHOPKEEP" );
 
@@ -141,6 +148,7 @@ static const trait_id trait_RETURN_TO_START_POS( "RETURN_TO_START_POS" );
 
 static const zone_type_id zone_type_NO_NPC_PICKUP( "NO_NPC_PICKUP" );
 static const zone_type_id zone_type_NPC_RETREAT( "NPC_RETREAT" );
+static const zone_type_id zone_type_FARM_PLOT( "FARM_PLOT" );
 
 static constexpr float NPC_DANGER_VERY_LOW = 5.0f;
 static constexpr float NPC_DANGER_MAX = 150.0f;
@@ -1882,6 +1890,11 @@ npc_action npc::address_needs( float danger )
         return npc_noop;
     }
 
+    const bool cold = needs_warmth();
+    if( cold && ( wear_warmest_inventory_item() || wear_local_clothing( false ) ) ) {
+        return npc_noop;
+    }
+
     // Extreme thirst or hunger, bypass safety check.
     if( get_thirst() > 80 ||
         get_stored_kcal() + stomach.get_calories() < get_healthy_kcal() * 0.75 ) {
@@ -1889,6 +1902,9 @@ npc_action npc::address_needs( float danger )
             return npc_noop;
         }
         if( consume_food() ) {
+            return npc_noop;
+        }
+        if( consume_local_food( false ) || drink_local_clean_water( false ) ) {
             return npc_noop;
         }
     }
@@ -1903,12 +1919,26 @@ npc_action npc::address_needs( float danger )
         return npc_undecided;
     }
 
+    if( cold && ( wear_local_clothing( true ) || take_local_shelter() ) ) {
+        return npc_noop;
+    }
+
+    if( get_thirst() > 80 ||
+        get_stored_kcal() + stomach.get_calories() < get_healthy_kcal() * 0.75 ) {
+        if( consume_local_food( true ) || drink_local_clean_water( true ) || forage_local_food() ) {
+            return npc_noop;
+        }
+    }
+
     if( one_in( 3 ) && ( get_thirst() > NPC_THIRST_CONSUME ||
                          get_hunger() > NPC_HUNGER_CONSUME ) ) {
         if( consume_food_from_camp() ) {
             return npc_noop;
         }
         if( consume_food() ) {
+            return npc_noop;
+        }
+        if( consume_local_food( true ) || drink_local_clean_water( true ) ) {
             return npc_noop;
         }
     }
@@ -3877,6 +3907,334 @@ bool npc::consume_food()
     }
 
     return consumed;
+}
+
+bool npc::needs_warmth() const
+{
+    for( const bodypart_id &bp : get_all_body_parts() ) {
+        if( get_part_temp_conv( bp ) <= BODYTEMP_VERY_COLD ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool npc::wear_warmest_inventory_item()
+{
+    item_location best;
+    int best_warmth = 0;
+    for( item_location &candidate : all_items_loc() ) {
+        if( candidate && !is_worn( *candidate ) && candidate->get_warmth() > best_warmth &&
+            can_wear( *candidate ).success() ) {
+            best = candidate;
+            best_warmth = candidate->get_warmth();
+        }
+    }
+    if( !best ) {
+        return false;
+    }
+    return wear( best, false ).has_value();
+}
+
+static bool local_resource_tile_allowed( const npc &who, const tripoint &p )
+{
+    if( !who.is_player_ally() ) {
+        return true;
+    }
+    map &here = get_map();
+    zone_manager &mgr = zone_manager::get_manager();
+    const tripoint_abs_ms abs_p = here.getglobal( p );
+    return !g->check_zone( zone_type_NO_NPC_PICKUP, p ) && !mgr.has_personal( abs_p );
+}
+
+std::vector<npc::local_item_candidate> npc::find_local_food()
+{
+    std::vector<local_item_candidate> result;
+    if( is_player_ally() && !rules.has_flag( ally_rule::allow_pick_up ) ) {
+        return result;
+    }
+
+    map &here = get_map();
+    const int want_hunger = std::max( 0, get_hunger() );
+    const int want_quench = std::max( 0, get_thirst() );
+    const auto score = [&]( item &candidate ) {
+        if( !candidate.is_food() || !candidate.is_owned_by( *this, true ) ||
+            !will_eat( candidate ).success() ) {
+            return 0.0f;
+        }
+        return rate_food( candidate, want_hunger, want_quench );
+    };
+    std::function<void( item &, const item_location & )> consider;
+    consider = [&]( item &candidate, const item_location &loc ) {
+        const float value = score( candidate );
+        if( value > 0.0f ) {
+            result.push_back( { loc, value } );
+        }
+        for( item *contained : candidate.all_items_top() ) {
+            consider( *contained, item_location( loc, contained ) );
+        }
+    };
+
+    for( const tripoint &p : closest_points_first( pos(), 6 ) ) {
+        if( !sees( p ) || !local_resource_tile_allowed( *this, p ) ) {
+            continue;
+        }
+        if( here.sees_some_items( p, *this ) ) {
+            for( item &candidate : here.i_at( p ) ) {
+                consider( candidate, item_location( map_cursor( p ), &candidate ) );
+            }
+        }
+
+        const optional_vpart_position vp = here.veh_at( p );
+        if( !vp || vp->vehicle().is_moving() || !vp->vehicle().is_owned_by( *this, true ) ) {
+            continue;
+        }
+        const cata::optional<vpart_reference> cargo = vp.part_with_feature( VPFLAG_CARGO, true );
+        if( !cargo || cargo->has_feature( "LOCKED" ) ||
+            vp.part_with_feature( "CARGO_LOCKING", true ) ) {
+            continue;
+        }
+        for( item &candidate : cargo->vehicle().get_items( cargo->part_index() ) ) {
+            consider( candidate, item_location( vehicle_cursor( cargo->vehicle(),
+                      cargo->part_index() ), &candidate ) );
+        }
+    }
+
+    std::sort( result.begin(), result.end(), [this]( const local_item_candidate &lhs,
+    const local_item_candidate &rhs ) {
+        if( lhs.score != rhs.score ) {
+            return lhs.score > rhs.score;
+        }
+        return rl_dist( pos(), lhs.loc.position() ) < rl_dist( pos(), rhs.loc.position() );
+    } );
+    return result;
+}
+
+std::vector<npc::local_item_candidate> npc::find_local_warm_clothing()
+{
+    std::vector<local_item_candidate> result;
+    if( is_player_ally() && !rules.has_flag( ally_rule::allow_pick_up ) ) {
+        return result;
+    }
+
+    map &here = get_map();
+    std::function<void( item &, const item_location & )> consider;
+    consider = [&]( item &candidate, const item_location &loc ) {
+        if( candidate.get_warmth() > 0 && candidate.is_owned_by( *this, true ) &&
+            can_wear( candidate ).success() ) {
+            result.push_back( { loc, static_cast<float>( candidate.get_warmth() ) } );
+        }
+        for( item *contained : candidate.all_items_top() ) {
+            consider( *contained, item_location( loc, contained ) );
+        }
+    };
+
+    for( const tripoint &p : closest_points_first( pos(), 6 ) ) {
+        if( !sees( p ) || !local_resource_tile_allowed( *this, p ) ) {
+            continue;
+        }
+        if( here.sees_some_items( p, *this ) ) {
+            for( item &candidate : here.i_at( p ) ) {
+                consider( candidate, item_location( map_cursor( p ), &candidate ) );
+            }
+        }
+
+        const optional_vpart_position vp = here.veh_at( p );
+        if( !vp || vp->vehicle().is_moving() || !vp->vehicle().is_owned_by( *this, true ) ) {
+            continue;
+        }
+        const cata::optional<vpart_reference> cargo = vp.part_with_feature( VPFLAG_CARGO, true );
+        if( !cargo || cargo->has_feature( "LOCKED" ) ||
+            vp.part_with_feature( "CARGO_LOCKING", true ) ) {
+            continue;
+        }
+        for( item &candidate : cargo->vehicle().get_items( cargo->part_index() ) ) {
+            consider( candidate, item_location( vehicle_cursor( cargo->vehicle(),
+                      cargo->part_index() ), &candidate ) );
+        }
+    }
+
+    std::sort( result.begin(), result.end(), [this]( const local_item_candidate &lhs,
+    const local_item_candidate &rhs ) {
+        if( lhs.score != rhs.score ) {
+            return lhs.score > rhs.score;
+        }
+        return rl_dist( pos(), lhs.loc.position() ) < rl_dist( pos(), rhs.loc.position() );
+    } );
+    return result;
+}
+
+std::vector<tripoint> npc::find_local_clean_water() const
+{
+    std::vector<tripoint> result;
+    map &here = get_map();
+    for( const tripoint &p : closest_points_first( pos(), 6 ) ) {
+        if( sees( p ) && local_resource_tile_allowed( *this, p ) &&
+            here.water_from( p ).typeId() == itype_water_clean ) {
+            result.push_back( p );
+        }
+    }
+    std::sort( result.begin(), result.end(), [this]( const tripoint &lhs, const tripoint &rhs ) {
+        return rl_dist( pos(), lhs ) < rl_dist( pos(), rhs );
+    } );
+    return result;
+}
+
+std::vector<tripoint> npc::find_local_shelter() const
+{
+    std::vector<tripoint> result;
+    map &here = get_map();
+    if( here.has_flag( ter_furn_flag::TFLAG_INDOORS, pos() ) ) {
+        return result;
+    }
+    const creature_tracker &creatures = get_creature_tracker();
+    for( const tripoint &p : closest_points_first( pos(), 6 ) ) {
+        if( p != pos() && sees( p ) && here.passable( p ) &&
+            here.has_flag( ter_furn_flag::TFLAG_INDOORS, p ) && !creatures.creature_at( p ) ) {
+            result.push_back( p );
+        }
+    }
+    std::sort( result.begin(), result.end(), [this]( const tripoint &lhs, const tripoint &rhs ) {
+        return rl_dist( pos(), lhs ) < rl_dist( pos(), rhs );
+    } );
+    return result;
+}
+
+std::vector<tripoint> npc::find_local_harvest() const
+{
+    std::vector<tripoint> result;
+    if( is_player_ally() && !rules.has_flag( ally_rule::allow_pick_up ) ) {
+        return result;
+    }
+    map &here = get_map();
+    zone_manager &mgr = zone_manager::get_manager();
+    for( const tripoint &p : closest_points_first( pos(), 6 ) ) {
+        const tripoint_abs_ms abs_p = here.getglobal( p );
+        if( !sees( p ) || !local_resource_tile_allowed( *this, p ) ||
+            mgr.has( zone_type_FARM_PLOT, abs_p ) ) {
+            continue;
+        }
+        bool edible_harvest = here.ter( p ).obj().has_examine( iexamine::shrub_wildveggies );
+        const harvest_id &harvest = here.get_harvest( p );
+        if( !harvest.is_null() ) {
+            for( const harvest_entry &entry : harvest.obj() ) {
+                const itype_id drop( entry.drop );
+                if( drop.is_valid() && item( drop ).is_food() ) {
+                    edible_harvest = true;
+                    break;
+                }
+            }
+        }
+        if( edible_harvest && ( here.is_harvestable( p ) ||
+                                here.ter( p ).obj().has_examine( iexamine::shrub_wildveggies ) ) ) {
+            result.push_back( p );
+        }
+    }
+    std::sort( result.begin(), result.end(), [this]( const tripoint &lhs, const tripoint &rhs ) {
+        return rl_dist( pos(), lhs ) < rl_dist( pos(), rhs );
+    } );
+    return result;
+}
+
+bool npc::move_to_local_resource( const tripoint &target )
+{
+    const cata::optional<tripoint> destination = nearest_passable( target, pos() );
+    if( !destination ) {
+        return false;
+    }
+    update_path( *destination );
+    if( path.empty() ) {
+        return false;
+    }
+    const tripoint before = pos();
+    move_to_next();
+    return pos() != before;
+}
+
+bool npc::consume_local_food( bool allow_movement )
+{
+    for( local_item_candidate &candidate : find_local_food() ) {
+        const tripoint target = candidate.loc.position();
+        if( rl_dist( pos(), target ) <= 1 ) {
+            const time_duration consume_time = get_consume_time( *candidate.loc );
+            if( consume( candidate.loc ) != trinary::NONE ) {
+                moves -= to_moves<int>( consume_time );
+                return true;
+            }
+        } else if( allow_movement && move_to_local_resource( target ) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool npc::wear_local_clothing( bool allow_movement )
+{
+    for( local_item_candidate &candidate : find_local_warm_clothing() ) {
+        const tripoint target = candidate.loc.position();
+        if( rl_dist( pos(), target ) <= 1 ) {
+            if( wear( candidate.loc, false ).has_value() ) {
+                return true;
+            }
+        } else if( allow_movement && move_to_local_resource( target ) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool npc::drink_local_clean_water( bool allow_movement )
+{
+    if( get_thirst() <= 0 ) {
+        return false;
+    }
+    for( const tripoint &target : find_local_clean_water() ) {
+        if( rl_dist( pos(), target ) <= 1 ) {
+            const units::volume wanted = units::from_milliliter( get_thirst() * 5 );
+            const units::volume intake = std::min( wanted, stomach.stomach_remaining( *this ) );
+            if( intake > 0_ml ) {
+                stomach.ingest( { intake, 0_ml, {} } );
+                moves -= 100;
+                return true;
+            }
+        } else if( allow_movement && move_to_local_resource( target ) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool npc::take_local_shelter()
+{
+    for( const tripoint &target : find_local_shelter() ) {
+        if( rl_dist( pos(), target ) <= 1 ) {
+            const tripoint before = pos();
+            move_to( target );
+            if( pos() != before ) {
+                return true;
+            }
+        } else if( move_to_local_resource( target ) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool npc::forage_local_food()
+{
+    if( get_stored_kcal() + stomach.get_calories() >= get_healthy_kcal() * 0.75 ) {
+        return false;
+    }
+    for( const tripoint &target : find_local_harvest() ) {
+        if( rl_dist( pos(), target ) <= 1 ) {
+            get_map().examine( *this, target );
+            return true;
+        }
+        if( move_to_local_resource( target ) ) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void npc::mug_player( Character &mark )

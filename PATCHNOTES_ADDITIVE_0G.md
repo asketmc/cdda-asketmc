@@ -95,14 +95,20 @@ without revealing locations or rare loot pools.
 - Focused Catch coverage exercises sleep, elapsed environmental updates,
   camp-water stomach capacity, mop fetching, and static/custom/vehicle sorting
   with personal-zone overlap.
+- Followers in dangerous cold equip warm clothing from their inventory or
+  permitted nearby ground and vehicle storage, then seek nearby indoor shelter.
+- Hungry and thirsty followers can use permitted food and clean water from the
+  ground or unlocked owned vehicle cargo. Ownership, pickup rules, personal
+  zones, and no-NPC-pickup zones are respected.
+- Seriously starving followers may forage nearby edible wild plants after
+  camp, carried, ground, and cargo food are exhausted. Farms and protected
+  zones are never foraged automatically.
 - The normal crafting-menu follower orders, camp crafting UI, worker larder,
   vitamins, medicine/mutagen storage, follower-rules window, and bulk job
   priority controls were already present and remain unchanged.
 
-The broader experimental autonomous-needs/foraging state machine was not
-copied wholesale: it depends on post-0.G NPC mission and behavior-tree
-infrastructure and would replace existing follower behavior rather than make a
-bounded additive correction.
+These local survival actions are adapted to the 0.G needs cascade. The modern
+global behavior tree and mission scheduler are not included.
 
 ## Visuals, sound, fonts, and interface
 
