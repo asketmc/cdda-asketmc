@@ -837,6 +837,24 @@ bool zone_manager::has_nonpersonal( const zone_type_id &type, const tripoint_abs
     return false;
 }
 
+bool zone_manager::has_personal( const tripoint_abs_ms &where, const faction_id &fac ) const
+{
+    for( const zone_data &zone : zones ) {
+        if( zone.get_is_personal() && zone.get_enabled() && zone.get_faction() == fac &&
+            zone.has_inside( where ) ) {
+            return true;
+        }
+    }
+    map &here = get_map();
+    for( const zone_data *zone : here.get_vehicle_zones( here.get_abs_sub().z() ) ) {
+        if( zone->get_is_personal() && zone->get_enabled() && zone->get_faction() == fac &&
+            zone->has_inside( where ) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool zone_manager::has_near( const zone_type_id &type, const tripoint_abs_ms &where, int range,
                              const faction_id &fac ) const
 {
