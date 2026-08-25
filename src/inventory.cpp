@@ -304,7 +304,8 @@ item &inventory::add_item( item newit, bool keep_invlet, bool assign_invlet, boo
                 }
                 elem.emplace_back( std::move( newit ) );
                 return elem.back();
-            } else if( keep_invlet && assign_invlet && it_ref->invlet == newit.invlet ) {
+            } else if( keep_invlet && assign_invlet && it_ref->invlet == newit.invlet &&
+                       it_ref->invlet != 0 ) {
                 // If keep_invlet is true, we'll be forcing other items out of their current invlet.
                 assign_empty_invlet( *it_ref, player_character );
             }
@@ -1024,13 +1025,15 @@ void inventory::assign_empty_invlet( item &it, const Character &p, const bool fo
         // XXX YUCK I don't know how else to get the keybindings
         // FIXME: Find a better way to get bound keys
         inventory_selector selector( get_avatar() );
+        // Gathering the bindings once is far cheaper than one context lookup per letter.
+        const std::vector<char> bound_keys = selector.all_bound_keys();
 
         for( const char &inv_char : inv_chars ) {
             if( assigned_invlet.count( inv_char ) ) {
                 // don't overwrite assigned keys
                 continue;
             }
-            if( selector.action_bound_to_key( inv_char ) != "ERROR" ) {
+            if( std::find( bound_keys.begin(), bound_keys.end(), inv_char ) != bound_keys.end() ) {
                 // don't auto-assign bound keys
                 continue;
             }

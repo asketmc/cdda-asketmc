@@ -11,6 +11,7 @@ changes are deliberately avoided.
 
 This is not an official CDDA release. Compatibility with existing 0.G saves is
 best-effort, and there are no support guarantees.
+Windows Tiles+Sound packages are published on the repository's Releases page.
 
 ## Current feature areas
 

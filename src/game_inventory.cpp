@@ -1942,28 +1942,15 @@ class repair_inventory_preset: public inventory_selector_preset
 
             _indent_entries = false;
 
-            append_cell( [actor, &you]( const item_location & loc ) {
+            append_cell( [this, actor, &you]( const item_location & loc ) {
                 const int comp_needed = std::max<int>( 1,
                                                        std::ceil( loc->base_volume() / 250_ml * actor->cost_scaling ) );
                 const inventory &crafting_inv = you.crafting_inventory();
-                std::function<bool( const item & )> filter;
-                if( loc->is_filthy() ) {
-                    filter = []( const item & component ) {
-                        return component.allow_crafting_component();
-                    };
-                } else {
-                    filter = is_crafting_component;
-                }
+                const bool allow_filthy = loc->is_filthy();
                 std::vector<std::string> material_list;
                 for( const itype_id &component_id : actor->get_valid_repair_materials( *loc ) ) {
-                    if( item::count_by_charges( component_id ) ) {
-                        if( crafting_inv.has_charges( component_id, 1 ) ) {
-                            const int num_comp = crafting_inv.charges_of( component_id );
-                            material_list.push_back( colorize( string_format( _( "%s (%d)" ), item::nname( component_id ),
-                                                               num_comp ), num_comp < comp_needed ? c_red : c_unset ) );
-                        }
-                    } else if( crafting_inv.has_amount( component_id, 1, false, filter ) ) {
-                        const int num_comp = crafting_inv.amount_of( component_id, false );
+                    const int num_comp = cached_component_count( crafting_inv, component_id, allow_filthy );
+                    if( num_comp > 0 ) {
                         material_list.push_back( colorize( string_format( _( "%s (%d)" ), item::nname( component_id ),
                                                            num_comp ), num_comp < comp_needed ? c_red : c_unset ) );
                     }
@@ -1976,19 +1963,15 @@ class repair_inventory_preset: public inventory_selector_preset
             },
             _( "MATERIALS AVAILABLE" ) );
 
-            append_cell( [actor, &you]( const item_location & loc ) {
-                const int level = you.get_skill_level( actor->used_skill );
-                const repair_item_actor::repair_type action_type = actor->default_action( *loc, level );
-                const std::pair<float, float> chance = actor->repair_chance( you, *loc, action_type );
+            append_cell( [this]( const item_location & loc ) {
+                const std::pair<float, float> chance = cached_repair_chance( *loc );
                 return colorize( string_format( "%0.1f%%", 100.0f * chance.first ),
                                  chance.first == 0 ? c_yellow : ( chance.second == 0 ? c_light_green : c_unset ) );
             },
             _( "SUCCESS CHANCE" ) );
 
-            append_cell( [actor, &you]( const item_location & loc ) {
-                const int level = you.get_skill_level( actor->used_skill );
-                const repair_item_actor::repair_type action_type = actor->default_action( *loc, level );
-                const std::pair<float, float> chance = actor->repair_chance( you, *loc, action_type );
+            append_cell( [this]( const item_location & loc ) {
+                const std::pair<float, float> chance = cached_repair_chance( *loc );
                 return colorize( string_format( "%0.1f%%", 100.0f * chance.second ),
                                  chance.second > chance.first ? c_yellow : ( chance.second == 0 &&
                                          chance.first > 0 ? c_light_green : c_unset ) );
@@ -2001,9 +1984,73 @@ class repair_inventory_preset: public inventory_selector_preset
         }
 
     private:
+        /**
+         * SUCCESS CHANCE and DAMAGE CHANCE need the same pair, and every redraw re-runs
+         * both cells for every visible row.  The damage level is part of the key so the
+         * cache cannot go stale if the item changes while the selector is open.
+         */
+        std::pair<float, float> cached_repair_chance( const item &fix ) const {
+            const std::pair<const item *, int> key( &fix, fix.damage() );
+            const auto found = chance_cache.find( key );
+            if( found != chance_cache.end() ) {
+                return found->second;
+            }
+            const int level = character.get_skill_level( actor->used_skill );
+            const repair_item_actor::repair_type action_type = actor->default_action( fix, level );
+            const std::pair<float, float> chance = actor->repair_chance( character, fix, action_type );
+            chance_cache.emplace( key, chance );
+            return chance;
+        }
+
+        /** Repeated inventory walks dominate the materials column on large inventories. */
+        int cached_component_count( const inventory &crafting_inv, const itype_id &component_id,
+                                    bool allow_filthy ) const {
+            const std::pair<itype_id, bool> key( component_id, allow_filthy );
+            const auto found = component_count_cache.find( key );
+            if( found != component_count_cache.end() ) {
+                return found->second;
+            }
+            int count = 0;
+            if( item::count_by_charges( component_id ) ) {
+                if( crafting_inv.has_charges( component_id, 1 ) ) {
+                    count = crafting_inv.charges_of( component_id );
+                }
+            } else {
+                std::function<bool( const item & )> filter;
+                if( allow_filthy ) {
+                    filter = []( const item & component ) {
+                        return component.allow_crafting_component();
+                    };
+                } else {
+                    filter = is_crafting_component;
+                }
+                if( crafting_inv.has_amount( component_id, 1, false, filter ) ) {
+                    count = crafting_inv.amount_of( component_id, false );
+                }
+            }
+            component_count_cache.emplace( key, count );
+            return count;
+        }
+
         const repair_item_actor *actor;
         const item *main_tool;
         Character &character;
+        struct repair_cache_key_less {
+            bool operator()( const std::pair<const item *, int> &lhs,
+                             const std::pair<const item *, int> &rhs ) const {
+                const std::less<const item *> less;
+                if( less( lhs.first, rhs.first ) ) {
+                    return true;
+                }
+                if( less( rhs.first, lhs.first ) ) {
+                    return false;
+                }
+                return lhs.second < rhs.second;
+            }
+        };
+        mutable std::map<std::pair<const item *, int>, std::pair<float, float>,
+                repair_cache_key_less> chance_cache;
+        mutable std::map<std::pair<itype_id, bool>, int> component_count_cache;
 };
 
 static std::string get_repair_hint( const Character &you, const repair_item_actor *actor,

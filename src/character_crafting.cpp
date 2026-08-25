@@ -116,7 +116,8 @@ recipe_subset Character::get_available_nested( const recipe_subset &res ) const
     return nested_recipes;
 }
 
-recipe_subset Character::get_recipes_from_books( const inventory &crafting_inv ) const
+recipe_subset Character::get_recipes_from_books( const inventory &crafting_inv,
+        recipe_filter filter ) const
 {
     recipe_subset res;
 
@@ -125,6 +126,9 @@ recipe_subset Character::get_recipes_from_books( const inventory &crafting_inv )
 
         for( std::pair<const recipe *, int> recipe_entry :
              candidate.get_available_recipes( *this ) ) {
+            if( filter && !filter( *recipe_entry.first ) ) {
+                continue;
+            }
             res.include( recipe_entry.first, recipe_entry.second );
         }
     }
@@ -132,7 +136,8 @@ recipe_subset Character::get_recipes_from_books( const inventory &crafting_inv )
     return res;
 }
 
-recipe_subset Character::get_recipes_from_ebooks( const inventory &crafting_inv ) const
+recipe_subset Character::get_recipes_from_ebooks( const inventory &crafting_inv,
+        recipe_filter filter ) const
 {
     recipe_subset res;
 
@@ -146,6 +151,9 @@ recipe_subset Character::get_recipes_from_ebooks( const inventory &crafting_inv 
         for( const item *it : ereader.get_contents().ebooks() ) {
             for( std::pair<const recipe *, int> recipe_entry :
                  it->get_available_recipes( *this ) ) {
+                if( filter && !filter( *recipe_entry.first ) ) {
+                    continue;
+                }
                 res.include( recipe_entry.first, recipe_entry.second );
             }
         }
@@ -155,47 +163,71 @@ recipe_subset Character::get_recipes_from_ebooks( const inventory &crafting_inv 
 }
 
 recipe_subset Character::get_available_recipes( const inventory &crafting_inv,
-        const std::vector<npc *> *helpers ) const
+        const std::vector<npc *> *helpers, recipe_filter filter ) const
 {
-    recipe_subset res( get_learned_recipes() );
-    res.include( get_recipes_from_books( crafting_inv ) );
-    res.include( get_recipes_from_ebooks( crafting_inv ) );
+    recipe_subset res;
+    if( filter ) {
+        res.include_if( get_learned_recipes(), filter );
+    } else {
+        res.include( get_learned_recipes() );
+    }
+    res.include( get_recipes_from_books( crafting_inv, filter ) );
+    res.include( get_recipes_from_ebooks( crafting_inv, filter ) );
 
     if( helpers != nullptr ) {
         for( npc *np : *helpers ) {
             // Directly form the helper's inventory
-            res.include( get_recipes_from_books( *np->inv ) );
+            res.include( get_recipes_from_books( *np->inv, filter ) );
             // Being told what to do
-            res.include_if( np->get_learned_recipes(), [ this ]( const recipe & r ) {
+            res.include_if( np->get_learned_recipes(), [ this, &filter ]( const recipe & r ) {
+                if( filter && !filter( r ) ) {
+                    return false;
+                }
                 return get_knowledge_level( r.skill_used ) >= static_cast<int>( r.get_difficulty(
                             *this ) * 0.8f ); // Skilled enough to understand
             } );
         }
     }
 
-    res.include( get_available_nested( res ) );
+    if( filter ) {
+        res.include_if( get_available_nested( res ), filter );
+    } else {
+        res.include( get_available_nested( res ) );
+    }
 
     return res;
 }
 
 recipe_subset Character::get_available_recipes( const inventory &crafting_inv,
-        const std::vector<Character *> *helpers ) const
+        const std::vector<Character *> *helpers, recipe_filter filter ) const
 {
-    recipe_subset res( get_learned_recipes() );
-    res.include( get_recipes_from_books( crafting_inv ) );
-    res.include( get_recipes_from_ebooks( crafting_inv ) );
+    recipe_subset res;
+    if( filter ) {
+        res.include_if( get_learned_recipes(), filter );
+    } else {
+        res.include( get_learned_recipes() );
+    }
+    res.include( get_recipes_from_books( crafting_inv, filter ) );
+    res.include( get_recipes_from_ebooks( crafting_inv, filter ) );
 
     if( helpers != nullptr ) {
         for( Character *guy : *helpers ) {
-            res.include( get_recipes_from_books( *guy->inv ) );
-            res.include_if( guy->get_learned_recipes(), [ this ]( const recipe & r ) {
+            res.include( get_recipes_from_books( *guy->inv, filter ) );
+            res.include_if( guy->get_learned_recipes(), [ this, &filter ]( const recipe & r ) {
+                if( filter && !filter( r ) ) {
+                    return false;
+                }
                 return get_knowledge_level( r.skill_used ) >= static_cast<int>( r.get_difficulty(
                             *this ) * 0.8f );
             } );
         }
     }
 
-    res.include( get_available_nested( res ) );
+    if( filter ) {
+        res.include_if( get_available_nested( res ), filter );
+    } else {
+        res.include( get_available_nested( res ) );
+    }
     return res;
 }
 

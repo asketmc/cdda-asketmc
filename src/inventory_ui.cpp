@@ -2907,6 +2907,19 @@ std::string inventory_selector::action_bound_to_key( char key ) const
     return ctxt.input_to_action( input_event( key, input_event_t::keyboard_char ) );
 }
 
+std::vector<char> inventory_selector::all_bound_keys() const
+{
+    std::vector<char> ret;
+    for( const std::string &action_descriptor : ctxt.get_registered_actions() ) {
+        for( const input_event &evt : ctxt.keys_bound_to( action_descriptor, 0 ) ) {
+            if( evt.type == input_event_t::keyboard_char && !evt.sequence.empty() ) {
+                ret.push_back( static_cast<char>( evt.sequence.front() ) );
+            }
+        }
+    }
+    return ret;
+}
+
 item_location inventory_pick_selector::execute()
 {
     shared_ptr_fast<ui_adaptor> ui = create_or_get_ui_adaptor();

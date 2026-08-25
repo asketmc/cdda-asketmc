@@ -87,6 +87,20 @@ const recipe &recipe_dictionary::get_craft( const itype_id &id )
     return iter != recipe_dict.recipes.end() ? iter->second : null_recipe;
 }
 
+recipe_filter recipe_filter_by_component( const itype_id &c )
+{
+    return [c]( const recipe & r ) {
+        for( const std::vector<item_comp> &opts : r.simple_requirements().get_components() ) {
+            for( const item_comp &comp : opts ) {
+                if( comp.type == c ) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+}
+
 // searches for left-anchored partial match in the relevant recipe requirements set
 template <class group>
 bool search_reqs( group gp, const std::string &txt )

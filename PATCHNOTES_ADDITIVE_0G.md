@@ -1,10 +1,18 @@
 # CDDA 0.G Additive Fork — Detailed Patch Notes
 
 This repository begins with the integrated source snapshot documented below.
-No public binary release has yet been published from this repository.
+The matching Windows Tiles+Sound package is published under GitHub Releases.
 
 ## Crash and rotation fixes
 
+- Item-description recipe searches now filter learned, book, e-reader, and
+  helper recipes while collecting them instead of building the full recipe set.
+- Automatic inventory-letter assignment gathers reserved keys once and ignores
+  modifier-only bindings when choosing plain inventory letters.
+- The repair selector caches repeated chance and material-count calculations
+  while preserving the displayed success, damage, and component values.
+- TODO: add granular Catch coverage for recipe-source filtering, modified-key
+  invlet reservation, and repair-cache equivalence; the Windows build is the P0 gate.
 - Fixed save/load resolution for items inside containers carried by unloaded
   NPCs.  Interrupted follower and prisoner activities no longer emit cascades
   of missing-owner, lost-target, and invalid-parent `item_location` errors.

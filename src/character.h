@@ -79,7 +79,12 @@ class nc_color;
 class npc;
 class player_morale;
 class proficiency_set;
+class recipe;
 class recipe_subset;
+
+// Mirrors the alias in recipe_dictionary.h; repeated identical alias declarations are
+// well-formed and keep character.h from pulling in the whole recipe dictionary.
+using recipe_filter = std::function<bool( const recipe &r )>;
 class spell;
 class ui_adaptor;
 class vpart_reference;
@@ -3087,19 +3092,25 @@ class Character : public Creature, public visitable
         const recipe_subset &get_learned_recipes() const;
         recipe_subset get_available_nested( const recipe_subset & ) const;
         /** Returns all recipes that are known from the books (either in inventory or nearby). */
-        recipe_subset get_recipes_from_books( const inventory &crafting_inv ) const;
+        recipe_subset get_recipes_from_books( const inventory &crafting_inv,
+                                              recipe_filter filter = nullptr ) const;
         /** Returns all recipes that are known from the books inside ereaders (either in inventory or nearby). */
-        recipe_subset get_recipes_from_ebooks( const inventory &crafting_inv ) const;
+        recipe_subset get_recipes_from_ebooks( const inventory &crafting_inv,
+                                               recipe_filter filter = nullptr ) const;
         /**
           * Returns all available recipes (from books and npc companions)
           * @param crafting_inv Current available items to craft
           * @param helpers List of NPCs that could help with crafting.
+          * @param filter If set, only recipes matching the filter are collected.  Filtering
+          * during collection is much cheaper than building the whole subset first.
           */
         recipe_subset get_available_recipes( const inventory &crafting_inv,
-                                             const std::vector<npc *> *helpers = nullptr ) const;
+                                             const std::vector<npc *> *helpers = nullptr,
+                                             recipe_filter filter = nullptr ) const;
         /** Returns recipes available from books and an allied Character group. */
         recipe_subset get_available_recipes( const inventory &crafting_inv,
-                                             const std::vector<Character *> *helpers ) const;
+                                             const std::vector<Character *> *helpers,
+                                             recipe_filter filter = nullptr ) const;
         /**
           * Returns the set of book types in crafting_inv that provide the
           * given recipe.

@@ -5467,7 +5467,7 @@ void item::final_info( std::vector<iteminfo> &info, const iteminfo_query *parts,
     }
 
     // does the item fit in any holsters?
-    std::vector<const itype *> holsters = Item_factory::find( [this]( const itype & e ) {
+    std::vector<const itype *> holsters = item_controller->find( [this]( const itype & e ) {
         if( !e.can_use( "holster" ) ) {
             return false;
         }
@@ -5556,7 +5556,8 @@ void item::final_info( std::vector<iteminfo> &info, const iteminfo_query *parts,
         itype_id tid = typeId();
         const inventory &crafting_inv = player_character.crafting_inventory();
         const recipe_subset available_recipe_subset = player_character.get_available_recipes(
-                    crafting_inv );
+                    crafting_inv, static_cast<const std::vector<Character *> *>( nullptr ),
+                    recipe_filter_by_component( tid ) );
         const std::set<const recipe *> &item_recipes = available_recipe_subset.of_component( tid );
 
         if( item_recipes.empty() ) {
