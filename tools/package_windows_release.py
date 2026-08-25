@@ -43,13 +43,12 @@ def package(source_dir: pathlib.Path, output: pathlib.Path, source_date_epoch: i
         temp_path = pathlib.Path(temp_file.name)
 
     try:
-        with zipfile.ZipFile(
-            temp_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9
-        ) as archive:
+        # Stored entries avoid zlib-version-dependent bytes on hosted-runner reruns.
+        with zipfile.ZipFile(temp_path, "w", compression=zipfile.ZIP_STORED) as archive:
             for path in files:
                 relative = path.relative_to(source_dir).as_posix()
                 info = zipfile.ZipInfo(relative, date_time=timestamp)
-                info.compress_type = zipfile.ZIP_DEFLATED
+                info.compress_type = zipfile.ZIP_STORED
                 info.create_system = 3
                 mode = 0o755 if path.name.lower().endswith(".exe") else 0o644
                 info.external_attr = (0o100000 | mode) << 16
@@ -76,6 +75,10 @@ def verify(archive_path: pathlib.Path, commit_sha: str, version: str) -> None:
             "BUILD_MANIFEST.txt",
             "README.md",
             "LICENSE.txt",
+            "data/core/game_balance.json",
+            "data/json/items/ammo.json",
+            "data/mods/dda/modinfo.json",
+            "gfx/UltimateCataclysm/tileset.txt",
         }
         missing = sorted(required - set(names))
         if missing:

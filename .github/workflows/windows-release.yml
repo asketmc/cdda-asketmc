@@ -58,7 +58,13 @@ jobs:
             --output "${TOOLCHAIN_CACHE}/libbacktrace-x86_64-w64-mingw32.tar.gz" \
             https://github.com/Qrox/libbacktrace/releases/download/2020-01-03/libbacktrace-x86_64-w64-mingw32.tar.gz
 
-      - name: Save MXE archives for trusted events
+      - name: Verify MXE archives
+        run: |
+          cd "${TOOLCHAIN_CACHE}"
+          sha256sum --check "${GITHUB_WORKSPACE}/build-scripts/mxe-x86_64-gcc11.2-sha256"
+          sha256sum --check "${GITHUB_WORKSPACE}/build-scripts/libbacktrace-x86_64-w64-mingw32-sha256"
+
+      - name: Save verified MXE archives for trusted events
         if: steps.mxe-cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request'
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
@@ -68,9 +74,7 @@ jobs:
       - name: Install verified MXE toolchain
         run: |
           cd "${TOOLCHAIN_CACHE}"
-          sha256sum --check "${GITHUB_WORKSPACE}/build-scripts/mxe-x86_64-gcc11.2-sha256"
           sudo tar -xJf mxe-x86_64.tar.xz -C /opt
-          sha256sum --check "${GITHUB_WORKSPACE}/build-scripts/libbacktrace-x86_64-w64-mingw32-sha256"
           sudo tar -xzf libbacktrace-x86_64-w64-mingw32.tar.gz \
             --exclude=LICENSE \
             -C /opt/mxe/usr/x86_64-w64-mingw32.static.gcc11
@@ -98,6 +102,7 @@ jobs:
           safe_ref=$(printf '%s' "${GITHUB_REF_NAME}" | tr -c 'A-Za-z0-9._-' '-')
           asset="cdda-0g-additive-asketmc-${safe_ref}-${build_sha}-windows-x64-tiles-sound.zip"
           source_epoch=$(git show -s --format=%ct "${GITHUB_SHA}")
+          export SOURCE_DATE_EPOCH="${source_epoch}"
           output_dir="${GITHUB_WORKSPACE}/release-output"
           mkdir -p "${output_dir}"
 
@@ -117,15 +122,20 @@ jobs:
           EOF
 
           build_distribution() {
+            local build_prefix="$1"
+            local use_ccache="$2"
+            mkdir -p "${build_prefix}"
             make -j"$(nproc)" \
+              "BUILD_PREFIX=${build_prefix}" \
               "VERSION=${version}" \
               "CROSS=${cross}" \
-              CCACHE=1 RELEASE=1 TILES=1 SOUND=1 LOCALIZE=0 RUNTESTS=0 \
+              "CCACHE=${use_ccache}" RELEASE=1 TILES=1 SOUND=1 LOCALIZE=0 RUNTESTS=0 \
               LINTJSON=0 ASTYLE=0 WARNINGS=-w BACKTRACE=1 LIBBACKTRACE=1 PCH=0 \
+              BINDIST_CMD=: \
               bindist
-            test -s cataclysm-tiles.exe
-            file cataclysm-tiles.exe | grep -q "PE32+ executable"
-            dist_dir="cataclysmdda-${version}"
+            test -s "${build_prefix}cataclysm-tiles.exe"
+            file "${build_prefix}cataclysm-tiles.exe" | grep -q "PE32+ executable"
+            dist_dir="${build_prefix}bindist"
             test -d "${dist_dir}"
             cp BUILD_MANIFEST.txt "${dist_dir}/BUILD_MANIFEST.txt"
             python3 tools/package_windows_release.py \
@@ -134,14 +144,19 @@ jobs:
               "${output_dir}/${asset}" "${GITHUB_SHA}" "${version}"
           }
 
-          build_distribution
-          first_exe=$(sha256sum cataclysm-tiles.exe | cut -d' ' -f1)
+          first_prefix="build-one/"
+          cache_mode=1
+          if [[ "${RELEASE_BUILD}" == "true" ]]; then
+            cache_mode=0
+          fi
+          build_distribution "${first_prefix}" "${cache_mode}"
+          first_exe=$(sha256sum "${first_prefix}cataclysm-tiles.exe" | cut -d' ' -f1)
           first_zip=$(sha256sum "${output_dir}/${asset}" | cut -d' ' -f1)
 
           if [[ "${RELEASE_BUILD}" == "true" ]]; then
-            make clean
-            build_distribution
-            second_exe=$(sha256sum cataclysm-tiles.exe | cut -d' ' -f1)
+            second_prefix="build-two/"
+            build_distribution "${second_prefix}" 0
+            second_exe=$(sha256sum "${second_prefix}cataclysm-tiles.exe" | cut -d' ' -f1)
             second_zip=$(sha256sum "${output_dir}/${asset}" | cut -d' ' -f1)
             test "${first_exe}" = "${second_exe}"
             test "${first_zip}" = "${second_zip}"
@@ -249,8 +264,18 @@ jobs:
           EOF
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
             mkdir existing
-            gh release download "${GITHUB_REF_NAME}" --pattern SHA256SUMS.txt --dir existing
+            asset_name=$(basename "${asset}")
+            mapfile -t remote_assets < <(gh release view "${GITHUB_REF_NAME}" --json assets --jq '.assets[].name' | sort)
+            mapfile -t expected_assets < <(printf '%s\n' "${asset_name}" BUILD_MANIFEST.txt SHA256SUMS.txt | sort)
+            test "${#remote_assets[@]}" -eq 3
+            test "${remote_assets[*]}" = "${expected_assets[*]}"
+            gh release download "${GITHUB_REF_NAME}" \
+              --pattern "${asset_name}" --pattern BUILD_MANIFEST.txt --pattern SHA256SUMS.txt \
+              --dir existing
             cmp SHA256SUMS.txt existing/SHA256SUMS.txt
+            cmp BUILD_MANIFEST.txt existing/BUILD_MANIFEST.txt
+            cmp "${asset}" "existing/${asset_name}"
+            ( cd existing && sha256sum --check SHA256SUMS.txt )
           else
             gh release create "${GITHUB_REF_NAME}" "${asset}" SHA256SUMS.txt BUILD_MANIFEST.txt \
               --verify-tag \

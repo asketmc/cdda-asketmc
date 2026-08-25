@@ -12,6 +12,7 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         cls.workflow = (ROOT / ".github" / "workflows" / "windows-release.yml").read_text(
             encoding="utf-8"
         )
+        cls.makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
 
     def test_all_actions_are_pinned_to_full_commit(self) -> None:
         uses = re.findall(r"^\s+(?:- )?uses:\s*([^\s#]+)", self.workflow, flags=re.MULTILINE)
@@ -44,6 +45,26 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
     def test_release_build_compares_two_build_outputs(self) -> None:
         self.assertIn('test "${first_exe}" = "${second_exe}"', self.workflow)
         self.assertIn('test "${first_zip}" = "${second_zip}"', self.workflow)
+        self.assertIn('build_distribution "${second_prefix}" 0', self.workflow)
+        self.assertIn('export SOURCE_DATE_EPOCH="${source_epoch}"', self.workflow)
+
+    def test_make_staging_contract_is_used_without_make_zip(self) -> None:
+        self.assertRegex(self.makefile, r"(?m)^BINDIST_DIR = \$\(BUILD_PREFIX\)bindist$")
+        self.assertIn('dist_dir="${build_prefix}bindist"', self.workflow)
+        self.assertIn("BINDIST_CMD=:", self.workflow)
+        self.assertNotIn('dist_dir="cataclysmdda-${version}"', self.workflow)
+
+    def test_cached_toolchains_are_verified_before_save(self) -> None:
+        verify = self.workflow.index("- name: Verify MXE archives")
+        save = self.workflow.index("- name: Save verified MXE archives")
+        install = self.workflow.index("- name: Install verified MXE toolchain")
+        self.assertLess(verify, save)
+        self.assertLess(save, install)
+
+    def test_existing_release_requires_exact_assets_and_bytes(self) -> None:
+        self.assertIn('test "${#remote_assets[@]}" -eq 3', self.workflow)
+        self.assertIn('cmp "${asset}" "existing/${asset_name}"', self.workflow)
+        self.assertIn("sha256sum --check SHA256SUMS.txt", self.workflow)
 
 
 if __name__ == "__main__":

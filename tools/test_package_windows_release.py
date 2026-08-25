@@ -12,7 +12,13 @@ class WindowsReleasePackagingTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = pathlib.Path(temp_dir)
             source = root / "dist"
-            (source / "data").mkdir(parents=True)
+            for directory in (
+                source / "data" / "core",
+                source / "data" / "json" / "items",
+                source / "data" / "mods" / "dda",
+                source / "gfx" / "UltimateCataclysm",
+            ):
+                directory.mkdir(parents=True)
             commit = "a" * 40
             version = "0.G-additive-" + commit[:12]
             (source / "cataclysm-tiles.exe").write_bytes(b"PE-test")
@@ -24,8 +30,12 @@ class WindowsReleasePackagingTest(unittest.TestCase):
             )
             (source / "README.md").write_text("readme\n", encoding="utf-8")
             (source / "LICENSE.txt").write_text("license\n", encoding="utf-8")
-            (source / "data" / "z.json").write_text("{}\n", encoding="utf-8")
-            (source / "data" / "a.json").write_text("[]\n", encoding="utf-8")
+            (source / "data" / "core" / "game_balance.json").write_text("{}\n", encoding="utf-8")
+            (source / "data" / "json" / "items" / "ammo.json").write_text("[]\n", encoding="utf-8")
+            (source / "data" / "mods" / "dda" / "modinfo.json").write_text("[]\n", encoding="utf-8")
+            (source / "gfx" / "UltimateCataclysm" / "tileset.txt").write_text(
+                "NAME: UltimateCataclysm\n", encoding="utf-8"
+            )
 
             first = root / "first.zip"
             second = root / "second.zip"
@@ -61,10 +71,30 @@ class WindowsReleasePackagingTest(unittest.TestCase):
                     "README.md",
                     "VERSION.txt",
                     "cataclysm-tiles.exe",
+                    "data/core/game_balance.json",
+                    "data/json/items/ammo.json",
+                    "data/mods/dda/modinfo.json",
+                    "gfx/UltimateCataclysm/tileset.txt",
                 ):
                     archive.writestr(name, "present but no provenance")
             with self.assertRaisesRegex(ValueError, "full commit SHA"):
                 package_windows_release.verify(archive_path, "b" * 40, "0.G-test")
+
+    def test_verifier_rejects_missing_runtime_tree(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            archive_path = pathlib.Path(temp_dir) / "bad.zip"
+            commit = "c" * 40
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                for name in (
+                    "BUILD_MANIFEST.txt",
+                    "LICENSE.txt",
+                    "README.md",
+                    "VERSION.txt",
+                    "cataclysm-tiles.exe",
+                ):
+                    archive.writestr(name, f"{commit}\n0.G-test\n")
+            with self.assertRaisesRegex(ValueError, "data/core/game_balance.json"):
+                package_windows_release.verify(archive_path, commit, "0.G-test")
 
 
 if __name__ == "__main__":
