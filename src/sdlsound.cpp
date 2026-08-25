@@ -446,8 +446,14 @@ bool initialize_directsound_with_retry()
         initialized = false;
     }
 
-    if( SDL_setenv( audio_driver_environment, had_previous_driver ? previous_driver.c_str() : "",
-                    1 ) != 0 ) {
+    // SDL 2.0.14 unsets a Windows variable when given an empty value.
+    const int restore_result = SDL_setenv( audio_driver_environment,
+                               had_previous_driver ? previous_driver.c_str() : "", 1 );
+    const char *const restored_driver = SDL_getenv( audio_driver_environment );
+    const bool environment_restored = had_previous_driver ?
+                                      restored_driver != nullptr && previous_driver == restored_driver :
+                                      restored_driver == nullptr;
+    if( restore_result != 0 || !environment_restored ) {
         dbg( D_WARNING ) << "Unable to restore SDL's audio-driver environment after fallback.";
     }
     return initialized;

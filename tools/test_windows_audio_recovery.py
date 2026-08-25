@@ -18,6 +18,8 @@ class WindowsAudioRecoveryContractTest(unittest.TestCase):
         self.assertIn('constexpr const char *audio_driver_environment = "SDL_AUDIODRIVER"', source)
         self.assertIn('SDL_setenv( audio_driver_environment, "directsound", 1 )', source)
         self.assertIn('had_previous_driver ? previous_driver.c_str() : ""', source)
+        self.assertIn("restored_driver == nullptr", source)
+        self.assertIn("!environment_restored", source)
         self.assertIn("initialize_directsound_with_retry()", source)
         self.assertIn("SDL_getenv( audio_driver_environment )", source)
         self.assertIn("SDL_GetCurrentAudioDriver()", source)
