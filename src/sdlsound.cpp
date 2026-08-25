@@ -2,7 +2,6 @@
 
 #include "sdlsound.h"
 
-#include <cstdlib>
 #include <algorithm>
 #include <chrono>
 #include <map>
@@ -20,6 +19,7 @@
 #    include <SDL_mixer.h>
 #endif
 
+#include "audio_retry_policy.h"
 #include "cached_options.h"
 #include "debug.h"
 #include "init.h"
@@ -296,6 +296,199 @@ static std::vector<sfx_args> sfx_preload;
 
 bool sounds::sound_enabled = false;
 
+namespace
+{
+
+constexpr int audio_rate = 44100;
+constexpr Uint16 audio_format = AUDIO_S16;
+constexpr int audio_channels = 2;
+constexpr int audio_buffers = 2048;
+constexpr Uint32 audio_retry_delay_ms = 500;
+constexpr const char *audio_driver_environment = "SDL_AUDIODRIVER";
+bool audio_subsystem_initialized = false;
+
+std::string current_audio_driver()
+{
+    const char *const driver = SDL_GetCurrentAudioDriver();
+    return driver != nullptr ? driver : "(none)";
+}
+
+void log_audio_devices()
+{
+    const int device_count = SDL_GetNumAudioDevices( 0 );
+    if( device_count < 0 ) {
+        dbg( D_WARNING ) << "Unable to enumerate playback devices for SDL audio driver \""
+                         << current_audio_driver() << "\": " << SDL_GetError();
+        return;
+    }
+
+    dbg( D_INFO ) << "SDL audio driver \"" << current_audio_driver() << "\" reports "
+                  << device_count << " playback device(s).";
+    for( int i = 0; i < device_count; ++i ) {
+        const char *const device_name = SDL_GetAudioDeviceName( i, 0 );
+        dbg( D_INFO ) << "SDL playback device " << i << ": "
+                      << ( device_name != nullptr ? device_name : "(unknown)" );
+    }
+}
+
+void quit_audio_subsystem()
+{
+    if( audio_subsystem_initialized ) {
+        SDL_QuitSubSystem( SDL_INIT_AUDIO );
+        audio_subsystem_initialized = false;
+    }
+}
+
+bool initialize_audio_subsystem_with_retry( const std::string &driver_label )
+{
+    return audio_retry_policy::try_twice( [&]( const int attempt ) {
+        if( SDL_InitSubSystem( SDL_INIT_AUDIO ) == 0 ) {
+            audio_subsystem_initialized = true;
+            dbg( D_INFO ) << "Initialized SDL audio driver \"" << current_audio_driver()
+                          << "\" (" << driver_label << ", attempt " << attempt << "/2).";
+            return true;
+        }
+
+        dbg( D_WARNING ) << "SDL audio " << driver_label << " attempt " << attempt
+                         << "/2 failed: " << SDL_GetError();
+        SDL_QuitSubSystem( SDL_INIT_AUDIO );
+        return false;
+    }, []() {
+        SDL_Delay( audio_retry_delay_ms );
+    } );
+}
+
+bool open_audio_mixer( const std::string &attempt )
+{
+    if( Mix_OpenAudioDevice( audio_rate, audio_format, audio_channels, audio_buffers, nullptr,
+                            SDL_AUDIO_ALLOW_FREQUENCY_CHANGE ) != 0 ) {
+        dbg( D_WARNING ) << "Audio mixer " << attempt << " failed using SDL driver \""
+                         << current_audio_driver() << "\": " << Mix_GetError();
+        return false;
+    }
+
+    int opened_rate = 0;
+    Uint16 opened_format = 0;
+    int opened_channels = 0;
+    if( Mix_QuerySpec( &opened_rate, &opened_format, &opened_channels ) != 0 ) {
+        dbg( D_INFO ) << "Audio mixer opened using SDL driver \"" << current_audio_driver()
+                      << "\" and the system default playback device at " << opened_rate
+                      << " Hz with " << opened_channels
+                      << " channel(s), format " << opened_format << ".";
+    } else {
+        dbg( D_INFO ) << "Audio mixer opened using SDL driver \"" << current_audio_driver()
+                      << "\" and the system default playback device; its format could not be queried.";
+    }
+    return true;
+}
+
+bool open_audio_mixer_with_retry( const std::string &driver_label )
+{
+    return audio_retry_policy::try_twice( [&]( const int attempt ) {
+        const std::string delay_suffix = attempt == 1 ? "" :
+                                         " after " + std::to_string( audio_retry_delay_ms ) + " ms";
+        return open_audio_mixer( driver_label + " attempt " + std::to_string( attempt ) +
+                                 "/2" + delay_suffix );
+    }, []() {
+        SDL_Delay( audio_retry_delay_ms );
+    } );
+}
+
+#if defined(_WIN32)
+bool audio_driver_available( const std::string &wanted_driver )
+{
+    const int driver_count = SDL_GetNumAudioDrivers();
+    for( int i = 0; i < driver_count; ++i ) {
+        const char *const driver = SDL_GetAudioDriver( i );
+        if( driver != nullptr && wanted_driver == driver ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool can_fallback_to_directsound()
+{
+    static const std::string directsound = "directsound";
+    if( current_audio_driver() == directsound ) {
+        return false;
+    }
+
+    const char *const requested_driver = SDL_getenv( audio_driver_environment );
+    if( requested_driver != nullptr && requested_driver[0] != '\0' ) {
+        dbg( D_WARNING ) << "Not overriding explicitly requested SDL audio driver \""
+                         << requested_driver << "\" with DirectSound.";
+        return false;
+    }
+    if( !audio_driver_available( directsound ) ) {
+        dbg( D_WARNING ) << "DirectSound fallback is unavailable in this SDL build.";
+        return false;
+    }
+
+    return true;
+}
+
+bool initialize_directsound_with_retry()
+{
+    const char *const previous_driver_value = SDL_getenv( audio_driver_environment );
+    const bool had_previous_driver = previous_driver_value != nullptr;
+    const std::string previous_driver = had_previous_driver ? previous_driver_value : "";
+
+    if( SDL_setenv( audio_driver_environment, "directsound", 1 ) != 0 ) {
+        dbg( D_WARNING ) << "Unable to select DirectSound through SDL's audio-driver environment.";
+        return false;
+    }
+
+    return audio_retry_policy::initialize_temporary_backend( []() {
+        bool initialized = initialize_audio_subsystem_with_retry( "DirectSound fallback" );
+        if( initialized && current_audio_driver() != "directsound" ) {
+            dbg( D_WARNING ) << "DirectSound fallback selected unexpected SDL driver \""
+                             << current_audio_driver() << "\"; refusing to open its mixer.";
+            quit_audio_subsystem();
+            initialized = false;
+        }
+        return initialized;
+    }, [&]() {
+        // SDL 2.0.14 unsets a Windows variable when given an empty value.
+        const int restore_result = SDL_setenv( audio_driver_environment,
+                                   had_previous_driver ? previous_driver.c_str() : "", 1 );
+        const char *const restored_driver = SDL_getenv( audio_driver_environment );
+        const bool environment_restored = had_previous_driver ?
+                                          restored_driver != nullptr && previous_driver == restored_driver :
+                                          restored_driver == nullptr;
+        if( restore_result != 0 || !environment_restored ) {
+            dbg( D_WARNING ) << "Unable to restore SDL's audio-driver environment after fallback; "
+                             "disabling sound for this session.";
+            return false;
+        }
+        return true;
+    }, []() {
+        quit_audio_subsystem();
+    } );
+}
+#endif
+
+void configure_audio_channels()
+{
+    Mix_AllocateChannels( 128 );
+    Mix_ReserveChannels( static_cast<int>( sfx::channel::MAX_CHANNEL ) );
+
+    Mix_GroupChannels( static_cast<int>( sfx::channel::daytime_outdoors_env ),
+                       static_cast<int>( sfx::channel::nighttime_outdoors_env ),
+                       static_cast<int>( sfx::group::time_of_day ) );
+    Mix_GroupChannels( static_cast<int>( sfx::channel::underground_env ),
+                       static_cast<int>( sfx::channel::outdoor_blizzard ),
+                       static_cast<int>( sfx::group::weather ) );
+    Mix_GroupChannels( static_cast<int>( sfx::channel::danger_extreme_theme ),
+                       static_cast<int>( sfx::channel::danger_low_theme ),
+                       static_cast<int>( sfx::group::context_themes ) );
+    Mix_GroupChannels( static_cast<int>( sfx::channel::stamina_75 ),
+                       static_cast<int>( sfx::channel::stamina_35 ),
+                       static_cast<int>( sfx::group::fatigue ) );
+}
+
+} // namespace
+
 static bool check_sound( const int volume = 1 )
 {
     return sound_init_success && sounds::sound_enabled && volume > 0;
@@ -306,41 +499,45 @@ static bool check_sound( const int volume = 1 )
  */
 bool init_sound()
 {
-    int audio_rate = 44100;
-    Uint16 audio_format = AUDIO_S16;
-    int audio_channels = 2;
-    int audio_buffers = 2048;
+    if( sound_init_success ) {
+        return true;
+    }
 
-    // We should only need to init once
-    if( !sound_init_success ) {
-        // Mix_OpenAudio returns non-zero if something went wrong trying to open the device
-        if( !Mix_OpenAudioDevice( audio_rate, audio_format, audio_channels, audio_buffers, nullptr,
-                                  SDL_AUDIO_ALLOW_FREQUENCY_CHANGE ) ) {
-            Mix_AllocateChannels( 128 );
-            Mix_ReserveChannels( static_cast<int>( sfx::channel::MAX_CHANNEL ) );
+    const bool default_driver_initialized = initialize_audio_subsystem_with_retry( "default backend" );
+    if( default_driver_initialized ) {
+        log_audio_devices();
+        sound_init_success = open_audio_mixer_with_retry( "default backend" );
+    }
 
-            // For the sound effects system.
-            Mix_GroupChannels( static_cast<int>( sfx::channel::daytime_outdoors_env ),
-                               static_cast<int>( sfx::channel::nighttime_outdoors_env ),
-                               static_cast<int>( sfx::group::time_of_day ) );
-            Mix_GroupChannels( static_cast<int>( sfx::channel::underground_env ),
-                               static_cast<int>( sfx::channel::outdoor_blizzard ),
-                               static_cast<int>( sfx::group::weather ) );
-            Mix_GroupChannels( static_cast<int>( sfx::channel::danger_extreme_theme ),
-                               static_cast<int>( sfx::channel::danger_low_theme ),
-                               static_cast<int>( sfx::group::context_themes ) );
-            Mix_GroupChannels( static_cast<int>( sfx::channel::stamina_75 ),
-                               static_cast<int>( sfx::channel::stamina_35 ),
-                               static_cast<int>( sfx::group::fatigue ) );
-
-            sound_init_success = true;
-        } else {
-            dbg( D_ERROR ) << "Failed to open audio mixer, sound won't work: " << Mix_GetError();
+#if defined(_WIN32)
+    if( !sound_init_success && can_fallback_to_directsound() ) {
+        const std::string failed_driver = current_audio_driver();
+        quit_audio_subsystem();
+        dbg( D_WARNING ) << "SDL audio driver \"" << failed_driver
+                         << "\" failed; retrying with DirectSound.";
+        if( initialize_directsound_with_retry() ) {
+            log_audio_devices();
+            sound_init_success = open_audio_mixer_with_retry( "DirectSound fallback" );
         }
+    }
+#endif
+
+    if( sound_init_success ) {
+        configure_audio_channels();
+    } else {
+        quit_audio_subsystem();
+        dbg( D_ERROR ) << "Failed to open an audio mixer after bounded retries; soundpack loading "
+                       "will be skipped for this session.";
     }
 
     return sound_init_success;
 }
+
+bool is_sound_initialized()
+{
+    return sound_init_success;
+}
+
 void shutdown_sound()
 {
     // De-allocate all loaded sound.
@@ -348,7 +545,11 @@ void shutdown_sound()
     sfx_resources.sound_effects.clear();
 
     playlists.clear();
-    Mix_CloseAudio();
+    if( sound_init_success ) {
+        Mix_CloseAudio();
+        sound_init_success = false;
+    }
+    quit_audio_subsystem();
 }
 
 static void musicFinished();
