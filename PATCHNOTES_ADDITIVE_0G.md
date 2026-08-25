@@ -3,6 +3,19 @@
 This repository begins with the integrated source snapshot documented below.
 The matching Windows Tiles+Sound package is published under GitHub Releases.
 
+## Windows audio recovery
+
+- Audio initialization now records the active SDL backend and available
+  playback devices in `debug.log`.
+- A transient endpoint failure is retried once. On Windows, an unavailable or
+  broken default backend automatically falls back to DirectSound and retries.
+  An explicitly selected `SDL_AUDIODRIVER` remains authoritative.
+- Soundpacks are parsed and preloaded only after the mixer opens successfully,
+  preventing one device error from cascading into misleading soundpack errors.
+- SDL3 was deliberately not transplanted: its modern CDDA/BN implementation is
+  coupled to their full tiles, input, build, and packaging migrations. The
+  bounded SDL2 recovery path fixes the 0.G failure without replacing that stack.
+
 ## Crash and rotation fixes
 
 - Item-description recipe searches now filter learned, book, e-reader, and

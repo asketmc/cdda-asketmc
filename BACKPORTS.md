@@ -14,6 +14,7 @@ evidence remain in the linked reports and player patch notes.
 | Backup generator | Integrated | [Generator report](H6_BACKUP_GENERATOR_BACKPORT_REPORT.md) |
 | Crafting, inventory, and repair performance | Integrated selected behavior | [BN #917](https://github.com/cataclysmbnteam/Cataclysm-BN/pull/917), [BN #1117](https://github.com/cataclysmbnteam/Cataclysm-BN/pull/1117), [BN #8221](https://github.com/cataclysmbnteam/Cataclysm-BN/pull/8221) |
 | Contained NPC activity items | Fixed locally | [Patch notes](PATCHNOTES_ADDITIVE_0G.md) |
+| Windows audio recovery | Adapted for 0.G SDL2 | [DDA #76782](https://github.com/CleverRaven/Cataclysm-DDA/pull/76782), [SDL #5571](https://github.com/libsdl-org/SDL/issues/5571) |
 | H3-H6 delivery ledger | Resolved; exclusions recorded | Reports above |
 
 Primary donor provenance is recorded per feature in the reports above and in

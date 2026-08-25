@@ -9,6 +9,7 @@
  * Attempt to initialize an audio device.  Returns false if initialization fails.
  */
 bool init_sound();
+bool is_sound_initialized();
 void shutdown_sound();
 void play_music( const std::string &playlist );
 void stop_music();
@@ -18,6 +19,10 @@ void load_soundset();
 #else
 
 inline bool init_sound()
+{
+    return false;
+}
+inline bool is_sound_initialized()
 {
     return false;
 }

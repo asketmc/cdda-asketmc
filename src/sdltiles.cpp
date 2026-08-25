@@ -170,7 +170,7 @@ static void ClearScreen()
 
 static void InitSDL()
 {
-    int init_flags = SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER;
+    int init_flags = SDL_INIT_VIDEO | SDL_INIT_TIMER;
     int ret;
 
 #if defined(SDL_HINT_WINDOWS_DISABLE_THREAD_NAMING)
@@ -187,6 +187,9 @@ static void InitSDL()
     }
 #endif
 
+    // Audio is initialized separately by init_sound().  A broken Windows
+    // endpoint must not prevent the video/input interface from starting, and
+    // init_sound() can retry or select a fallback backend before giving up.
     ret = SDL_Init( init_flags );
     throwErrorIf( ret != 0, "SDL_Init failed" );
 
@@ -3654,8 +3657,12 @@ void catacurses::init_interface()
     color_loader<SDL_Color>().load( windowsPalette );
     init_colors();
 
-    // initialize sound set
-    load_soundset();
+    // Do not parse or preload a soundpack without a working mixer.  Besides
+    // avoiding misleading JSON errors, this keeps a failed Windows endpoint
+    // from cascading into hundreds of failed audio loads.
+    if( is_sound_initialized() ) {
+        load_soundset();
+    }
 
     font = std::make_unique<FontFallbackList>( renderer, format, fl.fontwidth, fl.fontheight,
             windowsPalette, fl.typeface, fl.fontsize, fl.fontblending );
