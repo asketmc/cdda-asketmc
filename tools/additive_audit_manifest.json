@@ -207,6 +207,12 @@
     },
     {
       "type": "talk_topic",
+      "id": "TALK_ALLY_ORDERS",
+      "target_fingerprint": "e15cc9a83fab0291cdbb40ed31080219eb64b7cb88ceebecf375bffa8d5a56ae",
+      "reason": "Camp-assigned followers can return to their existing duties after a temporary follow or guard order"
+    },
+    {
+      "type": "talk_topic",
       "id": "TALK_FRIEND",
       "target_fingerprint": "93e525433c81f468370f3c44e7ca1efe7ba12d858f55ec23b4d5181972587691",
       "reason": "The follower rules manager adds an entry point to the shared allied-NPC dialogue"

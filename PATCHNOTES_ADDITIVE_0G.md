@@ -121,6 +121,18 @@ global behavior tree and mission scheduler are not included.
   exist, but remains available when the follower would otherwise starve.
 - Weapon comparison now handles empty hands and non-guns deterministically;
   ranged/melee coefficients and silent-weapon rules remain unchanged.
+- Camp workers keep their current job through ordinary hunger, tiredness and
+  minor wounds. Critical injury or starvation may interrupt the job, which is
+  resumed after the need is handled.
+- Camp assignment survives temporary follow and guard orders. A follower can
+  be told to return to camp duties; displaced workers head for their camp and
+  spend downtime inside its footprint.
+- Camp crafting recognizes recipes from physical books and powered e-readers
+  in storage, reports when no worker is available, and rejects liquid crafts
+  before work starts when no empty zoned liquid fixture exists.
+- The legacy sorter correctly reports that its move-loot job was assigned,
+  preventing a false no-work result. The later walking sorter and activity
+  actor framework are not imported.
 
 ## Visuals, sound, fonts, and interface
 
