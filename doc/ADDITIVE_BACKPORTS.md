@@ -194,7 +194,9 @@ manifest are actually imported.
 | Safe self/ally first aid | TLG #1603 (`5fd614b81aeb7de418b4ed239e5b7e8f93828cba`) | Adapted with a save-compatible follower rule and activity restoration |
 | Vitamin and food selection | TLG #2982 (`87448bac93398575e854128d00840b73d3f7c7ac`) | Adapted with deficiency bounds and starvation fallback |
 | Weapon comparison correctness | TLG #2746 (`336d552d6df48f73ddfd1f63f7572cd3ad15238b`) | Null and initialization fixes only; balance changes excluded |
-| Modern behavior tree and sorting actors | #86172, #86173, #83980, #84311 | Not imported |
+| Legacy priorities and camp lifecycle | #86172, #86173 | Adapted to the 0.G cascade and `assigned_camp`; modern behavior tree and mission framework excluded |
+| Camp recipe sources and liquid checks | #78612, #81148 | Existing behavior retained; missing book/e-book and preflight checks adapted without the later camp framework |
+| Legacy sorter | #83980, #84311 | Confirmed false no-work result fixed; activity actors, physical walking and bagful sorting excluded |
 
 ## Additive data audit
 

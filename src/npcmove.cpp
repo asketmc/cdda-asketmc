@@ -832,6 +832,7 @@ void npc::move()
     }
 
     npc_action action = npc_undecided;
+    activity_id interrupted_order = activity_id::NULL_ID();
 
     const item_location weapon = get_wielded_item();
     static const std::string no_target_str = "none";
@@ -941,7 +942,13 @@ void npc::move()
         // No present danger
         cleanup_on_no_danger();
 
-        action = address_needs();
+        const bool protect_current_order = attitude == NPCATT_ACTIVITY &&
+                                           ( has_player_activity() || has_destination_activity() ||
+                                             has_stashed_activity() );
+        if( protect_current_order && has_player_activity() ) {
+            interrupted_order = activity.id();
+        }
+        action = address_needs( ai_cache.danger, protect_current_order );
         print_action( "address_needs %s", action );
 
         if( action == npc_undecided ) {
@@ -1004,13 +1011,20 @@ void npc::move()
                 mission = NPC_MISSION_NULL;
             }
         }
-        if( assigned_camp && attitude != NPCATT_ACTIVITY ) {
+        if( assigned_camp && camp_duty && !is_camp_duty_ready() ) {
+            if( mission != NPC_MISSION_TRAVELLING ) {
+                return_to_assigned_camp();
+            }
+            action = npc_goto_destination;
+        } else if( is_camp_duty_ready() && attitude != NPCATT_ACTIVITY ) {
             if( has_job() && calendar::once_every( 10_minutes ) && find_job_to_perform() ) {
                 action = npc_player_activity;
             } else {
                 action = npc_worker_downtime;
                 goal = global_omt_location();
             }
+        } else if( assigned_camp && mission == NPC_MISSION_TRAVELLING ) {
+            action = npc_goto_destination;
         }
         if( is_stationary( true ) && !assigned_camp ) {
             // if we're in a vehicle, stay in the vehicle
@@ -1068,6 +1082,10 @@ void npc::move()
 
     add_msg_debug( debugmode::DF_NPC, "%s chose action %s.", get_name(), npc_action_name( action ) );
     execute_action( action );
+    if( interrupted_order && activity.id() != interrupted_order && !backlog.empty() &&
+        backlog.front().id() == interrupted_order ) {
+        backlog.front().auto_resume = true;
+    }
 }
 
 void npc::execute_action( npc_action action )
@@ -1840,7 +1858,7 @@ healing_options npc::patient_assessment( const Character &c )
     return try_to_fix;
 }
 
-npc_action npc::address_needs( float danger )
+npc_action npc::address_needs( float danger, bool urgent_only )
 {
     Character &player_character = get_player_character();
     const bool safe_to_heal = danger < 0.01f;
@@ -1850,8 +1868,15 @@ npc_action npc::address_needs( float danger )
     // ( also we can get huge performance boosts )
     if( one_in( 3 ) ) {
         healing_options try_to_fix_me = patient_assessment( *this );
+        bool critical_injury = has_effect( effect_bleed ) || has_effect( effect_bite ) ||
+                               has_effect( effect_infected );
+        for( const bodypart_id &bp : get_all_body_parts() ) {
+            critical_injury = critical_injury ||
+                              get_part_hp_cur( bp ) * 2 <= get_part_hp_max( bp );
+        }
         if( try_to_fix_me.any_true() ) {
-            if( !use_bionic_by_id( bio_nanobots ) && safe_to_heal ) {
+            if( ( !urgent_only || critical_injury ) && !use_bionic_by_id( bio_nanobots ) &&
+                safe_to_heal ) {
                 ai_cache.can_heal = has_healing_options( try_to_fix_me );
                 if( ai_cache.can_heal.any_true() ) {
                     return npc_heal;
@@ -1860,7 +1885,7 @@ npc_action npc::address_needs( float danger )
         } else {
             deactivate_bionic_by_id( bio_nanobots );
         }
-        if( safe_to_heal && get_skill_level( skill_firstaid ) > 0 &&
+        if( !urgent_only && safe_to_heal && get_skill_level( skill_firstaid ) > 0 &&
             rules.has_flag( ally_rule::heal_others ) ) {
             if( is_player_ally() ) {
                 healing_options try_to_fix_other = patient_assessment( player_character );
@@ -1888,7 +1913,7 @@ npc_action npc::address_needs( float danger )
         }
     }
 
-    if( one_in( 3 ) ) {
+    if( one_in( 3 ) && ( !urgent_only || get_perceived_pain() >= 40 ) ) {
         if( get_perceived_pain() >= 15 ) {
             if( !activate_bionic_by_id( bio_painkiller ) && has_painkiller() && !took_painkiller() ) {
                 return npc_use_painkiller;
@@ -1898,14 +1923,16 @@ npc_action npc::address_needs( float danger )
         }
     }
 
-    if( one_in( 3 ) && can_reload_current() ) {
+    if( !urgent_only && one_in( 3 ) && can_reload_current() ) {
         return npc_reload;
     }
 
-    item_location reloadable = find_reloadable();
-    if( reloadable ) {
-        do_reload( reloadable );
-        return npc_noop;
+    if( !urgent_only ) {
+        item_location reloadable = find_reloadable();
+        if( reloadable ) {
+            do_reload( reloadable );
+            return npc_noop;
+        }
     }
 
     const bool local_survival = is_player_ally();
@@ -1914,7 +1941,7 @@ npc_action npc::address_needs( float danger )
         return npc_noop;
     }
 
-    const bool vitamin_deficiency = has_treatable_vitamin_deficiency( *this );
+    const bool vitamin_deficiency = !urgent_only && has_treatable_vitamin_deficiency( *this );
     // Extreme thirst, hunger, or a treatable deficiency bypasses the safety check.
     if( get_thirst() > 80 ||
         get_stored_kcal() + stomach.get_calories() < get_healthy_kcal() * 0.75 ||
@@ -1955,6 +1982,13 @@ npc_action npc::address_needs( float danger )
         if( forage_local_food() ) {
             return activity ? npc_player_activity : npc_noop;
         }
+    }
+
+    if( urgent_only ) {
+        if( get_fatigue() > fatigue_levels::MASSIVE_FATIGUE && danger <= 0.01f ) {
+            return npc_sleep;
+        }
+        return npc_undecided;
     }
 
     if( one_in( 3 ) && ( get_thirst() > NPC_THIRST_CONSUME ||
@@ -2679,6 +2713,7 @@ bool npc::find_job_to_perform()
         player_activity scan_act = player_activity( elem );
         if( elem == ACT_MOVE_LOOT ) {
             assign_activity( elem );
+            return true;
         } else if( generic_multi_activity_handler( scan_act, *this->as_character(), true ) ) {
             assign_activity( elem );
             return true;
@@ -2757,7 +2792,8 @@ void npc::worker_downtime()
                 10 ) ) {
             if( creatures.creature_at( elem ) || !could_move_onto( elem ) ||
                 here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, elem ) ||
-                !here.has_floor( elem ) || g->is_dangerous_tile( elem ) ) {
+                !here.has_floor( elem ) || g->is_dangerous_tile( elem ) ||
+                !here.point_within_camp( here.getabs( elem ) ) ) {
                 continue;
             }
             pts.push_back( elem );
@@ -2768,6 +2804,45 @@ void npc::worker_downtime()
         }
     }
     move_pause();
+}
+
+bool npc::is_camp_duty_ready() const
+{
+    if( !assigned_camp || !camp_duty ) {
+        return false;
+    }
+    const cata::optional<basecamp *> camp = overmap_buffer.find_camp( assigned_camp->xy() );
+    return camp && ( *camp )->point_within_camp( global_omt_location() );
+}
+
+void npc::return_to_assigned_camp()
+{
+    if( !assigned_camp ) {
+        return;
+    }
+    const cata::optional<basecamp *> camp = overmap_buffer.find_camp( assigned_camp->xy() );
+    if( !camp ) {
+        assigned_camp = cata::nullopt;
+        camp_duty = false;
+        return;
+    }
+
+    camp_duty = true;
+    fetching_item = false;
+    guard_pos = cata::nullopt;
+    chair_pos = cata::nullopt;
+    wander_pos = cata::nullopt;
+    goal = ( *camp )->camp_omt_pos();
+    set_attitude( NPCATT_NULL );
+    if( global_omt_location() == goal ) {
+        set_mission( NPC_MISSION_GUARD_ALLY );
+        omt_path.clear();
+    } else {
+        omt_path = overmap_buffer.get_travel_path( global_omt_location(), goal,
+                   overmap_path_params::for_npc() );
+        set_mission( NPC_MISSION_TRAVELLING );
+    }
+    chatbin.first_topic = chatbin.talk_friend_guard;
 }
 
 void npc::move_pause()

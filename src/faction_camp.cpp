@@ -3092,12 +3092,7 @@ void basecamp::start_crafting( const std::string &type, const mission_id &miss_i
 
 void basecamp::start_crafting_with_ui( const mission_id &miss_id )
 {
-    std::vector<npc_ptr> available_workers;
-    for( const npc_ptr &worker : assigned_npcs ) {
-        if( worker.get() != nullptr && !worker->has_companion_mission() ) {
-            available_workers.push_back( worker );
-        }
-    }
+    std::vector<npc_ptr> available_workers = available_crafting_workers();
     if( available_workers.empty() ) {
         popup( _( "No assigned camp worker is currently available to craft." ) );
         return;
@@ -3110,7 +3105,7 @@ void basecamp::start_crafting_with_ui( const mission_id &miss_id )
 
     recipe_subset camp_recipes;
     npc combined_worker;
-    for( const recipe_id &known_recipe : recipe_deck_all() ) {
+    for( const recipe_id &known_recipe : recipe_deck_all( &_inv ) ) {
         const recipe *rec = &known_recipe.obj();
         camp_recipes.include( rec );
         combined_worker.learn_recipe( rec );
@@ -3137,6 +3132,13 @@ void basecamp::start_crafting_with_ui( const mission_id &miss_id )
     const recipe *making = select_crafting_recipe( batch_size, recipe_id(), &combined_worker,
                            true, &_inv, &camp_recipes );
     if( making == nullptr ) {
+        return;
+    }
+
+    map &here = get_map();
+    form_storage_zones( here, get_player_character().get_location() );
+    if( !has_storage_for_craft( *making ) ) {
+        popup( _( "The camp has no empty liquid container in its storage zone for this craft." ) );
         return;
     }
 

@@ -1200,6 +1200,14 @@ void conditional_t<T>::set_npc_following( bool is_npc )
 }
 
 template<class T>
+void conditional_t<T>::set_npc_has_assigned_camp( bool is_npc )
+{
+    condition = [is_npc]( const T & d ) {
+        return d.actor( is_npc )->has_assigned_camp();
+    };
+}
+
+template<class T>
 void conditional_t<T>::set_npc_friend( bool is_npc )
 {
     condition = [is_npc]( const T & d ) {
@@ -3328,6 +3336,8 @@ conditional_t<T>::conditional_t( const std::string &type )
         set_npc_available( false );
     } else if( type == "npc_following" ) {
         set_npc_following( true );
+    } else if( type == "npc_has_assigned_camp" ) {
+        set_npc_has_assigned_camp( true );
     } else if( type == "u_following" ) {
         set_npc_following( false );
     } else if( type == "npc_friend" ) {

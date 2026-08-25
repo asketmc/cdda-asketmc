@@ -367,12 +367,14 @@ std::vector<basecamp_upgrade> basecamp::available_upgrades( const point &dir )
 }
 
 // recipes and craft support functions
-std::unordered_set<recipe_id> basecamp::recipe_deck_all() const
+std::unordered_set<recipe_id> basecamp::recipe_deck_all( const inventory *supplies ) const
 {
     std::unordered_set<recipe_id> recipes;
     for( const npc_ptr &worker : assigned_npcs ) {
         if( worker != nullptr ) {
-            for( const recipe *known : worker->get_learned_recipes() ) {
+            const recipe_subset available = supplies == nullptr ? worker->get_learned_recipes() :
+                                            worker->get_available_recipes( *supplies );
+            for( const recipe *known : available ) {
                 recipes.insert( known->ident() );
             }
         }
@@ -386,6 +388,39 @@ std::unordered_set<recipe_id> basecamp::recipe_deck_all() const
         }
     }
     return recipes;
+}
+
+std::vector<npc_ptr> basecamp::available_crafting_workers() const
+{
+    std::vector<npc_ptr> result;
+    for( const npc_ptr &worker : assigned_npcs ) {
+        if( worker != nullptr && !worker->has_companion_mission() ) {
+            result.push_back( worker );
+        }
+    }
+    return result;
+}
+
+bool basecamp::has_storage_for_craft( const recipe &making ) const
+{
+    const std::vector<item> results = making.create_results( 1 );
+    const std::vector<item> byproducts = making.create_byproducts( 1 );
+    const bool produces_liquid =
+        std::any_of( results.begin(), results.end(), []( const item & it ) {
+        return it.made_of( phase_id::LIQUID );
+    } ) || std::any_of( byproducts.begin(), byproducts.end(), []( const item & it ) {
+        return it.made_of( phase_id::LIQUID );
+    } );
+    if( !produces_liquid ) {
+        return true;
+    }
+
+    map &here = get_map();
+    return std::any_of( liquid_dumping_spots.begin(), liquid_dumping_spots.end(),
+    [&here]( const tripoint_abs_ms & spot ) {
+        const tripoint local_spot = here.getlocal( spot );
+        return here.inbounds( local_spot ) && here.i_at( local_spot ).empty();
+    } );
 }
 
 faction *basecamp::fac() const
@@ -566,6 +601,7 @@ void basecamp::add_assignee( character_id id )
         return;
     }
     npc_to_add->assigned_camp = omt_pos;
+    npc_to_add->camp_duty = true;
     assigned_npcs.push_back( npc_to_add );
 }
 
@@ -577,6 +613,7 @@ void basecamp::remove_assignee( character_id id )
         return;
     }
     npc_to_remove->assigned_camp = cata::nullopt;
+    npc_to_remove->camp_duty = false;
     assigned_npcs.erase( std::remove( assigned_npcs.begin(), assigned_npcs.end(), npc_to_remove ),
                          assigned_npcs.end() );
 }
