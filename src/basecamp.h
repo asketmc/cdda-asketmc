@@ -252,7 +252,8 @@ class basecamp
         /// Recipes known by assigned NPCs or provided by any camp expansion.
         std::unordered_set<recipe_id> recipe_deck_all( const inventory *supplies = nullptr ) const;
         std::vector<npc_ptr> available_crafting_workers() const;
-        bool has_storage_for_craft( const recipe &making ) const;
+        bool has_storage_for_craft( const recipe &making, map &target_map,
+                                    const tripoint_abs_ms &storage_origin );
         int recipe_batch_max( const recipe &making ) const;
         void form_crafting_inventory();
         void form_crafting_inventory( map &target_map );

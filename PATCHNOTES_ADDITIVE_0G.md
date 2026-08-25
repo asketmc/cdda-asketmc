@@ -128,8 +128,9 @@ global behavior tree and mission scheduler are not included.
   be told to return to camp duties; displaced workers head for their camp and
   spend downtime inside its footprint.
 - Camp crafting recognizes recipes from physical books and powered e-readers
-  in storage, reports when no worker is available, and rejects liquid crafts
-  before work starts when no empty zoned liquid fixture exists.
+  in storage, offers only on-duty workers present at that camp, and rejects
+  local or radio liquid crafts before work starts when the target camp has no
+  empty zoned liquid fixture.
 - The legacy sorter correctly reports that its move-loot job was assigned,
   preventing a false no-work result. The later walking sorter and activity
   actor framework are not imported.

@@ -213,6 +213,15 @@ TEST_CASE( "Camp assignment survives temporary follow and guard orders",
         CHECK( *worker.assigned_camp == camp_pos );
         CHECK_FALSE( worker.camp_duty );
     }
+
+    SECTION( "return command does not interrupt active camp work" ) {
+        worker.set_attitude( NPCATT_ACTIVITY );
+        worker.assign_activity( ACT_WAIT_NPC, 5000 );
+        talk_function::return_to_camp( worker );
+        CHECK( worker.activity.id() == ACT_WAIT_NPC );
+        CHECK( worker.get_attitude() == NPCATT_ACTIVITY );
+        CHECK( worker.camp_duty );
+    }
 }
 
 TEST_CASE( "Displaced camp worker targets the assigned camp board",
@@ -235,6 +244,52 @@ TEST_CASE( "Displaced camp worker targets the assigned camp board",
     CHECK( worker.camp_duty );
     CHECK( worker.goal == camp_pos );
     CHECK( worker.mission == NPC_MISSION_TRAVELLING );
+}
+
+TEST_CASE( "Camp worker finishes travel on arrival",
+           "[npc][camp][lifecycle][travel]" )
+{
+    npc &worker = setup_camp_worker();
+    const tripoint_abs_omt camp_pos = worker.global_omt_location();
+    overmap *const om = overmap_buffer.get_existing( project_to<coords::om>( camp_pos.xy() ) );
+    REQUIRE( om != nullptr );
+    test_camp_scope scope( *om, camp_pos, get_map().getglobal( worker.pos() ).raw() );
+    scope.camp().add_assignee( worker.getID() );
+    worker.set_mission( NPC_MISSION_TRAVELLING );
+    worker.omt_path.push_back( camp_pos );
+
+    worker.move();
+
+    CHECK( worker.mission == NPC_MISSION_GUARD_ALLY );
+    CHECK( worker.omt_path.empty() );
+    CHECK( worker.camp_duty );
+}
+
+TEST_CASE( "Urgent needs preserve stashed camp work",
+           "[npc][camp][priority][activity]" )
+{
+    npc &worker = setup_camp_worker();
+    worker.set_skill_level( skill_firstaid, 4 );
+    worker.set_attitude( NPCATT_ACTIVITY );
+    worker.apply_damage( nullptr, bodypart_id( "arm_r" ),
+                         worker.get_part_hp_max( bodypart_id( "arm_r" ) ) / 2 + 1 );
+    worker.i_add( item( itype_bandages ) );
+    worker.set_stashed_activity( player_activity( ACT_WAIT_NPC ) );
+
+    worker.move();
+
+    CHECK( worker.activity.id() == ACT_FIRSTAID );
+    REQUIRE( worker.has_stashed_activity() );
+    CHECK( worker.get_stashed_activity().id() == ACT_WAIT_NPC );
+
+    while( worker.activity.id() == ACT_FIRSTAID ) {
+        worker.moves += worker.get_speed();
+        worker.activity.do_turn( worker );
+    }
+    worker.moves = 100;
+    worker.move();
+    CHECK( worker.activity.id() == ACT_WAIT_NPC );
+    CHECK_FALSE( worker.has_stashed_activity() );
 }
 
 TEST_CASE( "Camp worker free time remains inside camp",
@@ -332,6 +387,13 @@ TEST_CASE( "Camp crafting worker availability is explicit",
     const std::vector<npc_ptr> workers = scope.camp().available_crafting_workers();
     REQUIRE( workers.size() == 1 );
     CHECK( workers.front()->getID() == worker.getID() );
+
+    worker.camp_duty = false;
+    CHECK( scope.camp().available_crafting_workers().empty() );
+
+    worker.camp_duty = true;
+    worker.spawn_at_omt( camp_pos + point( 1, 0 ) );
+    CHECK( scope.camp().available_crafting_workers().empty() );
 }
 
 TEST_CASE( "Liquid camp craft requires an empty storage fixture",
@@ -348,12 +410,35 @@ TEST_CASE( "Liquid camp craft requires an empty storage fixture",
                                      faction_your_followers, false, true,
                                      absolute_target.raw(), absolute_target.raw() );
 
-    REQUIRE( camp.form_storage_zones( here, here.getglobal( worker.pos() ) ) );
-    CHECK( camp.has_storage_for_craft( recipe_water_clean.obj() ) );
+    CHECK( camp.has_storage_for_craft( recipe_water_clean.obj(), here,
+                                       here.getglobal( worker.pos() ) ) );
 
     here.add_item_or_charges( target, item( itype_rock ) );
-    CHECK_FALSE( camp.has_storage_for_craft( recipe_water_clean.obj() ) );
-    CHECK( camp.has_storage_for_craft( recipe_test_soldering_iron.obj() ) );
+    CHECK_FALSE( camp.has_storage_for_craft( recipe_water_clean.obj(), here,
+                 here.getglobal( worker.pos() ) ) );
+    CHECK( camp.has_storage_for_craft( recipe_test_soldering_iron.obj(), here,
+                                       here.getglobal( worker.pos() ) ) );
+}
+
+TEST_CASE( "Remote camp liquid storage uses the camp map",
+           "[npc][camp][crafting][liquid][remote]" )
+{
+    npc &worker = setup_camp_worker();
+    const tripoint_abs_ms remote_target = worker.get_location() + tripoint( 1000, 1000, 0 );
+    tinymap remote_map;
+    remote_map.load( project_to<coords::sm>( remote_target ), false );
+    const tripoint remote_local = remote_map.getlocal( remote_target );
+    const furn_id old_furniture = remote_map.furn( remote_local );
+    remote_map.furn_set( remote_local, furn_f_bathtub );
+    zone_manager::get_manager().add( "Remote camp storage", zone_type_CAMP_STORAGE,
+                                     faction_your_followers, false, true,
+                                     remote_target.raw(), remote_target.raw() );
+    basecamp camp( "remote liquid camp", project_to<coords::omt>( remote_target ) );
+
+    CHECK( camp.has_storage_for_craft( recipe_water_clean.obj(), remote_map, remote_target ) );
+
+    remote_map.furn_set( remote_local, old_furniture );
+    remote_map.save();
 }
 
 TEST_CASE( "Legacy camp sorter reports assigned work",

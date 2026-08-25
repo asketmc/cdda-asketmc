@@ -394,14 +394,16 @@ std::vector<npc_ptr> basecamp::available_crafting_workers() const
 {
     std::vector<npc_ptr> result;
     for( const npc_ptr &worker : assigned_npcs ) {
-        if( worker != nullptr && !worker->has_companion_mission() ) {
+        if( worker != nullptr && !worker->has_companion_mission() && worker->camp_duty &&
+            worker->is_camp_duty_ready() ) {
             result.push_back( worker );
         }
     }
     return result;
 }
 
-bool basecamp::has_storage_for_craft( const recipe &making ) const
+bool basecamp::has_storage_for_craft( const recipe &making, map &target_map,
+                                      const tripoint_abs_ms &storage_origin )
 {
     const std::vector<item> results = making.create_results( 1 );
     const std::vector<item> byproducts = making.create_byproducts( 1 );
@@ -415,11 +417,11 @@ bool basecamp::has_storage_for_craft( const recipe &making ) const
         return true;
     }
 
-    map &here = get_map();
+    form_storage_zones( target_map, storage_origin );
     return std::any_of( liquid_dumping_spots.begin(), liquid_dumping_spots.end(),
-    [&here]( const tripoint_abs_ms & spot ) {
-        const tripoint local_spot = here.getlocal( spot );
-        return here.inbounds( local_spot ) && here.i_at( local_spot ).empty();
+    [&target_map]( const tripoint_abs_ms & spot ) {
+        const tripoint local_spot = target_map.getlocal( spot );
+        return target_map.inbounds( local_spot ) && target_map.i_at( local_spot ).empty();
     } );
 }
 

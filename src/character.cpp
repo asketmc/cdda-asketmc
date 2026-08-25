@@ -1356,6 +1356,11 @@ player_activity Character::get_stashed_activity() const
     return stashed_outbounds_activity;
 }
 
+player_activity Character::get_stashed_backlog_activity() const
+{
+    return stashed_outbounds_backlog;
+}
+
 void Character::set_stashed_activity( const player_activity &act, const player_activity &act_back )
 {
     stashed_outbounds_activity = act;
