@@ -195,6 +195,7 @@ TEST_CASE( "NPC healing resumes an interrupted activity", "[npc][needs][medicine
     REQUIRE( guy.activity.id() == ACT_FIRSTAID );
     finish_firstaid_only( guy );
     CHECK( guy.activity.id() == ACT_WAIT_NPC );
+    CHECK( guy.current_activity_id == ACT_WAIT_NPC );
 }
 
 TEST_CASE( "NPC resumes work after healing an ally", "[npc][needs][medicine][activity]" )
@@ -213,6 +214,7 @@ TEST_CASE( "NPC resumes work after healing an ally", "[npc][needs][medicine][act
     finish_firstaid_only( guy );
     CHECK( patient.has_effect( efftype_id( "bandaged" ), arm ) );
     CHECK( guy.activity.id() == ACT_WAIT_NPC );
+    CHECK( guy.current_activity_id == ACT_WAIT_NPC );
 }
 
 TEST_CASE( "NPC uses vitamin medicine only for a deficiency", "[npc][needs][vitamins]" )

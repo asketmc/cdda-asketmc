@@ -8250,6 +8250,9 @@ void Character::resume_backlog_activity()
         activity.auto_resume = false;
         activity.allow_distractions();
         backlog.pop_front();
+        if( is_npc() ) {
+            dynamic_cast<npc *>( this )->current_activity_id = activity.id();
+        }
     }
 }
 
