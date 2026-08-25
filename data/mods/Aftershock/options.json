@@ -16,5 +16,11 @@
     "name": "EMP_DISABLE_ELECTRONICS",
     "stype": "bool",
     "value": false
+  },
+  {
+    "type": "EXTERNAL_OPTION",
+    "name": "GAME_EMP",
+    "stype": "bool",
+    "value": true
   }
 ]

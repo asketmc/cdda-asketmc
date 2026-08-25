@@ -1,6 +1,7 @@
 #include "cata_catch.h"
 #include "item.h"
 
+#include <array>
 #include <cmath>
 #include <initializer_list>
 #include <limits>
@@ -10,6 +11,7 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "enums.h"
+#include "fault.h"
 #include "flag.h"
 #include "game.h"
 #include "item_factory.h"
@@ -36,6 +38,27 @@ static const itype_id itype_test_mp3( "test_mp3" );
 static const itype_id itype_test_smart_phone( "test_smart_phone" );
 static const itype_id itype_test_snippet_description( "test_snippet_description" );
 static const itype_id itype_test_waterproof_bag( "test_waterproof_bag" );
+
+TEST_CASE( "EMP faults disable electronics and provide repairs", "[item][fault][emp]" )
+{
+    const std::array<fault_id, 3> repairable_faults = {
+        fault_id( "fault_electronic_blown_fuse" ),
+        fault_id( "fault_electronic_blown_capacitor" ),
+        fault_id( "fault_electronic_shorted_circuit" )
+    };
+
+    for( const fault_id &fault : repairable_faults ) {
+        item phone( itype_test_smart_phone );
+        phone.faults.insert( fault );
+        CHECK( phone.is_broken() );
+        CHECK_FALSE( fault->mending_methods().empty() );
+    }
+
+    item rebooting_phone( itype_test_smart_phone );
+    rebooting_phone.faults.insert( fault_id( "fault_emp_reboot" ) );
+    CHECK( rebooting_phone.is_broken() );
+    CHECK( rebooting_phone.needs_processing() );
+}
 
 TEST_CASE( "item_description_snippets_expand_once", "[item][snippet]" )
 {
