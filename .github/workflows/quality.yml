@@ -1,4 +1,4 @@
-name: Lightweight quality
+name: KISS PR gate
 
 on:
   pull_request:
@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 1
           persist-credentials: false
@@ -26,12 +26,23 @@ jobs:
         run: git fetch --no-tags --depth=1 https://github.com/CleverRaven/Cataclysm-DDA.git d6ec466140839dd70c1a43671eb4a08b007695c2
       - name: Install graphics-test dependencies
         run: python3 -m pip install --disable-pip-version-check -r tools/gfx_tools/ultica_hires/requirements.txt
+      - name: Validate GitHub Actions workflows
+        run: |
+          curl --fail --location --retry 3 \
+            --output actionlint.tar.gz \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  actionlint.tar.gz" | sha256sum --check
+          tar -xzf actionlint.tar.gz actionlint
+          ./actionlint
       - name: Python feature contracts
         run: |
           python3 -m unittest \
+            tools.test_package_windows_release \
+            tools.test_windows_release_workflow \
             tools.test_h5_interface_qol \
             tools.test_h6_antigrind \
             tools.test_h6_backup_generator \
+            tools.test_windows_audio_recovery \
             tools.gfx_tools.test_backport_tileset_release \
             tools.gfx_tools.test_build_ultica_hires \
             tools.gfx_tools.test_beauty_backport_assets \
