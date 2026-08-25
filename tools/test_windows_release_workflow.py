@@ -51,6 +51,7 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
     def test_make_staging_contract_is_used_without_make_zip(self) -> None:
         self.assertRegex(self.makefile, r"(?m)^BINDIST_DIR = \$\(BUILD_PREFIX\)bindist$")
         self.assertIn('dist_dir="${build_prefix}bindist"', self.workflow)
+        self.assertIn('"JSON_FORMATTER_BIN=${build_prefix}json_formatter.exe"', self.workflow)
         self.assertIn("BINDIST_CMD=:", self.workflow)
         self.assertNotIn('dist_dir="cataclysmdda-${version}"', self.workflow)
 

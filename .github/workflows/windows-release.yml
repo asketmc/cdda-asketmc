@@ -127,6 +127,7 @@ jobs:
             mkdir -p "${build_prefix}"
             make -j"$(nproc)" \
               "BUILD_PREFIX=${build_prefix}" \
+              "JSON_FORMATTER_BIN=${build_prefix}json_formatter.exe" \
               "VERSION=${version}" \
               "CROSS=${cross}" \
               "CCACHE=${use_ccache}" RELEASE=1 TILES=1 SOUND=1 LOCALIZE=0 RUNTESTS=0 \
