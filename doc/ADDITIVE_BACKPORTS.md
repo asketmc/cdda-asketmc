@@ -185,6 +185,21 @@ Existing 0.G entities remain authoritative; only IDs absent from 0.G are
 candidates for import, and only self-contained candidates selected for this
 manifest are actually imported.
 
+## Follower QoL donor disposition
+
+This branch selectively adapts the small, compatible parts of the modern NPC
+work rather than importing its replacement behavior stack.
+
+| Area | Donor | Result |
+| --- | --- | --- |
+| NPC temperature, wetness, sleep, camp water | CleverRaven #86016 (`69e67579e0adf6bc345904242c40e88e1237d74d`) | Adapted to the 0.G NPC update and camp APIs |
+| Camp mopping job | CleverRaven #86257 (`4813d0e10e9baa048aea3f9e32afb77145fdda0c`) | Adapted; the target already had mopping and tool fetching |
+| Personal sorting-zone isolation | CleverRaven #86254 (`eba56896b357c633f17973c5442d3b69f7832895`) | Adapted to the legacy move-loot activity |
+| Crafting UI, bulk priorities, worker food/vitamins, larder medicine | #67458, #77715, #77573, #71546, #71670, #76025 | Already present |
+| Autonomous ground/vehicle scavenging and camp-resident state machine | #86035, #86052, #86172, #86173 | Deferred: requires the later global NPC behavior/mission stack |
+| Activity-actor sorting rewrites | #83980, #84311 | Not applicable to the legacy direct sorting implementation |
+| TLG medical and weapon-selection rewrites | TLG #1603, #2746, #2982 | Deferred: target already self-heals/allied-heals; remaining changes alter combat or require later medicine AI |
+
 ## Additive data audit
 
 `tools/additive_audit.py` is the fail-closed data gate for this branch. It always

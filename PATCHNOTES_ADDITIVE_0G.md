@@ -54,6 +54,27 @@ The matching Windows Tiles+Sound package is published under GitHub Releases.
 Spoiler-heavy lists are collapsed below. Normal sections explain mechanics
 without revealing locations or rare loot pools.
 
+## Followers and camp work
+
+- Followers now actually fall asleep when tired instead of repeatedly lying
+  down without recovering. Non-following NPCs no longer erase their fatigue.
+- NPC body temperature and wetness update while active and reconcile after an
+  unloaded NPC returns, so weather and shelter matter consistently.
+- Camp water is ingested into the NPC stomach instead of instantly resetting
+  thirst, preserving the normal digestion model.
+- Camp residents can be assigned mopping from the existing job-priority menu;
+  they use the existing tool-fetching and mopping-zone workflow.
+- NPC automatic sorting ignores player-personal source and destination zones.
+  Shared camp and vehicle zones continue to work normally.
+- The normal crafting-menu follower orders, camp crafting UI, worker larder,
+  vitamins, medicine/mutagen storage, follower-rules window, and bulk job
+  priority controls were already present and remain unchanged.
+
+The broader experimental autonomous-needs/foraging state machine was not
+copied wholesale: it depends on post-0.G NPC mission and behavior-tree
+infrastructure and would replace existing follower behavior rather than make a
+bounded additive correction.
+
 ## Visuals, sound, fonts, and interface
 
 ### Current UltiCa and SurveyorsMap

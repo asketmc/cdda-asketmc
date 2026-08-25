@@ -2102,6 +2102,9 @@ void activity_on_turn_move_loot( player_activity &act, Character &you )
         for( const tripoint_abs_ms &p :
              mgr.get_near( zone_type_LOOT_UNSORTED, abspos, ACTIVITY_SEARCH_DISTANCE, nullptr,
                            _fac_id( you ) ) ) {
+            if( you.is_npc() && !mgr.has_nonpersonal( zone_type_LOOT_UNSORTED, p, _fac_id( you ) ) ) {
+                continue;
+            }
             act.coord_set.insert( p.raw() );
         }
         stage = THINK;
@@ -2293,8 +2296,17 @@ void activity_on_turn_move_loot( player_activity &act, Character &you )
                 continue;
             }
 
-            const std::unordered_set<tripoint_abs_ms> dest_set =
+            std::unordered_set<tripoint_abs_ms> dest_set =
                 mgr.get_near( id, abspos, ACTIVITY_SEARCH_DISTANCE, &thisitem, _fac_id( you ) );
+            if( you.is_npc() ) {
+                for( auto it_dest = dest_set.begin(); it_dest != dest_set.end(); ) {
+                    if( !mgr.has_nonpersonal( id, *it_dest, _fac_id( you ) ) ) {
+                        it_dest = dest_set.erase( it_dest );
+                    } else {
+                        ++it_dest;
+                    }
+                }
+            }
 
             // if this item isn't going anywhere and its not sealed
             // check if it is in a unload zone or a strip corpse zone

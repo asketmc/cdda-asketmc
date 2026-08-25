@@ -141,6 +141,7 @@ class job_data
             { activity_id( "ACT_MULTIPLE_FISH" ), 0 },
             { activity_id( "ACT_MOVE_LOOT" ), 0 },
             { activity_id( "ACT_TIDY_UP" ), 0 },
+            { activity_id( "ACT_MULTIPLE_MOP" ), 0 },
             { activity_id( "ACT_MULTIPLE_DIS" ), 0}
         };
     public:
@@ -1384,6 +1385,7 @@ class npc : public Character
          * Update body, but throttled.
          */
         void npc_update_body();
+        void update_bodytemp_and_wetness();
 
         bool get_known_to_u() const;
 

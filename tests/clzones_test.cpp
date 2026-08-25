@@ -53,13 +53,29 @@ int count_items_or_charges( const tripoint src, const itype_id &id,
 }
 
 void create_tile_zone( const std::string &name, const zone_type_id &zone_type, tripoint pos,
-                       bool veh = false )
+                       bool veh = false, bool personal = false )
 {
     zone_manager &zm = zone_manager::get_manager();
-    zm.add( name, zone_type, faction_your_followers, false, true, pos, pos, nullptr, false, veh );
+    zm.add( name, zone_type, faction_your_followers, false, true, pos, pos, nullptr, personal, veh );
 }
 
 } // namespace
+
+TEST_CASE( "NPC work ignores personal zones", "[zones][npc][basecamp]" )
+{
+    clear_avatar();
+    clear_map();
+    zone_manager &zm = zone_manager::get_manager();
+    const tripoint personal_pos = tripoint_east;
+    const tripoint shared_pos = tripoint_west;
+
+    create_tile_zone( "Personal", zone_type_LOOT_UNSORTED, personal_pos, false, true );
+    create_tile_zone( "Shared", zone_type_LOOT_UNSORTED, shared_pos );
+
+    CHECK_FALSE( zm.has_nonpersonal( zone_type_LOOT_UNSORTED,
+                                    get_map().getglobal( personal_pos ) ) );
+    CHECK( zm.has_nonpersonal( zone_type_LOOT_UNSORTED, get_map().getglobal( shared_pos ) ) );
+}
 
 TEST_CASE( "zone unloading ammo belts", "[zones][items][ammo_belt][activities][unload]" )
 {
