@@ -15,6 +15,7 @@ evidence remain in the linked reports and player patch notes.
 | Crafting, inventory, and repair performance | Integrated selected behavior | [BN #917](https://github.com/cataclysmbnteam/Cataclysm-BN/pull/917), [BN #1117](https://github.com/cataclysmbnteam/Cataclysm-BN/pull/1117), [BN #8221](https://github.com/cataclysmbnteam/Cataclysm-BN/pull/8221) |
 | Repairable EMP faults | Integrated | [CDDA 73bcb0a](https://github.com/CleverRaven/Cataclysm-DDA/commit/73bcb0a906b7a8d5b38257d9d11cf53b79f6aa83), [game EMP 6c45556](https://github.com/CleverRaven/Cataclysm-DDA/commit/6c4555671cd1d8ae102bd81d36d107058e5d1c8e) |
 | Contained NPC activity items | Fixed locally | [Patch notes](PATCHNOTES_ADDITIVE_0G.md) |
+| Multi-turn pickup target loss | Fixed locally; no donor code | [Patch notes](PATCHNOTES_ADDITIVE_0G.md) |
 | Windows audio recovery | Adapted for 0.G SDL2 | [DDA #76782](https://github.com/CleverRaven/Cataclysm-DDA/pull/76782) merge `1c24d320625841301dbde926da1e1c9eb0c4dbf1` (donors `effacd0bf5a6d3f746f26fc28493a98d2cd34617`, `4ba6ea94fc565326d17bb41640a4828c8ef8993f`); SDL3 excluded; policy executable-tested and Windows objects compiled from source commit `028a83ba97dbdfcecaf46b2c035e106aea7007ca`, but broken-endpoint hardware injection remains a local runtime limit |
 | H3-H6 delivery ledger | Resolved; exclusions recorded | Reports above |
 

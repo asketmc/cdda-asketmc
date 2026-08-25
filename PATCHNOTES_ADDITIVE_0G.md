@@ -32,6 +32,11 @@ The matching Windows Tiles+Sound package is published under GitHub Releases.
 - Fixed save/load resolution for items inside containers carried by unloaded
   NPCs.  Interrupted follower and prisoner activities no longer emit cascades
   of missing-owner, lost-target, and invalid-parent `item_location` errors.
+- Multi-turn pickup now reports items removed by other activity instead of
+  raising a debug error.  Names and safe location descriptions survive saves,
+  lost locations cannot retarget another item on load, and locations that never
+  resolved still fail loudly.  Focused Catch coverage exercises multiple losses,
+  a surviving target, an unrelated same-tile item, and a save/load round trip.
 - Fixed an NPC dialogue crash when closing the final categorized talk topic.
 - Normalized current UltiCa and SurveyorsMap directional sprites to the 0.G
   rotation contract. This fixes east/west mirroring for vehicles, diagonal

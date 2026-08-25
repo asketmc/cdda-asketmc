@@ -38,15 +38,20 @@
 template <typename T>
 static int find_index( const T &sel, const item *obj )
 {
+    if( obj == nullptr ) {
+        return -1;
+    }
     int idx = -1;
-    sel.visit_items( [&idx, &obj]( const item * e, item * ) {
+    int found = -1;
+    sel.visit_items( [&idx, &found, &obj]( const item * e, item * ) {
         idx++;
         if( e == obj ) {
+            found = idx;
             return VisitResponse::ABORT;
         }
         return VisitResponse::NEXT;
     } );
-    return idx;
+    return found;
 }
 
 template <typename T>

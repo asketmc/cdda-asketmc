@@ -311,7 +311,10 @@ static bool pick_one_up( item_location &loc, int quantity, bool &got_water, bool
 }
 
 bool Pickup::do_pickup( std::vector<item_location> &targets, std::vector<int> &quantities,
-                        bool autopickup, bool &stash_successful )
+                        bool autopickup, bool &stash_successful,
+                        std::vector<std::string> *target_names,
+                        std::vector<std::string> *target_descriptions,
+                        std::vector<bool> *target_was_valid )
 {
     bool got_water = false;
     bool got_gas = false;
@@ -324,16 +327,46 @@ bool Pickup::do_pickup( std::vector<item_location> &targets, std::vector<int> &q
     PickupMap mapPickup;
 
     bool problem = false;
+    int lost_targets = 0;
     while( !problem && player_character.moves >= 0 && !targets.empty() ) {
         item_location target = std::move( targets.back() );
         int quantity = quantities.back();
+        std::string target_name;
+        if( target_names != nullptr && !target_names->empty() ) {
+            target_name = target_names->back();
+            target_names->pop_back();
+        }
+        std::string target_description;
+        if( target_descriptions != nullptr && !target_descriptions->empty() ) {
+            target_description = target_descriptions->back();
+            target_descriptions->pop_back();
+        }
+        bool was_valid = false;
+        if( target_was_valid != nullptr && !target_was_valid->empty() ) {
+            was_valid = target_was_valid->back();
+            target_was_valid->pop_back();
+        }
         // Whether we pick the item up or not, we're done trying to do so,
         // so remove it from the list.
         targets.pop_back();
         quantities.pop_back();
 
         if( !target ) {
-            debugmsg( "lost target item of ACT_PICKUP" );
+            const std::string what = target_name.empty() ? "an unknown item" : target_name;
+            if( !was_valid ) {
+                // The location never pointed anywhere usable, so this is a real defect
+                // rather than an item that stopped existing while we worked.
+                debugmsg( "lost target item of ACT_PICKUP: %s had an invalid location", what );
+            } else {
+                // Losing a target is legitimate.  Picking up several items takes more
+                // than one turn, and an ally hauling loot, a craft consuming components,
+                // or terrain being deconstructed can all remove one in the meantime.
+                // D_MAIN because only that class is logged by default in a release build.
+                DebugLog( D_WARNING, D_MAIN ) << "lost target item of ACT_PICKUP: " << what
+                                              << " was " << ( target_description.empty() ?
+                                                      "at a location that no longer resolves" : target_description );
+                lost_targets++;
+            }
             continue;
         }
 
@@ -344,6 +377,11 @@ bool Pickup::do_pickup( std::vector<item_location> &targets, std::vector<int> &q
 
     if( !mapPickup.empty() ) {
         show_pickup_message( mapPickup );
+    }
+    if( lost_targets > 0 ) {
+        add_msg( m_info, n_gettext( "%d item you were picking up is no longer there.",
+                                    "%d items you were picking up are no longer there.",
+                                    static_cast<std::size_t>( lost_targets ) ), lost_targets );
     }
     if( got_frozen_liquid ) {
         add_msg( m_info, _( "Chunks of frozen liquid cannot be picked up without the correct tools." ) );
