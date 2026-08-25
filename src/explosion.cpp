@@ -67,6 +67,11 @@ static const efftype_id effect_emp( "emp" );
 static const efftype_id effect_stunned( "stunned" );
 static const efftype_id effect_teleglow( "teleglow" );
 
+static const fault_id fault_electronic_blown_capacitor( "fault_electronic_blown_capacitor" );
+static const fault_id fault_electronic_blown_fuse( "fault_electronic_blown_fuse" );
+static const fault_id fault_electronic_shorted_circuit( "fault_electronic_shorted_circuit" );
+static const fault_id fault_emp_reboot( "fault_emp_reboot" );
+
 static const flag_id json_flag_ACTIVATE_ON_PLACE( "ACTIVATE_ON_PLACE" );
 
 static const furn_str_id furn_f_machinery_electronic( "f_machinery_electronic" );
@@ -95,6 +100,16 @@ static float fragment_area = 0.00001f;
 static constexpr float MIN_EFFECTIVE_VELOCITY = 70.0f;
 // Pretty arbitrary minimum density.  1/1,000 change of a fragment passing through the given square.
 static constexpr float MIN_FRAGMENT_DENSITY = 0.0001f;
+
+static fault_id random_emp_fault()
+{
+    static const std::array<fault_id, 3> faults = {
+        fault_electronic_blown_fuse,
+        fault_electronic_blown_capacitor,
+        fault_electronic_shorted_circuit
+    };
+    return random_entry( faults );
+}
 
 explosion_data load_explosion_data( const JsonObject &jo )
 {
@@ -642,6 +657,8 @@ void emp_blast( const tripoint &p )
     Character &player_character = get_player_character();
     const bool sight = player_character.sees( p );
     map &here = get_map();
+    const bool game_emp = get_option<bool>( "GAME_EMP" );
+    const bool disable_electronics = get_option<bool>( "EMP_DISABLE_ELECTRONICS" ) || game_emp;
     if( here.has_flag( ter_furn_flag::TFLAG_CONSOLE, p ) ) {
         if( sight ) {
             add_msg( _( "The %s is rendered non-functional!" ), here.tername( p ) );
@@ -758,24 +775,26 @@ void emp_blast( const tripoint &p )
 
         for( item_location &it : player_character.all_items_loc() ) {
             // Render any electronic stuff in player's possession non-functional
-            if( it->has_flag( flag_ELECTRONIC ) && !it->is_broken() &&
-                get_option<bool>( "EMP_DISABLE_ELECTRONICS" ) ) {
+            if( it->has_flag( flag_ELECTRONIC ) && !it->is_broken() && disable_electronics ) {
                 add_msg( m_bad, _( "The EMP blast fries your %s!" ), it->tname() );
                 it->deactivate();
-                it->set_flag( flag_ITEM_BROKEN );
+                it->faults.insert( game_emp ? fault_emp_reboot : random_emp_fault() );
             }
         }
     }
 
     for( item &it : here.i_at( p ) ) {
         // Render any electronic stuff on the ground non-functional
-        if( it.has_flag( flag_ELECTRONIC ) && !it.is_broken() &&
-            get_option<bool>( "EMP_DISABLE_ELECTRONICS" ) ) {
+        if( it.has_flag( flag_ELECTRONIC ) && !it.is_broken() && disable_electronics ) {
             if( sight ) {
                 add_msg( _( "The EMP blast fries the %s!" ), it.tname() );
             }
             it.deactivate();
-            it.set_flag( flag_ITEM_BROKEN );
+            it.faults.insert( game_emp ? fault_emp_reboot : random_emp_fault() );
+            if( game_emp ) {
+                item_location loc = item_location( map_cursor( p ), &it );
+                here.make_active( loc );
+            }
         }
     }
     // TODO: Drain NPC energy reserves

@@ -131,6 +131,10 @@ static const efftype_id effect_shakes( "shakes" );
 static const efftype_id effect_sleep( "sleep" );
 static const efftype_id effect_weed_high( "weed_high" );
 
+static const fault_id fault_electronic_blown_capacitor( "fault_electronic_blown_capacitor" );
+static const fault_id fault_electronic_blown_fuse( "fault_electronic_blown_fuse" );
+static const fault_id fault_electronic_shorted_circuit( "fault_electronic_shorted_circuit" );
+static const fault_id fault_emp_reboot( "fault_emp_reboot" );
 const static fault_id fault_gun_damaged( "fault_gun_damaged" );
 const static fault_id fault_gun_unaccurized( "fault_gun_unaccurized" );
 
@@ -10076,12 +10080,12 @@ bool item::is_irremovable() const
 
 bool item::is_broken() const
 {
-    return has_flag( flag_ITEM_BROKEN );
+    return has_flag( flag_ITEM_BROKEN ) || has_fault_flag( "ITEM_BROKEN" );
 }
 
 bool item::is_broken_on_active() const
 {
-    return has_flag( flag_ITEM_BROKEN ) || ( wetness && has_flag( flag_WATER_BREAK_ACTIVE ) );
+    return is_broken() || ( wetness && has_flag( flag_WATER_BREAK_ACTIVE ) );
 }
 
 int item::wind_resist() const
@@ -12847,7 +12851,7 @@ bool item::needs_processing() const
     bool need_process = false;
     visit_items( [&need_process]( const item * it, item * ) {
         if( it->active || it->ethereal || it->wetness || it->has_flag( flag_RADIO_ACTIVATION ) ||
-            it->has_relic_recharge() ) {
+            it->has_relic_recharge() || it->has_fault( fault_emp_reboot ) ) {
             need_process = true;
             return VisitResponse::ABORT;
         }
@@ -12862,7 +12866,8 @@ int item::processing_speed() const
         return to_turns<int>( 10_minutes );
     }
 
-    if( active || ethereal || wetness || has_flag( flag_RADIO_ACTIVATION ) || has_relic_recharge() ) {
+    if( active || ethereal || wetness || has_flag( flag_RADIO_ACTIVATION ) || has_relic_recharge() ||
+        has_fault( fault_emp_reboot ) ) {
         // Unless otherwise indicated, update every turn.
         return 1;
     }
@@ -13863,6 +13868,25 @@ bool item::process_internal( map &here, Character *carrier, const tripoint &pos,
         // guns are never active so we only need to tick this on inactive items. For performance reasons.
         if( has_fault_flag( flag_BLACKPOWDER_FOULING_DAMAGE ) ) {
             return process_blackpowder_fouling( carrier );
+        }
+        if( has_fault( fault_emp_reboot ) ) {
+            if( one_in( 60 ) ) {
+                faults.erase( fault_emp_reboot );
+                if( one_in( 20 ) ) {
+                    static const std::array<fault_id, 3> shorted_faults = {
+                        fault_electronic_blown_fuse,
+                        fault_electronic_blown_capacitor,
+                        fault_electronic_shorted_circuit
+                    };
+                    faults.insert( random_entry( shorted_faults ) );
+                    if( carrier ) {
+                        carrier->add_msg_if_player( m_bad, _( "Your %s fails to reboot properly." ), tname() );
+                    }
+                } else if( carrier ) {
+                    carrier->add_msg_if_player( m_good, _( "Your %s reboots successfully." ), tname() );
+                }
+            }
+            return false;
         }
     }
 

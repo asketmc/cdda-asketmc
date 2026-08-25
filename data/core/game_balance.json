@@ -344,6 +344,13 @@
   },
   {
     "type": "EXTERNAL_OPTION",
+    "name": "GAME_EMP",
+    "info": "EMP effects usually disable electronics for about one minute, with a small chance of a repairable fault.",
+    "stype": "bool",
+    "value": false
+  },
+  {
+    "type": "EXTERNAL_OPTION",
     "name": "DESCRIBE_MUSIC_FREQUENCY",
     "info": "Determines frequency (in minutes) of displaying music description in sidebar when listening to MP3-players and the like.",
     "stype": "int",
