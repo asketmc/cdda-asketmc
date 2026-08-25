@@ -4,6 +4,7 @@
 #include "activity_actor_definitions.h"
 #include "cata_catch.h"
 #include "clzones.h"
+#include "field.h"
 #include "field_type.h"
 #include "item.h"
 #include "item_category.h"
