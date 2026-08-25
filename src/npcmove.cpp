@@ -3831,6 +3831,7 @@ bool npc::consume_food_from_camp()
                 const units::volume intake = std::min( wanted, stomach.stomach_remaining( *this ) );
                 if( intake > 0_ml ) {
                     stomach.ingest( { intake, 0_ml, {} } );
+                    moves -= 100;
                     complain_about( "camp_water_thanks", 1_hours,
                                     chatbin.snip_camp_water_thanks, false );
                     return true;
@@ -3959,6 +3960,18 @@ static bool local_resource_tile_allowed( const npc &who, const tripoint &p )
     zone_manager &mgr = zone_manager::get_manager();
     const tripoint_abs_ms abs_p = here.getglobal( p );
     return !g->check_zone( zone_type_NO_NPC_PICKUP, p ) && !mgr.has_personal( abs_p );
+}
+
+static bool local_resource_adjacent( const npc &who, const tripoint &target )
+{
+    if( rl_dist( who.pos(), target ) > 1 ) {
+        return false;
+    }
+    const point delta = target.xy() - who.pos().xy();
+    map &here = get_map();
+    return delta.x == 0 || delta.y == 0 ||
+           !here.impassable( who.pos() + point( delta.x, 0 ) ) ||
+           !here.impassable( who.pos() + point( 0, delta.y ) );
 }
 
 std::vector<npc::local_item_candidate> npc::find_local_food()
@@ -4107,6 +4120,10 @@ std::vector<tripoint> npc::find_local_clean_water() const
         if( !sees( p ) || !local_resource_tile_allowed( *this, p ) ) {
             continue;
         }
+        if( here.has_flag( ter_furn_flag::TFLAG_TOILET_WATER, p ) || here.has_flag(
+                ter_furn_flag::TFLAG_MURKY, p ) ) {
+            continue;
+        }
         item water = here.water_from( p );
         if( water.typeId() == itype_water_clean && water.poison <= 0 ) {
             result.push_back( p );
@@ -4208,7 +4225,7 @@ bool npc::consume_local_food( bool allow_movement )
     map &here = get_map();
     for( local_item_candidate &candidate : find_local_food() ) {
         const tripoint target = candidate.loc.position();
-        if( rl_dist( pos(), target ) <= 1 && here.accessible_items( target ) ) {
+        if( local_resource_adjacent( *this, target ) && here.accessible_items( target ) ) {
             const time_duration consume_time = get_consume_time( *candidate.loc );
             if( consume( candidate.loc ) != trinary::NONE ) {
                 moves -= to_moves<int>( consume_time );
@@ -4226,7 +4243,7 @@ bool npc::wear_local_clothing( bool allow_movement )
     map &here = get_map();
     for( local_item_candidate &candidate : find_local_warm_clothing() ) {
         const tripoint target = candidate.loc.position();
-        if( rl_dist( pos(), target ) <= 1 && here.accessible_items( target ) ) {
+        if( local_resource_adjacent( *this, target ) && here.accessible_items( target ) ) {
             if( wear( candidate.loc, false ).has_value() ) {
                 return true;
             }
@@ -4243,7 +4260,7 @@ bool npc::drink_local_clean_water( bool allow_movement )
         return false;
     }
     for( const tripoint &target : find_local_clean_water() ) {
-        if( rl_dist( pos(), target ) <= 1 ) {
+        if( local_resource_adjacent( *this, target ) ) {
             item water = get_map().water_from( target );
             if( water.typeId() == itype_water_clean && water.poison <= 0 &&
                 will_eat( water ).success() ) {
@@ -4266,7 +4283,7 @@ bool npc::take_local_shelter()
         return false;
     }
     for( const tripoint &target : find_local_shelter() ) {
-        if( rl_dist( pos(), target ) <= 1 ) {
+        if( local_resource_adjacent( *this, target ) ) {
             const tripoint before = pos();
             move_to( target );
             if( pos() != before ) {
@@ -4286,7 +4303,7 @@ bool npc::forage_local_food()
         return false;
     }
     for( const tripoint &target : find_local_harvest() ) {
-        if( rl_dist( pos(), target ) <= 1 ) {
+        if( local_resource_adjacent( *this, target ) ) {
             map &here = get_map();
             if( here.ter( target ).obj().has_examine( iexamine::shrub_wildveggies ) ) {
                 int move_cost = 100000 / ( 2 * get_skill_level( skill_survival ) + 5 );

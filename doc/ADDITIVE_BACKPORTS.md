@@ -187,9 +187,6 @@ manifest are actually imported.
 
 ## Follower QoL donor disposition
 
-This fork selectively adapts the small, compatible parts of the modern NPC
-work rather than importing its replacement behavior stack.
-
 | Area | Donor | Result |
 | --- | --- | --- |
 | NPC temperature, wetness, sleep, camp water | CleverRaven #86016 (`69e67579e0adf6bc345904242c40e88e1237d74d`) | Adapted to the 0.G NPC update and camp APIs |

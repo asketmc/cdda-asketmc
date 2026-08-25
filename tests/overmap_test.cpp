@@ -176,13 +176,15 @@ TEST_CASE( "npc_checks_each_nearby_camp_for_accessible_food", "[overmap][camp][n
     restricted_camp.set_owner( scavengers->id );
     basecamp accessible_camp( "accessible camp", accessible_pos );
     accessible_camp.set_owner( followers->id );
+    accessible_camp.add_expansion( "faction_base_camp_12", accessible_pos );
+    REQUIRE( accessible_camp.has_water() );
 
     standard_npc hungry_npc( "hungry camp visitor" );
     hungry_npc.set_fac( followers->id );
     hungry_npc.spawn_at_omt( accessible_pos );
-    hungry_npc.set_thirst( 0 );
-    hungry_npc.set_hunger( 100 );
-    hungry_npc.set_stored_kcal( hungry_npc.get_healthy_kcal() / 2 );
+    hungry_npc.set_thirst( 81 );
+    hungry_npc.set_hunger( 0 );
+    hungry_npc.set_stored_kcal( hungry_npc.get_healthy_kcal() );
     REQUIRE_FALSE( restricted_camp.allowed_access_by( hungry_npc ) );
     REQUIRE( accessible_camp.allowed_access_by( hungry_npc ) );
 
@@ -202,6 +204,15 @@ TEST_CASE( "npc_checks_each_nearby_camp_for_accessible_food", "[overmap][camp][n
     followers->consumes_food = true;
     const int calories_before = followers->food_supply.calories;
 
+    hungry_npc.moves = 100;
+    CHECK( hungry_npc.consume_food_from_camp() );
+    CHECK( hungry_npc.moves == 0 );
+    CHECK( hungry_npc.get_thirst() <= 40 );
+    CHECK_FALSE( hungry_npc.consume_food_from_camp() );
+
+    hungry_npc.set_thirst( 0 );
+    hungry_npc.set_hunger( 100 );
+    hungry_npc.set_stored_kcal( hungry_npc.get_healthy_kcal() / 2 );
     CHECK( hungry_npc.consume_food_from_camp() );
     CHECK( followers->food_supply.calories < calories_before );
 
