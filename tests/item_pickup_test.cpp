@@ -4,6 +4,7 @@
 #include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "cata_catch.h"
+#include "cata_utility.h"
 #include "item.h"
 #include "json.h"
 #include "json_loader.h"
@@ -281,23 +282,31 @@ TEST_CASE( "pickup target descriptions cover non-map locations",
     map &here = get_map();
     clear_avatar();
     clear_map();
+    npc &container_owner = spawn_npc( they.pos().xy() + point_west, "test_talker" );
 
-    item_location character_item = they.i_add( item( "rag" ) );
-    item_location container = they.i_add( item( itype_backpack_hiking ) );
+    item rag( "rag" );
+    REQUIRE( they.wield( rag ) );
+    item_location character_item = they.get_wielded_item();
+    item_location container = container_owner.i_add( item( itype_backpack_hiking ) );
+    REQUIRE( character_item );
+    REQUIRE( container );
     REQUIRE( container->put_in( item( "tshirt" ),
                                 item_pocket::pocket_type::CONTAINER ).success() );
     item_location contained_item( container, &container->only_item() );
+    REQUIRE( contained_item );
 
-    vehicle *veh = here.add_vehicle( vehicle_prototype_test_cargo_space, they.pos(),
+    const tripoint vehicle_pos = they.pos() + tripoint_east;
+    vehicle *veh = here.add_vehicle( vehicle_prototype_test_cargo_space, vehicle_pos,
                                      0_degrees, 0, 0 );
     REQUIRE( veh != nullptr );
     const cata::optional<vpart_reference> cargo =
-        here.veh_at( they.pos() ).part_with_feature( "CARGO", true );
+        here.veh_at( vehicle_pos ).part_with_feature( "CARGO", true );
     REQUIRE( cargo );
     const cata::optional<vehicle_stack::iterator> added =
         veh->add_item( cargo->part(), item( "rock" ) );
     REQUIRE( added );
     item_location vehicle_item( vehicle_cursor( cargo->vehicle(), cargo->part_index() ), & **added );
+    REQUIRE( vehicle_item );
 
     player_activity activity( pickup_activity_actor(
                                   { character_item, contained_item, vehicle_item },
@@ -309,5 +318,27 @@ TEST_CASE( "pickup target descriptions cover non-map locations",
     CHECK( saved.str().find( "in a character's inventory" ) != std::string::npos );
     CHECK( saved.str().find( "in a container" ) != std::string::npos );
     CHECK( saved.str().find( "in a vehicle" ) != std::string::npos );
+
+    item_location loaded_character;
+    JsonValue character_json = json_loader::from_string( serialize( character_item ) );
+    REQUIRE( character_json.read( loaded_character ) );
+    REQUIRE( loaded_character );
+    CHECK( loaded_character.where() == item_location::type::character );
+    CHECK( loaded_character->typeId() == itype_id( "rag" ) );
+
+    item_location loaded_contained;
+    JsonValue contained_json = json_loader::from_string( serialize( contained_item ) );
+    REQUIRE( contained_json.read( loaded_contained ) );
+    REQUIRE( loaded_contained );
+    CHECK( loaded_contained.where() == item_location::type::container );
+    CHECK( loaded_contained.where_recursive() == item_location::type::character );
+    CHECK( loaded_contained->typeId() == itype_id( "tshirt" ) );
+
+    item_location loaded_vehicle;
+    JsonValue vehicle_json = json_loader::from_string( serialize( vehicle_item ) );
+    REQUIRE( vehicle_json.read( loaded_vehicle ) );
+    REQUIRE( loaded_vehicle );
+    CHECK( loaded_vehicle.where() == item_location::type::vehicle );
+    CHECK( loaded_vehicle->typeId() == itype_id( "rock" ) );
 }
 

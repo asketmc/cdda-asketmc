@@ -65,6 +65,14 @@ void create_tile_zone( const std::string &name, const zone_type_id &zone_type, t
     zm.add( name, zone_type, faction_your_followers, false, true, pos, pos, nullptr, personal, veh );
 }
 
+void create_local_tile_zone( const std::string &name, const zone_type_id &zone_type,
+                             const tripoint &pos, bool veh = false, bool personal = false )
+{
+    const tripoint zone_pos = personal ? pos - get_avatar().pos() :
+                              get_map().getglobal( pos ).raw();
+    create_tile_zone( name, zone_type, zone_pos, veh, personal );
+}
+
 } // namespace
 
 TEST_CASE( "NPC work ignores personal zones", "[zones][npc][basecamp]" )
@@ -87,18 +95,18 @@ TEST_CASE( "NPC loot sorting cannot use personal zones", "[zones][npc][activitie
 {
     clear_avatar();
     clear_map();
-    get_avatar().setpos( tripoint_zero );
     map &here = get_map();
-    standard_npc worker( "zone worker", tripoint_zero );
+    const tripoint origin = get_avatar().pos();
+    standard_npc worker( "zone worker", origin );
     worker.set_fac( faction_your_followers );
-    const tripoint source = tripoint_east;
-    const tripoint personal_destination = tripoint_west;
-    const tripoint shared_destination = tripoint_north;
+    const tripoint source = origin + tripoint_east;
+    const tripoint personal_destination = origin + tripoint_west;
+    const tripoint shared_destination = origin + tripoint_north;
     item food( "test_bitter_almond" );
 
     SECTION( "a personal source is ignored" ) {
-        create_tile_zone( "Personal source", zone_type_LOOT_UNSORTED, source, false, true );
-        create_tile_zone( "Shared food", zone_type_LOOT_FOOD, shared_destination );
+        create_local_tile_zone( "Personal source", zone_type_LOOT_UNSORTED, source, false, true );
+        create_local_tile_zone( "Shared food", zone_type_LOOT_FOOD, shared_destination );
         here.add_item_or_charges( source, food );
 
         worker.assign_activity( player_activity( ACT_MOVE_LOOT ) );
@@ -109,9 +117,10 @@ TEST_CASE( "NPC loot sorting cannot use personal zones", "[zones][npc][activitie
     }
 
     SECTION( "a shared destination is used instead of a personal destination" ) {
-        create_tile_zone( "Shared source", zone_type_LOOT_UNSORTED, source );
-        create_tile_zone( "Personal food", zone_type_LOOT_FOOD, personal_destination, false, true );
-        create_tile_zone( "Shared food", zone_type_LOOT_FOOD, shared_destination );
+        create_local_tile_zone( "Shared source", zone_type_LOOT_UNSORTED, source );
+        create_local_tile_zone( "Personal food", zone_type_LOOT_FOOD, personal_destination,
+                                false, true );
+        create_local_tile_zone( "Shared food", zone_type_LOOT_FOOD, shared_destination );
         here.add_item_or_charges( source, food );
 
         worker.assign_activity( player_activity( ACT_MOVE_LOOT ) );
@@ -126,10 +135,10 @@ TEST_CASE( "NPC loot sorting cannot use personal zones", "[zones][npc][activitie
         custom_options->set_mark( "test_bitter_almond" );
         zone_manager::get_manager().add( "Personal custom", zone_type_LOOT_CUSTOM,
                                          faction_your_followers, false, true,
-                                         personal_destination, personal_destination,
+                                         tripoint_west, tripoint_west,
                                          custom_options, true, true );
-        create_tile_zone( "Shared source", zone_type_LOOT_UNSORTED, source );
-        create_tile_zone( "Shared food", zone_type_LOOT_FOOD, shared_destination );
+        create_local_tile_zone( "Shared source", zone_type_LOOT_UNSORTED, source );
+        create_local_tile_zone( "Shared food", zone_type_LOOT_FOOD, shared_destination );
         here.add_item_or_charges( source, food );
 
         worker.assign_activity( player_activity( ACT_MOVE_LOOT ) );
@@ -146,8 +155,8 @@ TEST_CASE( "NPC loot sorting cannot use personal zones", "[zones][npc][activitie
         cart->set_owner( worker );
         const optional_vpart_position cargo = here.veh_at( shared_destination );
         REQUIRE( cargo );
-        create_tile_zone( "Shared source", zone_type_LOOT_UNSORTED, source );
-        create_tile_zone( "Vehicle food", zone_type_LOOT_FOOD, shared_destination, true );
+        create_local_tile_zone( "Shared source", zone_type_LOOT_UNSORTED, source );
+        create_local_tile_zone( "Vehicle food", zone_type_LOOT_FOOD, shared_destination, true );
         here.add_item_or_charges( source, food );
 
         worker.assign_activity( player_activity( ACT_MOVE_LOOT ) );
@@ -165,12 +174,13 @@ TEST_CASE( "NPC mopping fetches a stored mop", "[zones][npc][activities][mopping
     clear_avatar();
     clear_map();
     map &here = get_map();
-    standard_npc worker( "mopping worker", tripoint_zero );
+    const tripoint origin = get_avatar().pos();
+    standard_npc worker( "mopping worker", origin );
     worker.set_fac( faction_your_followers );
-    const tripoint target = tripoint_east;
-    const tripoint tool_storage = tripoint_west;
-    create_tile_zone( "Mopping", zone_type_MOPPING, target );
-    create_tile_zone( "Tools", zone_type_LOOT_TOOLS, tool_storage );
+    const tripoint target = origin + tripoint_east;
+    const tripoint tool_storage = origin + tripoint_west;
+    create_local_tile_zone( "Mopping", zone_type_MOPPING, target );
+    create_local_tile_zone( "Tools", zone_type_LOOT_TOOLS, tool_storage );
     here.add_item_or_charges( tool_storage, item( "mop" ) );
     here.add_field( target, field_type_id( "fd_blood" ), 1 );
     REQUIRE( here.terrain_moppable( tripoint_bub_ms( target ) ) );
@@ -181,10 +191,9 @@ TEST_CASE( "NPC mopping fetches a stored mop", "[zones][npc][activities][mopping
     worker.assign_activity( player_activity( ACT_MULTIPLE_MOP ) );
     process_activity( worker );
 
-    CHECK_FALSE( here.terrain_moppable( tripoint_bub_ms( target ) ) );
-    CHECK( worker.has_item_with( []( const item & it ) {
-        return it.has_flag( flag_id( "MOP" ) );
-    } ) );
+    REQUIRE( worker.get_wielded_item() );
+    CHECK( worker.get_wielded_item()->has_flag( flag_id( "MOP" ) ) );
+    CHECK( here.i_at( tool_storage ).empty() );
 }
 
 TEST_CASE( "zone unloading ammo belts", "[zones][items][ammo_belt][activities][unload]" )
