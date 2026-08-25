@@ -370,7 +370,7 @@ std::vector<basecamp_upgrade> basecamp::available_upgrades( const point &dir )
 std::unordered_set<recipe_id> basecamp::recipe_deck_all( const inventory *supplies ) const
 {
     std::unordered_set<recipe_id> recipes;
-    for( const npc_ptr &worker : assigned_npcs ) {
+    for( const npc_ptr &worker : available_crafting_workers() ) {
         if( worker != nullptr ) {
             const recipe_subset available = supplies == nullptr ? worker->get_learned_recipes() :
                                             worker->get_available_recipes( *supplies );

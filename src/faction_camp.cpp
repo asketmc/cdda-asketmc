@@ -3110,10 +3110,7 @@ void basecamp::start_crafting_with_ui( const mission_id &miss_id )
         camp_recipes.include( rec );
         combined_worker.learn_recipe( rec );
     }
-    for( const npc_ptr &worker : assigned_npcs ) {
-        if( worker.get() == nullptr ) {
-            continue;
-        }
+    for( const npc_ptr &worker : available_workers ) {
         for( const std::pair<const skill_id, SkillLevel> &skill : worker->get_all_skills() ) {
             if( skill.second.level() > combined_worker.get_skill_level( skill.first ) ) {
                 combined_worker.set_skill_level( skill.first, skill.second.level() );

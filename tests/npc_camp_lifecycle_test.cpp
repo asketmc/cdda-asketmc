@@ -414,6 +414,33 @@ TEST_CASE( "Camp crafting worker availability is explicit",
     CHECK( scope.camp().available_crafting_workers().empty() );
 }
 
+TEST_CASE( "Off-duty workers do not lend recipes to camp crafting",
+           "[npc][camp][crafting][workers]" )
+{
+    npc &worker = setup_camp_worker();
+    const tripoint_abs_omt camp_pos = worker.global_omt_location();
+    overmap *const om = overmap_buffer.get_existing( project_to<coords::om>( camp_pos.xy() ) );
+    REQUIRE( om != nullptr );
+    test_camp_scope scope( *om, camp_pos, get_map().getglobal( worker.pos() ).raw() );
+    scope.camp().add_assignee( worker.getID() );
+
+    npc &recipe_owner = spawn_npc( point( 62, 60 ), "test_talker" );
+    clear_character( recipe_owner );
+    recipe_owner.set_fac( faction_your_followers );
+    recipe_owner.set_attitude( NPCATT_FOLLOW );
+    recipe_owner.set_knowledge_level( skill_electronics, 1 );
+    item manual( itype_manual_electronics );
+    recipe_owner.identify( manual );
+    scope.camp().add_assignee( recipe_owner.getID() );
+
+    inventory supplies;
+    supplies.add_item( manual );
+    REQUIRE( scope.camp().recipe_deck_all( &supplies ).count( recipe_test_soldering_iron ) == 1 );
+    recipe_owner.camp_duty = false;
+    CHECK( scope.camp().available_crafting_workers().size() == 1 );
+    CHECK( scope.camp().recipe_deck_all( &supplies ).count( recipe_test_soldering_iron ) == 0 );
+}
+
 TEST_CASE( "Liquid camp craft requires an empty storage fixture",
            "[npc][camp][crafting][liquid]" )
 {
