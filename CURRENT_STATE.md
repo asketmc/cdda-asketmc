@@ -8,6 +8,8 @@
 Recent integrated fixes include vehicle and general tileset directional
 normalization. Modern UltiCa and SurveyorsMap four-direction arrays are adapted
 to the 0.G N/E/S/W contract; legacy compatibility sheets remain unchanged.
+Character-rooted contained item locations now resolve lazily after unloaded NPCs
+are registered, preserving interrupted activity targets across save/load.
 
 ## Fast validation
 
