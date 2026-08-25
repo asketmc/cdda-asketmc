@@ -224,6 +224,23 @@ TEST_CASE( "Camp assignment survives temporary follow and guard orders",
     }
 }
 
+TEST_CASE( "Abandoning a camp clears follower assignments", "[npc][camp][lifecycle]" )
+{
+    npc &worker = setup_camp_worker();
+    const tripoint_abs_omt camp_pos = worker.global_omt_location();
+    overmap *const om = overmap_buffer.get_existing( project_to<coords::om>( camp_pos.xy() ) );
+    REQUIRE( om != nullptr );
+    test_camp_scope scope( *om, camp_pos, get_map().getglobal( worker.pos() ).raw() );
+    scope.camp().add_assignee( worker.getID() );
+    REQUIRE( worker.assigned_camp );
+    REQUIRE( worker.camp_duty );
+
+    scope.camp().abandon_camp();
+
+    CHECK_FALSE( worker.assigned_camp );
+    CHECK_FALSE( worker.camp_duty );
+}
+
 TEST_CASE( "Displaced camp worker targets the assigned camp board",
            "[npc][camp][lifecycle][travel]" )
 {

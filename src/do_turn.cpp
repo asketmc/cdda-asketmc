@@ -553,12 +553,20 @@ void overmap_npc_move()
         }
         npc *npc_to_add = elem.get();
         if( ( !npc_to_add->is_active() || rl_dist( u.pos(), npc_to_add->pos() ) > SEEX * 2 ) &&
-            npc_to_add->mission == NPC_MISSION_TRAVELLING ) {
+            ( npc_to_add->mission == NPC_MISSION_TRAVELLING ||
+              ( npc_to_add->assigned_camp && npc_to_add->camp_duty ) ) ) {
             travelling_npcs.push_back( npc_to_add );
         }
     }
     bool npcs_need_reload = false;
     for( npc *&elem : travelling_npcs ) {
+        if( elem->assigned_camp && elem->camp_duty &&
+            elem->mission != NPC_MISSION_TRAVELLING ) {
+            elem->return_to_assigned_camp();
+            if( elem->mission != NPC_MISSION_TRAVELLING ) {
+                continue;
+            }
+        }
         if( elem->is_camp_duty_ready() ) {
             elem->return_to_assigned_camp();
             continue;

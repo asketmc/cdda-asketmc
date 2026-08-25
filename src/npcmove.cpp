@@ -2861,7 +2861,11 @@ void npc::return_to_assigned_camp()
         goal = ( *camp )->camp_omt_pos();
         omt_path = overmap_buffer.get_travel_path( global_omt_location(), goal,
                    overmap_path_params::for_npc() );
-        set_mission( NPC_MISSION_TRAVELLING );
+        if( omt_path.empty() ) {
+            set_mission( NPC_MISSION_GUARD_ALLY );
+        } else {
+            set_mission( NPC_MISSION_TRAVELLING );
+        }
     }
     chatbin.first_topic = chatbin.talk_friend_guard;
 }

@@ -1952,6 +1952,8 @@ void basecamp::abandon_camp()
     }
     for( npc_ptr &guy : get_npcs_assigned() ) {
         talk_function::stop_guard( *guy );
+        guy->assigned_camp = cata::nullopt;
+        guy->camp_duty = false;
     }
     add_msg( m_info, _( "You abandon %s." ), name );
     get_player_character().camps.erase( omt_pos );
