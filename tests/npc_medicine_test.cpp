@@ -401,6 +401,9 @@ TEST_CASE( "NPC selects a useful inventory weapon over empty hands",
 {
     npc &guy = setup_medicine_npc();
     REQUIRE_FALSE( guy.get_wielded_item() );
+    spawn_test_monster( "mon_zombie_hulk", guy.pos() + tripoint_east );
+    guy.regen_ai_cache();
+    REQUIRE( guy.danger_assessment() > 10.0f );
     guy.i_add( item( itype_knife_chef ) );
 
     CHECK( guy.wield_better_weapon() );

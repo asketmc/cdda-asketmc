@@ -1852,7 +1852,9 @@ npc_action npc::address_needs( float danger )
     if( one_in( 3 ) ) {
         healing_options try_to_fix_me = patient_assessment( *this );
         if( try_to_fix_me.any_true() ) {
-            if( !use_bionic_by_id( bio_nanobots ) && safe_to_heal ) {
+            if( !safe_to_heal ) {
+                deactivate_bionic_by_id( bio_nanobots );
+            } else if( !use_bionic_by_id( bio_nanobots ) ) {
                 ai_cache.can_heal = has_healing_options( try_to_fix_me );
                 if( ai_cache.can_heal.any_true() ) {
                     return npc_heal;
@@ -3381,7 +3383,9 @@ bool npc::wield_better_weapon()
 
     compare_weapon( weap );
     // To prevent changing to barely better stuff
-    best_value *= std::max<float>( 1.0f, ai_cache.danger_assessment / 10.0f );
+    if( weapon ) {
+        best_value *= std::max<float>( 1.0f, ai_cache.danger_assessment / 10.0f );
+    }
 
     // Fists aren't checked below
     compare_weapon( null_item_reference() );
@@ -3973,7 +3977,8 @@ bool npc::consume_food()
             set_thirst( 0 );
         }
     } else {
-        const bool critical_hunger = get_stored_kcal() + stomach.get_calories() <
+        const bool critical_hunger = get_stored_kcal() + stomach.get_calories() +
+                                     guts.get_calories() <
                                      get_healthy_kcal() / 2;
         for( item * const &food_item : inv_food ) {
             float cur_weight = rate_food( *this, *food_item, want_hunger, want_quench );
