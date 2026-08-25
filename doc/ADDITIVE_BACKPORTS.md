@@ -187,20 +187,11 @@ manifest are actually imported.
 
 ## Follower QoL donor disposition
 
-This fork selectively adapts the small, compatible parts of the modern NPC
-work rather than importing its replacement behavior stack.
-
 | Area | Donor | Result |
 | --- | --- | --- |
-| NPC temperature, wetness, sleep, camp water | CleverRaven #86016 (`69e67579e0adf6bc345904242c40e88e1237d74d`) | Adapted to the 0.G NPC update and camp APIs |
-| Camp mopping job | CleverRaven #86257 (`4813d0e10e9baa048aea3f9e32afb77145fdda0c`) | Adapted; the target already had mopping and tool fetching |
-| Personal sorting-zone isolation | CleverRaven #86254 (`eba56896b357c633f17973c5442d3b69f7832895`) | Adapted to the legacy move-loot activity |
-| Crafting UI, bulk priorities, worker food/vitamins, larder medicine | #67458, #77715, #77573, #71546, #71670, #76025 | Already present |
-| Warmth response | CleverRaven #86004 (`41418fe32bf85c67348963ce75ef7b2a72862b37`) | Adapted directly to body temperature and the legacy needs cascade |
-| Local food, water, clothing, shelter and foraging | CleverRaven #86035 (`3c6ec8d3aeb14d7f366db6f3823a69c60b53fb2e`), #86052 (`4018cea0a1d4f32c0dad492f7df38b7cbbb807e4`) | Adapted without the modern behavior tree; adds ownership, protected-zone and locked-cargo guards |
-| Global NPC priorities and camp-resident state machine | #86172, #86173 | Deferred to a separate legacy-scheduler adaptation; modern framework not imported |
-| Activity-actor sorting rewrites | #83980, #84311 | Not applicable to the legacy direct sorting implementation |
-| TLG medical and weapon-selection rewrites | TLG #1603, #2746, #2982 | Deferred: target already self-heals/allied-heals; remaining changes alter combat or require later medicine AI |
+| Sleep, weather, camp water, mopping and sorting zones | #86016, #86257, #86254 | Adapted to 0.G APIs |
+| Warmth and local survival | #86004, #86035, #86052 | Adapted with ownership, zone and cargo guards |
+| Modern behavior tree and sorting actors | #86172, #86173, #83980, #84311 | Not imported |
 
 ## Additive data audit
 

@@ -59,30 +59,10 @@ without revealing locations or rare loot pools.
 
 ## Followers and camp work
 
-- Followers now actually fall asleep when tired instead of repeatedly lying
-  down without recovering. Non-following NPCs no longer erase their fatigue.
-- NPC body temperature and wetness update while active and reconcile after an
-  unloaded NPC returns, so weather and shelter matter consistently.
-- Camp water is ingested into the NPC stomach instead of instantly resetting
-  thirst, preserving the normal digestion model.
-- Camp residents can be assigned mopping from the existing job-priority menu;
-  they use the existing tool-fetching and mopping-zone workflow.
-- NPC automatic sorting ignores player-personal source and destination zones.
-  Shared camp and vehicle zones continue to work normally.
-- Followers in dangerous cold equip warm clothing from their inventory or
-  permitted nearby ground and vehicle storage, then seek nearby indoor shelter.
-- Hungry and thirsty followers can use permitted food and clean water from the
-  ground or unlocked owned vehicle cargo. Ownership, pickup rules, personal
-  zones, and no-NPC-pickup zones are respected.
-- Seriously starving followers may forage nearby edible wild plants after
-  camp, carried, ground, and cargo food are exhausted. Farms and protected
-  zones are never foraged automatically.
-- The normal crafting-menu follower orders, camp crafting UI, worker larder,
-  vitamins, medicine/mutagen storage, follower-rules window, and bulk job
-  priority controls were already present and remain unchanged.
-
-These local survival actions are adapted to the 0.G needs cascade. The modern
-global behavior tree and mission scheduler are not included.
+- NPCs retain fatigue until sleeping; active/reloaded NPCs update temperature and wetness.
+- Camp water uses the stomach model; residents can mop and sorting skips personal zones.
+- Cold followers seek shelter and use permitted clothing, food and clean water nearby.
+- Seriously starving followers may forage wild plants outside protected or farm zones.
 
 ## Visuals, sound, fonts, and interface
 
