@@ -187,11 +187,8 @@ manifest are actually imported.
 
 ## Follower QoL donor disposition
 
-| Area | Donor | Result |
-| --- | --- | --- |
-| Sleep, weather, camp water, mopping and sorting zones | #86016, #86257, #86254 | Adapted to 0.G APIs |
-| Warmth and local survival | #86004, #86035, #86052 | Adapted with ownership, zone and cargo guards |
-| Modern behavior tree and sorting actors | #86172, #86173, #83980, #84311 | Not imported |
+Sleep/camp work (#86016, #86257, #86254) and guarded local survival (#86004,
+#86035, #86052) were adapted; modern BT and sorting actors were not imported.
 
 ## Additive data audit
 

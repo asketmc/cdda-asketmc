@@ -59,10 +59,8 @@ without revealing locations or rare loot pools.
 
 ## Followers and camp work
 
-- NPCs retain fatigue until sleeping; active/reloaded NPCs update temperature and wetness.
-- Camp water uses the stomach model; residents can mop and sorting skips personal zones.
-- Cold followers seek shelter and use permitted clothing, food and clean water nearby.
-- Seriously starving followers may forage wild plants outside protected or farm zones.
+- NPC sleep, weather exposure, camp water, mopping and personal-zone sorting are corrected.
+- Followers use permitted local food, clean water, warm clothing, shelter and emergency forage.
 
 ## Visuals, sound, fonts, and interface
 
