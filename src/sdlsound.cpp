@@ -19,6 +19,7 @@
 #    include <SDL_mixer.h>
 #endif
 
+#include "audio_retry_policy.h"
 #include "cached_options.h"
 #include "debug.h"
 #include "init.h"
@@ -340,7 +341,7 @@ void quit_audio_subsystem()
 
 bool initialize_audio_subsystem_with_retry( const std::string &driver_label )
 {
-    for( int attempt = 1; attempt <= 2; ++attempt ) {
+    return audio_retry_policy::try_twice( [&]( const int attempt ) {
         if( SDL_InitSubSystem( SDL_INIT_AUDIO ) == 0 ) {
             audio_subsystem_initialized = true;
             dbg( D_INFO ) << "Initialized SDL audio driver \"" << current_audio_driver()
@@ -351,11 +352,10 @@ bool initialize_audio_subsystem_with_retry( const std::string &driver_label )
         dbg( D_WARNING ) << "SDL audio " << driver_label << " attempt " << attempt
                          << "/2 failed: " << SDL_GetError();
         SDL_QuitSubSystem( SDL_INIT_AUDIO );
-        if( attempt == 1 ) {
-            SDL_Delay( audio_retry_delay_ms );
-        }
-    }
-    return false;
+        return false;
+    }, []() {
+        SDL_Delay( audio_retry_delay_ms );
+    } );
 }
 
 bool open_audio_mixer( const std::string &attempt )
@@ -384,13 +384,14 @@ bool open_audio_mixer( const std::string &attempt )
 
 bool open_audio_mixer_with_retry( const std::string &driver_label )
 {
-    if( open_audio_mixer( driver_label + " attempt 1/2" ) ) {
-        return true;
-    }
-
-    SDL_Delay( audio_retry_delay_ms );
-    return open_audio_mixer( driver_label + " attempt 2/2 after " +
-                             std::to_string( audio_retry_delay_ms ) + " ms" );
+    return audio_retry_policy::try_twice( [&]( const int attempt ) {
+        const std::string delay_suffix = attempt == 1 ? "" :
+                                         " after " + std::to_string( audio_retry_delay_ms ) + " ms";
+        return open_audio_mixer( driver_label + " attempt " + std::to_string( attempt ) +
+                                 "/2" + delay_suffix );
+    }, []() {
+        SDL_Delay( audio_retry_delay_ms );
+    } );
 }
 
 #if defined(_WIN32)
@@ -438,25 +439,32 @@ bool initialize_directsound_with_retry()
         return false;
     }
 
-    bool initialized = initialize_audio_subsystem_with_retry( "DirectSound fallback" );
-    if( initialized && current_audio_driver() != "directsound" ) {
-        dbg( D_WARNING ) << "DirectSound fallback selected unexpected SDL driver \""
-                         << current_audio_driver() << "\"; refusing to open its mixer.";
+    return audio_retry_policy::initialize_temporary_backend( []() {
+        bool initialized = initialize_audio_subsystem_with_retry( "DirectSound fallback" );
+        if( initialized && current_audio_driver() != "directsound" ) {
+            dbg( D_WARNING ) << "DirectSound fallback selected unexpected SDL driver \""
+                             << current_audio_driver() << "\"; refusing to open its mixer.";
+            quit_audio_subsystem();
+            initialized = false;
+        }
+        return initialized;
+    }, [&]() {
+        // SDL 2.0.14 unsets a Windows variable when given an empty value.
+        const int restore_result = SDL_setenv( audio_driver_environment,
+                                   had_previous_driver ? previous_driver.c_str() : "", 1 );
+        const char *const restored_driver = SDL_getenv( audio_driver_environment );
+        const bool environment_restored = had_previous_driver ?
+                                          restored_driver != nullptr && previous_driver == restored_driver :
+                                          restored_driver == nullptr;
+        if( restore_result != 0 || !environment_restored ) {
+            dbg( D_WARNING ) << "Unable to restore SDL's audio-driver environment after fallback; "
+                             "disabling sound for this session.";
+            return false;
+        }
+        return true;
+    }, []() {
         quit_audio_subsystem();
-        initialized = false;
-    }
-
-    // SDL 2.0.14 unsets a Windows variable when given an empty value.
-    const int restore_result = SDL_setenv( audio_driver_environment,
-                               had_previous_driver ? previous_driver.c_str() : "", 1 );
-    const char *const restored_driver = SDL_getenv( audio_driver_environment );
-    const bool environment_restored = had_previous_driver ?
-                                      restored_driver != nullptr && previous_driver == restored_driver :
-                                      restored_driver == nullptr;
-    if( restore_result != 0 || !environment_restored ) {
-        dbg( D_WARNING ) << "Unable to restore SDL's audio-driver environment after fallback.";
-    }
-    return initialized;
+    } );
 }
 #endif
 
