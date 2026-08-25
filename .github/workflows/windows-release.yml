@@ -26,7 +26,7 @@ jobs:
       RELEASE_BUILD: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v0.G-additive-') }}
       TOOLCHAIN_CACHE: ${{ github.workspace }}/.toolchain-cache
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -38,11 +38,11 @@ jobs:
       - name: Install host tools
         run: |
           sudo apt-get update
-          sudo apt-get install --yes ccache zip
+          sudo apt-get install --yes ccache
 
       - name: Restore MXE archives
         id: mxe-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ env.TOOLCHAIN_CACHE }}
           key: mxe-gcc11.2-x86_64-${{ hashFiles('build-scripts/mxe-x86_64-gcc11.2-sha256', 'build-scripts/libbacktrace-x86_64-w64-mingw32-sha256') }}
@@ -58,6 +58,13 @@ jobs:
             --output "${TOOLCHAIN_CACHE}/libbacktrace-x86_64-w64-mingw32.tar.gz" \
             https://github.com/Qrox/libbacktrace/releases/download/2020-01-03/libbacktrace-x86_64-w64-mingw32.tar.gz
 
+      - name: Save MXE archives for trusted events
+        if: steps.mxe-cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ env.TOOLCHAIN_CACHE }}
+          key: mxe-gcc11.2-x86_64-${{ hashFiles('build-scripts/mxe-x86_64-gcc11.2-sha256', 'build-scripts/libbacktrace-x86_64-w64-mingw32-sha256') }}
+
       - name: Install verified MXE toolchain
         run: |
           cd "${TOOLCHAIN_CACHE}"
@@ -69,15 +76,17 @@ jobs:
             -C /opt/mxe/usr/x86_64-w64-mingw32.static.gcc11
 
       - name: Restore compiler cache
-        uses: actions/cache@v4
+        id: compiler-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-windows-gcc11-${{ github.sha }}
           restore-keys: ccache-windows-gcc11-
 
-      - name: Compile and link Windows build
+      - name: Build and package Windows distribution
         shell: bash
         run: |
+          set -euo pipefail
           cross="/opt/mxe/usr/bin/x86_64-w64-mingw32.static.gcc11-"
           test -x "${cross}g++"
           "${cross}g++" --version
@@ -85,88 +94,167 @@ jobs:
           ccache --max-size "${CCACHE_MAXSIZE}"
 
           build_sha="${GITHUB_SHA:0:12}"
-          asset_sha="${GITHUB_SHA:0:7}"
           version="0.G-additive-${build_sha}"
-          target="cataclysm-tiles.exe"
-          if [[ "${RELEASE_BUILD}" == "true" ]]; then
-            cat > VERSION.txt <<EOF
+          safe_ref=$(printf '%s' "${GITHUB_REF_NAME}" | tr -c 'A-Za-z0-9._-' '-')
+          asset="cdda-0g-additive-asketmc-${safe_ref}-${build_sha}-windows-x64-tiles-sound.zip"
+          source_epoch=$(git show -s --format=%ct "${GITHUB_SHA}")
+          output_dir="${GITHUB_WORKSPACE}/release-output"
+          mkdir -p "${output_dir}"
+
+          cat > VERSION.txt <<EOF
           build type: Windows x64 Tiles+Sound
           version: ${version}
           commit sha: ${GITHUB_SHA}
           commit url: https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}
           EOF
-            target="bindist"
-          fi
+          cat > BUILD_MANIFEST.txt <<EOF
+          tag or ref: ${GITHUB_REF_NAME}
+          commit sha: ${GITHUB_SHA}
+          source date epoch: ${source_epoch}
+          build flags: RELEASE=1 TILES=1 SOUND=1 LOCALIZE=0 BACKTRACE=1 LIBBACKTRACE=1 PCH=0
+          mxe archive: $(cat build-scripts/mxe-x86_64-gcc11.2-sha256)
+          libbacktrace archive: $(cat build-scripts/libbacktrace-x86_64-w64-mingw32-sha256)
+          EOF
 
-          make -j"$(nproc)" \
-            "VERSION=${version}" \
-            "CROSS=${cross}" \
-            CCACHE=1 RELEASE=1 TILES=1 SOUND=1 LOCALIZE=0 RUNTESTS=0 \
-            LINTJSON=0 ASTYLE=0 WARNINGS=-w BACKTRACE=1 LIBBACKTRACE=1 PCH=0 \
-            "${target}"
+          build_distribution() {
+            make -j"$(nproc)" \
+              "VERSION=${version}" \
+              "CROSS=${cross}" \
+              CCACHE=1 RELEASE=1 TILES=1 SOUND=1 LOCALIZE=0 RUNTESTS=0 \
+              LINTJSON=0 ASTYLE=0 WARNINGS=-w BACKTRACE=1 LIBBACKTRACE=1 PCH=0 \
+              bindist
+            test -s cataclysm-tiles.exe
+            file cataclysm-tiles.exe | grep -q "PE32+ executable"
+            dist_dir="cataclysmdda-${version}"
+            test -d "${dist_dir}"
+            cp BUILD_MANIFEST.txt "${dist_dir}/BUILD_MANIFEST.txt"
+            python3 tools/package_windows_release.py \
+              "${dist_dir}" "${output_dir}/${asset}" "${source_epoch}"
+            python3 tools/package_windows_release.py --verify \
+              "${output_dir}/${asset}" "${GITHUB_SHA}" "${version}"
+          }
 
-          test -s cataclysm-tiles.exe
-          file cataclysm-tiles.exe | grep -q "PE32+ executable"
-          ccache --show-stats
+          build_distribution
+          first_exe=$(sha256sum cataclysm-tiles.exe | cut -d' ' -f1)
+          first_zip=$(sha256sum "${output_dir}/${asset}" | cut -d' ' -f1)
 
           if [[ "${RELEASE_BUILD}" == "true" ]]; then
-            source_zip="cataclysmdda-${version}.zip"
-            asset="cdda-0g-additive-asketmc-${asset_sha}-windows-x64-tiles-sound.zip"
-            test -s "${source_zip}"
-            mv "${source_zip}" "${asset}"
-            sha256sum "${asset}" > SHA256SUMS.txt
+            make clean
+            build_distribution
+            second_exe=$(sha256sum cataclysm-tiles.exe | cut -d' ' -f1)
+            second_zip=$(sha256sum "${output_dir}/${asset}" | cut -d' ' -f1)
+            test "${first_exe}" = "${second_exe}"
+            test "${first_zip}" = "${second_zip}"
           fi
+
+          (
+            cd "${output_dir}"
+            sha256sum "${asset}" > SHA256SUMS.txt
+            cp "${GITHUB_WORKSPACE}/BUILD_MANIFEST.txt" BUILD_MANIFEST.txt
+          )
+          ccache --show-stats
+
+      - name: Save compiler cache for trusted events
+        if: github.event_name != 'pull_request' && steps.compiler-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-windows-gcc11-${{ github.sha }}
 
       - name: Stage tagged release bundle
         if: env.RELEASE_BUILD == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: windows-release
           path: |
-            cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip
-            SHA256SUMS.txt
+            release-output/cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip
+            release-output/SHA256SUMS.txt
+            release-output/BUILD_MANIFEST.txt
           if-no-files-found: error
           retention-days: 1
 
-  publish-release:
-    name: Publish tagged release
+  validate-windows-release:
+    name: Validate packaged Windows release
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v0.G-additive-')
     needs: windows-compile
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: windows-release
+      - name: Verify, extract, and run packaged build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archives = @(Get-ChildItem -File -Filter 'cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip')
+          if ($archives.Count -ne 1) { throw "Expected exactly one release archive, found $($archives.Count)" }
+          $archive = $archives[0]
+          $sumLine = (Get-Content -Raw -LiteralPath 'SHA256SUMS.txt').Trim()
+          $sumParts = $sumLine -split '\s+', 2
+          if ($sumParts.Count -ne 2 -or (Split-Path -Leaf $sumParts[1]) -ne $archive.Name) {
+            throw 'SHA256SUMS.txt does not name the exact release archive'
+          }
+          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $archive.FullName).Hash.ToLowerInvariant()
+          if ($actual -ne $sumParts[0].ToLowerInvariant()) { throw 'Release archive checksum mismatch' }
+          Expand-Archive -LiteralPath $archive.FullName -DestinationPath extracted
+          $exe = Get-Item -LiteralPath 'extracted\cataclysm-tiles.exe'
+          if ($exe.Length -le 0) { throw 'Packaged executable is empty' }
+          $version = Get-Content -Raw -LiteralPath 'extracted\VERSION.txt'
+          if ($version -notmatch [regex]::Escape('${{ github.sha }}')) { throw 'Packaged VERSION.txt lacks the full commit SHA' }
+          $manifest = Get-Content -Raw -LiteralPath 'extracted\BUILD_MANIFEST.txt'
+          if ($manifest -notmatch [regex]::Escape('${{ github.sha }}')) { throw 'Packaged manifest lacks the full commit SHA' }
+          Push-Location extracted
+          try {
+            & .\cataclysm-tiles.exe --check-mods dda
+            if ($LASTEXITCODE -ne 0) { throw "--check-mods dda failed with exit code $LASTEXITCODE" }
+          } finally {
+            Pop-Location
+          }
+
+  publish-release:
+    name: Publish tagged prerelease
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v0.G-additive-')
+    needs: validate-windows-release
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
           name: windows-release
-      - name: Verify and publish release assets
+      - name: Verify and publish immutable release assets
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
+          set -euo pipefail
+          mapfile -t assets < <(find . -maxdepth 1 -name 'cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip' -print)
+          test "${#assets[@]}" -eq 1
+          asset="${assets[0]}"
+          expected_name=$(awk '{ print $2 }' SHA256SUMS.txt)
+          test "./${expected_name#./}" = "${asset}"
           sha256sum --check SHA256SUMS.txt
-          asset=$(find . -maxdepth 1 -name 'cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip' -print -quit)
-          test -n "${asset}"
           release_date="${GITHUB_REF_NAME#v0.G-additive-}"
           cat > RELEASE_NOTES.md <<EOF
-          Windows x64 Tiles+Sound release from public main at ${GITHUB_SHA}.
+          Windows x64 Tiles+Sound prerelease from public main at ${GITHUB_SHA}.
 
-          Highlights:
-          - packages the complete additive 0.G feature set documented in PATCHNOTES_ADDITIVE_0G.md
-          - builds the exact tagged source with the checksum-verified MXE GCC 11.2 toolchain
-          - contains no personal saves or configuration
+          Validation completed before publication:
+          - two clean release builds produced identical executable and ZIP hashes
+          - the exact staged ZIP was checksum-verified and extracted on Windows
+          - embedded full-SHA provenance was verified
+          - the packaged executable passed --check-mods dda
 
-          Validation:
-          - Windows x64 Tiles+Sound compile and link
-          - release archive creation and SHA256 verification
-
-          A copied-save load smoke on real Windows hardware remains recommended before moving an existing world. See SHA256SUMS.txt for archive integrity.
+          This remains a prerelease until an operator downloads this exact asset and completes a copied-save load smoke on Windows. Assets are immutable for this tag: a rerun must reproduce the existing checksum.
           EOF
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            gh release upload "${GITHUB_REF_NAME}" "${asset}" SHA256SUMS.txt --clobber
+            mkdir existing
+            gh release download "${GITHUB_REF_NAME}" --pattern SHA256SUMS.txt --dir existing
+            cmp SHA256SUMS.txt existing/SHA256SUMS.txt
           else
-            gh release create "${GITHUB_REF_NAME}" "${asset}" SHA256SUMS.txt \
+            gh release create "${GITHUB_REF_NAME}" "${asset}" SHA256SUMS.txt BUILD_MANIFEST.txt \
               --verify-tag \
+              --prerelease \
               --title "CDDA 0.G Additive ${release_date}" \
               --notes-file RELEASE_NOTES.md
           fi

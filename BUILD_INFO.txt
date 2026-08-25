@@ -21,11 +21,13 @@ Hosted automation:
 
 - `KISS PR gate` runs the portable feature contracts and fail-closed additive
   audit on pull requests.
-- `Windows build and release` compiles and links the Windows x64 Tiles+Sound
-  executable on pull requests using the cached, checksum-verified MXE GCC 11.2
-  toolchain. Pull-request builds do not upload binaries.
-- Pushing a `v0.G-additive-*` tag builds the same Windows target once, packages
-  it, writes `SHA256SUMS.txt`, and publishes both files to GitHub Releases.
-
-Hosted compilation does not replace the copied-save smoke test on real Windows
-hardware. That remains the final check before recommending a build for play.
+- `Windows build and release` compiles, links, and deterministically packages the
+  Windows x64 Tiles+Sound distribution on pull requests using the
+  checksum-verified MXE GCC 11.2 toolchain. Pull-request compiler outputs are
+  neither cached nor uploaded.
+- Pushing a `v0.G-additive-*` tag performs two clean builds and requires matching
+  executable and ZIP hashes. A Windows runner verifies the exact staged ZIP,
+  embedded full-SHA manifest, and `--check-mods dda` before publishing immutable
+  assets as a prerelease.
+- An operator must download that exact asset, complete the copied-save load smoke
+  on Windows, and only then promote the prerelease for normal play.
