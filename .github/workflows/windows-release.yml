@@ -23,6 +23,7 @@ jobs:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_COMPRESS: "true"
       CCACHE_MAXSIZE: 2G
+      TOOLCHAIN_CACHE: ${{ github.workspace }}/.toolchain-cache
     steps:
       - uses: actions/checkout@v5
         with:
@@ -38,32 +39,36 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes ccache zip
 
-      - name: Restore MXE toolchain
+      - name: Restore MXE archives
         id: mxe-cache
         uses: actions/cache@v4
         with:
-          path: ${{ runner.temp }}/mxe
+          path: ${{ env.TOOLCHAIN_CACHE }}
           key: mxe-gcc11.2-x86_64-${{ hashFiles('build-scripts/libbacktrace-x86_64-w64-mingw32-sha256') }}
 
-      - name: Install verified MXE toolchain
+      - name: Download MXE archives
         if: steps.mxe-cache.outputs.cache-hit != 'true'
         run: |
+          mkdir -p "${TOOLCHAIN_CACHE}"
           curl --fail --location --retry 3 \
-            --output mxe-x86_64.tar.xz \
+            --output "${TOOLCHAIN_CACHE}/mxe-x86_64.tar.xz" \
             https://github.com/BrettDong/MXE-GCC/releases/download/mxe-gcc-11.2/mxe-x86_64.tar.xz
           curl --fail --location --retry 3 \
-            --output mxe-x86_64.tar.xz.sha256 \
+            --output "${TOOLCHAIN_CACHE}/mxe-x86_64.tar.xz.sha256" \
             https://github.com/BrettDong/MXE-GCC/releases/download/mxe-gcc-11.2/mxe-x86_64.tar.xz.sha256
-          sha256sum --check mxe-x86_64.tar.xz.sha256
-          tar -xJf mxe-x86_64.tar.xz -C "${RUNNER_TEMP}"
-
           curl --fail --location --retry 3 \
-            --output libbacktrace-x86_64-w64-mingw32.tar.gz \
+            --output "${TOOLCHAIN_CACHE}/libbacktrace-x86_64-w64-mingw32.tar.gz" \
             https://github.com/Qrox/libbacktrace/releases/download/2020-01-03/libbacktrace-x86_64-w64-mingw32.tar.gz
-          sha256sum --check build-scripts/libbacktrace-x86_64-w64-mingw32-sha256
-          tar -xzf libbacktrace-x86_64-w64-mingw32.tar.gz \
+
+      - name: Install verified MXE toolchain
+        run: |
+          cd "${TOOLCHAIN_CACHE}"
+          sha256sum --check mxe-x86_64.tar.xz.sha256
+          sudo tar -xJf mxe-x86_64.tar.xz -C /opt
+          sha256sum --check "${GITHUB_WORKSPACE}/build-scripts/libbacktrace-x86_64-w64-mingw32-sha256"
+          sudo tar -xzf libbacktrace-x86_64-w64-mingw32.tar.gz \
             --exclude=LICENSE \
-            -C "${RUNNER_TEMP}/mxe/usr/x86_64-w64-mingw32.static.gcc11"
+            -C /opt/mxe/usr/x86_64-w64-mingw32.static.gcc11
 
       - name: Restore compiler cache
         uses: actions/cache@v4
@@ -75,7 +80,7 @@ jobs:
       - name: Compile and link Windows build
         shell: bash
         run: |
-          cross="${RUNNER_TEMP}/mxe/usr/bin/x86_64-w64-mingw32.static.gcc11-"
+          cross="/opt/mxe/usr/bin/x86_64-w64-mingw32.static.gcc11-"
           test -x "${cross}g++"
           "${cross}g++" --version
           ccache --zero-stats
