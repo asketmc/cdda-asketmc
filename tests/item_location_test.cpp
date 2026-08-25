@@ -140,3 +140,32 @@ TEST_CASE( "contained_npc_item_location_loads_before_owner_registration",
 
     CHECK( overmap_buffer.remove_npc( owner->getID() ) == owner );
 }
+
+TEST_CASE( "lost item locations cannot retarget during save and load",
+           "[item][item_location][serialization]" )
+{
+    clear_map();
+    map &here = get_map();
+    const tripoint pos( 60, 60, 0 );
+    item &lost = here.add_item( pos, item( "jeans" ) );
+    item &survivor = here.add_item( pos, item( "tshirt" ) );
+    survivor.set_var( "uid", "must-survive" );
+    item_location location( map_cursor( pos ), &lost );
+    REQUIRE( location );
+
+    here.i_rem( pos, &lost );
+    REQUIRE_FALSE( location );
+    const std::string saved = serialize( location );
+    CHECK( saved.find( "\"idx\":-1" ) != std::string::npos );
+
+    item_location loaded;
+    JsonValue json = json_loader::from_string( saved );
+    REQUIRE( json.read( loaded ) );
+    const std::string debug_message = capture_debugmsg_during( [&loaded]() {
+        CHECK_FALSE( loaded );
+    } );
+
+    CHECK( debug_message.find( "lost its target item" ) != std::string::npos );
+    REQUIRE( here.i_at( pos ).size() == 1 );
+    CHECK( here.i_at( pos ).begin()->get_var( "uid" ) == "must-survive" );
+}

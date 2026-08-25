@@ -1,14 +1,28 @@
+#include <algorithm>
+#include <sstream>
+
+#include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "cata_catch.h"
 #include "item.h"
+#include "json.h"
+#include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "messages.h"
+#include "player_activity.h"
 #include "player_helpers.h"
+#include "pickup.h"
 #include "rng.h"
+#include "vehicle.h"
+#include "vehicle_selector.h"
+#include "veh_type.h"
+#include "vpart_position.h"
 
 static const itype_id itype_backpack_hiking( "backpack_hiking" );
 static const itype_id itype_m4_carbine( "m4_carbine" );
 static const itype_id itype_rope_6( "rope_6" );
+static const vproto_id vehicle_prototype_test_cargo_space( "test_cargo_space" );
 
 // This test case exists by way of documenting and exhibiting some potentially unexpected behavior
 // of the following functions for transferring items into inventory:
@@ -186,5 +200,114 @@ TEST_CASE( "pickup m4 with a rope in a hiking backpack", "[pickup][container]" )
             }
         }
     }
+}
+
+TEST_CASE( "lost pickup targets survive serialization without retargeting",
+           "[pickup][activity][serialization]" )
+{
+    avatar &they = get_avatar();
+    map &here = get_map();
+    clear_avatar();
+    clear_map();
+    const tripoint ground = they.pos();
+    REQUIRE( they.wear_item( item( itype_backpack_hiking ) ) );
+
+    item &lost_jeans = here.add_item( ground, item( "jeans" ) );
+    item &lost_shirt = here.add_item( ground, item( "tshirt" ) );
+    item &surviving_target = here.add_item( ground, item( "rag" ) );
+    item &unrelated = here.add_item( ground, item( "rock" ) );
+    surviving_target.set_var( "uid", "pickup-survivor" );
+    unrelated.set_var( "uid", "must-not-retarget" );
+
+    std::vector<item_location> targets {
+        item_location( map_cursor( ground ), &lost_jeans ),
+        item_location( map_cursor( ground ), &lost_shirt ),
+        item_location( map_cursor( ground ), &surviving_target )
+    };
+    they.activity = player_activity( pickup_activity_actor( targets, { 1, 1, 1 }, ground, false ) );
+
+    here.i_rem( ground, &lost_jeans );
+    here.i_rem( ground, &lost_shirt );
+
+    std::ostringstream saved;
+    JsonOut json( saved );
+    they.activity.serialize( json );
+    CHECK( saved.str().find( "jeans" ) != std::string::npos );
+    CHECK( saved.str().find( "t-shirt" ) != std::string::npos );
+    CHECK( saved.str().find( "on the ground" ) != std::string::npos );
+
+    JsonObject saved_activity = json_loader::from_string( saved.str() ).get_object();
+    they.activity.deserialize( saved_activity );
+    they.activity.start_or_resume( they, true );
+    Messages::clear_messages();
+    const std::string debug_message = capture_debugmsg_during( [&they]() {
+        process_activity( they );
+    } );
+
+    CHECK( debug_message.empty() );
+    CHECK( character_has_item_with_var_val( they, "uid", "pickup-survivor" ) );
+    CHECK_FALSE( character_has_item_with_var_val( they, "uid", "must-not-retarget" ) );
+    REQUIRE( here.i_at( ground ).size() == 1 );
+    CHECK( here.i_at( ground ).begin()->get_var( "uid" ) == "must-not-retarget" );
+
+    const std::vector<std::pair<std::string, std::string>> messages =
+        Messages::recent_messages( 0 );
+    CHECK( std::any_of( messages.begin(), messages.end(), []( const auto & message ) {
+        return message.second.find( "2 items you were picking up are no longer there" ) !=
+               std::string::npos;
+    } ) );
+}
+
+TEST_CASE( "never-resolved pickup target remains a debug error", "[pickup][activity]" )
+{
+    avatar &they = get_avatar();
+    clear_avatar();
+    std::vector<item_location> targets { item_location::nowhere };
+    std::vector<int> quantities { 1 };
+    bool stash_successful = true;
+    they.moves = 100;
+
+    const std::string debug_message = capture_debugmsg_during( [&]() {
+        Pickup::do_pickup( targets, quantities, false, stash_successful );
+    } );
+
+    CHECK( debug_message.find( "had an invalid location" ) != std::string::npos );
+}
+
+TEST_CASE( "pickup target descriptions cover non-map locations",
+           "[pickup][activity][serialization]" )
+{
+    avatar &they = get_avatar();
+    map &here = get_map();
+    clear_avatar();
+    clear_map();
+
+    item_location character_item = they.i_add( item( "rag" ) );
+    item_location container = they.i_add( item( itype_backpack_hiking ) );
+    REQUIRE( container->put_in( item( "tshirt" ),
+                                item_pocket::pocket_type::CONTAINER ).success() );
+    item_location contained_item( container, &container->only_item() );
+
+    vehicle *veh = here.add_vehicle( vehicle_prototype_test_cargo_space, they.pos(),
+                                     0_degrees, 0, 0 );
+    REQUIRE( veh != nullptr );
+    const cata::optional<vpart_reference> cargo =
+        here.veh_at( they.pos() ).part_with_feature( "CARGO", true );
+    REQUIRE( cargo );
+    const cata::optional<vehicle_stack::iterator> added =
+        veh->add_item( cargo->part(), item( "rock" ) );
+    REQUIRE( added );
+    item_location vehicle_item( vehicle_cursor( cargo->vehicle(), cargo->part_index() ), & **added );
+
+    player_activity activity( pickup_activity_actor(
+                                  { character_item, contained_item, vehicle_item },
+                                  { 1, 1, 1 }, cata::nullopt, false ) );
+    std::ostringstream saved;
+    JsonOut json( saved );
+    activity.serialize( json );
+
+    CHECK( saved.str().find( "in a character's inventory" ) != std::string::npos );
+    CHECK( saved.str().find( "in a container" ) != std::string::npos );
+    CHECK( saved.str().find( "in a vehicle" ) != std::string::npos );
 }
 
