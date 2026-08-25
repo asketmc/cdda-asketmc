@@ -1055,9 +1055,13 @@ static bool are_requirements_nearby(
                 }
 
                 if( check_weight ) {
-                    // this fetch task will need to pick up an item. so check for its weight/volume before setting off.
-                    if( elem2.volume() > volume_allowed ||
-                        elem2.weight() > weight_allowed ) {
+                    // Wieldable mops do not need inventory storage; NPC i_add
+                    // will wield them when no pocket can contain them.
+                    const bool wieldable_mop = activity_to_restore == ACT_MULTIPLE_MOP &&
+                                               elem2.has_flag( json_flag_MOP ) &&
+                                               you.can_wield( elem2 ).success();
+                    if( !wieldable_mop && ( elem2.volume() > volume_allowed ||
+                                            elem2.weight() > weight_allowed ) ) {
                         continue;
                     }
                 }
@@ -1560,7 +1564,8 @@ static std::vector<std::tuple<tripoint_bub_ms, itype_id, int>> requirements_map(
                              you.backlog.front().id() == ACT_VEHICLE_DECONSTRUCTION ||
                              you.backlog.front().id() == ACT_VEHICLE_REPAIR ||
                              you.backlog.front().id() == ACT_MULTIPLE_FISH ||
-                             you.backlog.front().id() == ACT_MULTIPLE_MINE;
+                             you.backlog.front().id() == ACT_MULTIPLE_MINE ||
+                             you.backlog.front().id() == ACT_MULTIPLE_MOP;
     // where it is, what it is, how much of it, and how much in total is required of that item.
     std::vector<std::tuple<tripoint_bub_ms, itype_id, int>> final_map;
     std::vector<tripoint_bub_ms> loot_spots;
@@ -1982,25 +1987,34 @@ static bool fetch_activity(
                                                      you.backlog.front().id() == ACT_MULTIPLE_FISH ||
                                                      you.backlog.front().id() == ACT_MULTIPLE_MINE ||
                                                      you.backlog.front().id() == ACT_MULTIPLE_MOP ) ) {
-                    if( it.volume() > volume_allowed || it.weight() > weight_allowed ) {
+                    const bool wieldable_mop = you.backlog.front().id() == ACT_MULTIPLE_MOP &&
+                                               it.has_flag( json_flag_MOP ) &&
+                                               you.can_wield( it ).success();
+                    if( !wieldable_mop && ( it.volume() > volume_allowed ||
+                                            it.weight() > weight_allowed ) ) {
                         add_msg_if_player_sees( you, _( "%1s failed to fetch tools." ), you.name );
                         continue;
                     }
+                    item pickup = it;
                     item leftovers = it;
                     if( pickup_count != 1 && it.count_by_charges() ) {
                         // Reinserting leftovers happens after item removal to avoid stacking issues.
                         leftovers.charges = it.charges - pickup_count;
                         if( leftovers.charges > 0 ) {
-                            it.charges = pickup_count;
+                            pickup.charges = pickup_count;
                         }
                     } else {
                         leftovers.charges = 0;
                     }
-                    it.set_var( "activity_var", you.name );
-                    you.i_add( it );
+                    pickup.set_var( "activity_var", you.name );
+                    item_location added = you.i_add( pickup, true, nullptr, nullptr, false );
+                    if( !added || added.where_recursive() != item_location::type::character ) {
+                        add_msg_if_player_sees( you, _( "%1s failed to fetch tools." ), you.name );
+                        continue;
+                    }
                     if( you.is_npc() ) {
                         if( pickup_count == 1 ) {
-                            const std::string item_name = it.tname();
+                            const std::string item_name = pickup.tname();
                             add_msg( _( "%1$s picks up a %2$s." ), you.disp_name(), item_name );
                         } else {
                             add_msg( _( "%s picks up several items." ),  you.disp_name() );

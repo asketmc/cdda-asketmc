@@ -37,6 +37,8 @@ The matching Windows Tiles+Sound package is published under GitHub Releases.
   lost locations cannot retarget another item on load, and locations that never
   resolved still fail loudly.  Focused Catch coverage exercises multiple losses,
   a surviving target, an unrelated same-tile item, and a save/load round trip.
+- NPC butchery jobs now quietly cancel when their corpse had already vanished
+  before the save, while unexpected item-location resolution failures remain loud.
 - Fixed an NPC dialogue crash when closing the final categorized talk topic.
 - Normalized current UltiCa and SurveyorsMap directional sprites to the 0.G
   rotation contract. This fixes east/west mirroring for vehicles, diagonal

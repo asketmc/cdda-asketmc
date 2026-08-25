@@ -7,6 +7,7 @@
 #include <sstream>
 
 #include "activity_actor_definitions.h"
+#include "activity_handlers.h"
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_scope_helpers.h"
@@ -22,12 +23,15 @@
 #include "monster.h"
 #include "player_activity.h"
 #include "point.h"
+#include "string_formatter.h"
 
 static const activity_id ACT_AIM( "ACT_AIM" );
 static const activity_id ACT_BOLTCUTTING( "ACT_BOLTCUTTING" );
+static const activity_id ACT_BUTCHER_FULL( "ACT_BUTCHER_FULL" );
 static const activity_id ACT_CRACKING( "ACT_CRACKING" );
 static const activity_id ACT_EBOOKSAVE( "ACT_EBOOKSAVE" );
 static const activity_id ACT_HACKSAW( "ACT_HACKSAW" );
+static const activity_id ACT_MULTIPLE_BUTCHER( "ACT_MULTIPLE_BUTCHER" );
 static const activity_id ACT_NULL( "ACT_NULL" );
 static const activity_id ACT_OXYTORCH( "ACT_OXYTORCH" );
 static const activity_id ACT_PRYING( "ACT_PRYING" );
@@ -78,6 +82,54 @@ static const itype_id itype_test_weldtank( "test_weldtank" );
 static const itype_id itype_water_clean( "water_clean" );
 
 static const json_character_flag json_flag_SUPER_HEARING( "SUPER_HEARING" );
+
+TEST_CASE( "lost butchery corpse target loads as a quiet invalid location",
+           "[activity][butchery][item_location][serialization]" )
+{
+    const auto load_activity = []( const std::string &type, int target_index ) {
+        const std::string saved = string_format(
+                                      R"({"type":"%s","actor":null,"targets":[{"type":"map","pos":[60,60,0],"idx":%d}]})",
+                                      type, target_index );
+        JsonObject saved_activity = json_loader::from_string( saved ).get_object();
+        player_activity activity;
+        activity.deserialize( saved_activity );
+        return activity;
+    };
+
+    SECTION( "known-lost corpse target cancels butchery without a debug error" ) {
+        avatar &they = get_avatar();
+        clear_avatar();
+        player_activity activity = load_activity( "ACT_BUTCHER_FULL", -1 );
+        REQUIRE( activity.id() == ACT_BUTCHER_FULL );
+        REQUIRE( activity.targets.size() == 1 );
+
+        const std::string debug_message = capture_debugmsg_during( [&activity, &they]() {
+            activity_handlers::butcher_finish( &activity, &they );
+        } );
+
+        CHECK( debug_message.empty() );
+        CHECK( activity.is_null() );
+    }
+
+    SECTION( "unexpected positive corpse index remains a debug error" ) {
+        player_activity activity = load_activity( "ACT_BUTCHER_FULL", 9999 );
+        REQUIRE( activity.targets.size() == 1 );
+        const std::string debug_message = capture_debugmsg_during( [&activity]() {
+            CHECK_FALSE( activity.targets.front() );
+        } );
+        CHECK( debug_message.find( "lost its target item" ) != std::string::npos );
+    }
+
+    SECTION( "negative map index for another activity remains a debug error" ) {
+        player_activity activity = load_activity( "ACT_MULTIPLE_BUTCHER", -1 );
+        REQUIRE( activity.id() == ACT_MULTIPLE_BUTCHER );
+        REQUIRE( activity.targets.size() == 1 );
+        const std::string debug_message = capture_debugmsg_during( [&activity]() {
+            CHECK_FALSE( activity.targets.front() );
+        } );
+        CHECK( debug_message.find( "lost its target item" ) != std::string::npos );
+    }
+}
 
 static const mtype_id mon_test_non_shearable( "mon_test_non_shearable" );
 static const mtype_id mon_test_shearable( "mon_test_shearable" );

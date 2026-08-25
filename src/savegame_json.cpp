@@ -129,8 +129,16 @@
 struct mutation_branch;
 struct oter_type_t;
 
+static const activity_id ACT_BLEED( "ACT_BLEED" );
+static const activity_id ACT_BUTCHER( "ACT_BUTCHER" );
+static const activity_id ACT_BUTCHER_FULL( "ACT_BUTCHER_FULL" );
+static const activity_id ACT_DISMEMBER( "ACT_DISMEMBER" );
+static const activity_id ACT_DISSECT( "ACT_DISSECT" );
 static const activity_id ACT_FETCH_REQUIRED( "ACT_FETCH_REQUIRED" );
+static const activity_id ACT_FIELD_DRESS( "ACT_FIELD_DRESS" );
 static const activity_id ACT_MIGRATION_CANCEL( "ACT_MIGRATION_CANCEL" );
+static const activity_id ACT_QUARTER( "ACT_QUARTER" );
+static const activity_id ACT_SKIN( "ACT_SKIN" );
 
 static const anatomy_id anatomy_human_anatomy( "human_anatomy" );
 
@@ -399,6 +407,24 @@ void player_activity::deserialize( const JsonObject &data )
     data.read( "coord_set", coord_set );
     data.read( "name", name );
     data.read( "targets", targets );
+    const bool handles_disappearing_corpses = type == ACT_BLEED || type == ACT_BUTCHER ||
+            type == ACT_BUTCHER_FULL || type == ACT_DISMEMBER || type == ACT_DISSECT ||
+            type == ACT_FIELD_DRESS || type == ACT_QUARTER || type == ACT_SKIN;
+    if( handles_disappearing_corpses && data.has_array( "targets" ) ) {
+        JsonArray saved_targets = data.get_array( "targets" );
+        size_t target_index = 0;
+        while( saved_targets.has_more() && target_index < targets.size() ) {
+            JsonObject saved_target = saved_targets.next_object();
+            if( saved_target.get_string( "type", "null" ) == "map" &&
+                saved_target.get_int( "idx", 0 ) < 0 ) {
+                // Corpses may revive or otherwise vanish before an NPC's activity is saved.
+                // Preserve the generic item_location diagnostic for unexpected failures,
+                // but migrate this expected already-lost target to a quiet invalid location.
+                targets[target_index] = item_location::nowhere;
+            }
+            ++target_index;
+        }
+    }
     data.read( "placement", placement );
     data.read( "relative_placement", relative_placement );
     values = data.get_int_array( "values" );
