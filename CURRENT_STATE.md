@@ -29,6 +29,8 @@ python tools/additive_audit.py --target HEAD
 ## Release boundary
 
 `BUILD_INFO.txt` records the production command. Hosted checks cover portable
-Python/data contracts only. A release still requires the exact-tree Windows
-Tiles+Sound build, affected C++ tests, `--check-mods dda`, and a copied-save
-load smoke. No current baseline failure is accepted for these focused gates.
+Python/data contracts only. Tag `v0.G-additive-2026.08.25` identifies the
+Windows Tiles+Sound release; its asset checksum is published beside the ZIP.
+The full Catch build has a pre-existing EOC-test compile failure, so the P0
+release gates are the exact-tree Windows build, focused changed-object compile,
+`--check-mods dda`, and copied-save load smoke.

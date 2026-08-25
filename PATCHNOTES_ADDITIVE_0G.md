@@ -1,7 +1,7 @@
 # CDDA 0.G Additive Fork — Detailed Patch Notes
 
 This repository begins with the integrated source snapshot documented below.
-No public binary release has yet been published from this repository.
+The matching Windows Tiles+Sound package is published under GitHub Releases.
 
 ## Crash and rotation fixes
 
