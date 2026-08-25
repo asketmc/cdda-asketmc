@@ -1882,7 +1882,7 @@ npc_action npc::address_needs( float danger, bool urgent_only )
     // and swing into action with alarming alacrity.
     // no sometimes they are just looking the other way, sometimes they hestitate.
     // ( also we can get huge performance boosts )
-    if( one_in( 3 ) ) {
+    if( urgent_only || one_in( 3 ) ) {
         healing_options try_to_fix_me = patient_assessment( *this );
         bool critical_injury = has_effect( effect_bleed ) || has_effect( effect_bite ) ||
                                has_effect( effect_infected );
@@ -2836,13 +2836,14 @@ void npc::return_to_assigned_camp()
     if( !assigned_camp ) {
         return;
     }
-    if( is_camp_duty_ready() && mission != NPC_MISSION_TRAVELLING ) {
-        return;
-    }
     const cata::optional<basecamp *> camp = overmap_buffer.find_camp( assigned_camp->xy() );
     if( !camp ) {
         assigned_camp = cata::nullopt;
         camp_duty = false;
+        return;
+    }
+    const bool at_camp = ( *camp )->point_within_camp( global_omt_location() );
+    if( camp_duty && at_camp && mission != NPC_MISSION_TRAVELLING ) {
         return;
     }
 
@@ -2851,12 +2852,13 @@ void npc::return_to_assigned_camp()
     guard_pos = cata::nullopt;
     chair_pos = cata::nullopt;
     wander_pos = cata::nullopt;
-    goal = ( *camp )->camp_omt_pos();
     set_attitude( NPCATT_NULL );
-    if( global_omt_location() == goal ) {
+    if( at_camp ) {
+        goal = global_omt_location();
         set_mission( NPC_MISSION_GUARD_ALLY );
         omt_path.clear();
     } else {
+        goal = ( *camp )->camp_omt_pos();
         omt_path = overmap_buffer.get_travel_path( global_omt_location(), goal,
                    overmap_path_params::for_npc() );
         set_mission( NPC_MISSION_TRAVELLING );
