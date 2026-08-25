@@ -220,6 +220,12 @@
     "tools": [ [ [ "pickaxe", -1 ], [ "bronze_pickaxe", -1 ], [ "jackhammer", 300 ], [ "elec_jackhammer", 3500 ] ] ]
   },
   {
+    "id": "mopping_standard",
+    "type": "requirement",
+    "//": "mopping",
+    "tools": [ [ [ "mop", -1 ], [ "mop_folded", -1 ] ] ]
+  },
+  {
     "id": "bronzesmithing_tools",
     "type": "requirement",
     "//": "Tools for casting and work hardening items made from bronze",

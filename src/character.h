@@ -773,9 +773,10 @@ class Character : public Creature, public visitable
         /** Returns if the player has hibernation mutation and is asleep and well fed */
         bool is_hibernating() const;
         /** Maintains body temperature */
-        void update_bodytemp();
+        void update_bodytemp( const time_duration &elapsed = 1_turns );
         void update_frostbite( const bodypart_id &bp, int FBwindPower,
-                               const std::map<bodypart_id, int> &warmth_per_bp );
+                               const std::map<bodypart_id, int> &warmth_per_bp,
+                               int elapsed_turns = 1 );
         /** Equalizes heat between body parts */
         void temp_equalizer( const bodypart_id &bp1, const bodypart_id &bp2 );
 
@@ -890,7 +891,8 @@ class Character : public Creature, public visitable
         int get_part_hp_max( const bodypart_id &id ) const;
 
         /** Maintains body wetness and handles the rate at which the player dries */
-        void update_body_wetness( const w_point &weather );
+        void update_body_wetness( const w_point &weather,
+                                  const time_duration &elapsed = 1_turns );
 
         /** Modifies the player's sight values
          *  Must be called when any of the following change:

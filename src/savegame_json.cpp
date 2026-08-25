@@ -2157,6 +2157,7 @@ void job_data::deserialize( const JsonValue &jv )
         jo.allow_omitted_members();
         jo.read( "task_priorities", task_priorities );
     }
+    task_priorities.emplace( activity_id( "ACT_MULTIPLE_MOP" ), 0 );
 }
 
 /*

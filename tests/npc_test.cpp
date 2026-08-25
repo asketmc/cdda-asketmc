@@ -15,6 +15,7 @@
 #include "field.h"
 #include "field_type.h"
 #include "game.h"
+#include "game_constants.h"
 #include "line.h"
 #include "map.h"
 #include "map_helpers.h"
@@ -32,6 +33,7 @@
 #include "veh_type.h"
 #include "vehicle.h"
 #include "vpart_position.h"
+#include "weather.h"
 
 class Creature;
 
@@ -458,4 +460,69 @@ TEST_CASE( "npc_can_target_player" )
     hostile.regen_ai_cache();
     REQUIRE( hostile.current_target() != nullptr );
     CHECK( hostile.current_target() == static_cast<Creature *>( &player_character ) );
+}
+
+TEST_CASE( "npc environmental updates preserve turn semantics", "[npc][needs][temperature]" )
+{
+    clear_map();
+    const bodypart_id torso( "torso" );
+    const efftype_id effect_cold( "cold" );
+
+    SECTION( "temperature effects refresh away from the ten-second boundary" ) {
+        calendar::turn = calendar::turn_zero + 3_seconds;
+        npc guy = create_model();
+        guy.set_all_parts_temp_cur( BODYTEMP_FREEZING );
+        guy.set_all_parts_temp_conv( BODYTEMP_FREEZING );
+
+        guy.npc_update_body();
+
+        CHECK( guy.has_effect( effect_cold, torso ) );
+    }
+
+    SECTION( "elapsed drying advances by the supplied duration" ) {
+        npc guy = create_model();
+        w_point dry_weather = *get_weather().weather_precise;
+        dry_weather.temperature = units::from_fahrenheit( 90 );
+        dry_weather.humidity = 0;
+        dry_weather.windpower = 10;
+        guy.set_part_wetness( torso, guy.get_part_drench_capacity( torso ) );
+        const int before = guy.get_part_wetness( torso );
+
+        guy.update_body_wetness( dry_weather, 30_minutes );
+
+        CHECK( guy.get_part_wetness( torso ) < before );
+    }
+
+    SECTION( "on-load catch-up applies elapsed drying" ) {
+        npc guy = create_model();
+        weather_manager &weather = get_weather();
+        weather.weather_precise->temperature = units::from_fahrenheit( 90 );
+        weather.weather_precise->humidity = 0;
+        weather.weather_precise->windpower = 10;
+        guy.set_part_wetness( torso, guy.get_part_drench_capacity( torso ) );
+        const int before = guy.get_part_wetness( torso );
+
+        on_load_test( guy, 0_turns, 30_minutes );
+
+        CHECK( guy.get_part_wetness( torso ) < before );
+    }
+}
+
+TEST_CASE( "tired non-allied NPCs use the sleep action", "[npc][needs][sleep]" )
+{
+    clear_map();
+    calendar::turn = calendar::turn_zero + 1_hours;
+    npc guy = create_model();
+    guy.unset_mutation( trait_WEB_WEAVER );
+    guy.set_fatigue( fatigue_levels::MASSIVE_FATIGUE + 100 );
+    guy.set_hunger( 0 );
+    guy.set_thirst( 0 );
+    REQUIRE_FALSE( guy.is_player_ally() );
+
+    for( int attempt = 0; attempt < 100 && !guy.has_effect( effect_sleep ); ++attempt ) {
+        guy.execute_action( guy.address_needs( 0.0f ) );
+    }
+
+    CHECK( guy.has_effect( effect_sleep ) );
+    CHECK( guy.get_fatigue() > 0 );
 }

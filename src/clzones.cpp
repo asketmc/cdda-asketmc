@@ -818,6 +818,25 @@ bool zone_manager::has( const zone_type_id &type, const tripoint_abs_ms &where,
     return point_set.find( where ) != point_set.end() || vzone_set.find( where ) != vzone_set.end();
 }
 
+bool zone_manager::has_nonpersonal( const zone_type_id &type, const tripoint_abs_ms &where,
+                                    const faction_id &fac ) const
+{
+    for( const zone_data &zone : zones ) {
+        if( !zone.get_is_personal() && zone.get_enabled() && zone.get_type() == type &&
+            zone.get_faction() == fac && zone.has_inside( where ) ) {
+            return true;
+        }
+    }
+    map &here = get_map();
+    for( const zone_data *zone : here.get_vehicle_zones( here.get_abs_sub().z() ) ) {
+        if( !zone->get_is_personal() && zone->get_enabled() && zone->get_type() == type &&
+            zone->get_faction() == fac && zone->has_inside( where ) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool zone_manager::has_near( const zone_type_id &type, const tripoint_abs_ms &where, int range,
                              const faction_id &fac ) const
 {
@@ -890,7 +909,8 @@ std::vector<zone_data const *> zone_manager::get_zones_at( const tripoint_abs_ms
 }
 
 bool zone_manager::custom_loot_has( const tripoint_abs_ms &where, const item *it,
-                                    const zone_type_id &ztype, const faction_id &fac ) const
+                                    const zone_type_id &ztype, const faction_id &fac,
+                                    bool exclude_personal ) const
 {
     std::vector<zone_data const *> const zones = get_zones_at( where, ztype, fac );
     if( zones.empty() || !it ) {
@@ -898,6 +918,9 @@ bool zone_manager::custom_loot_has( const tripoint_abs_ms &where, const item *it
     }
     item const *const check_it = it->this_or_single_content();
     for( zone_data const *zone : zones ) {
+        if( exclude_personal && zone->get_is_personal() ) {
+            continue;
+        }
         loot_options const &options = dynamic_cast<const loot_options &>( zone->get_options() );
         std::string const filter_string = options.get_mark();
         bool has = false;
@@ -920,7 +943,8 @@ bool zone_manager::custom_loot_has( const tripoint_abs_ms &where, const item *it
 }
 
 std::unordered_set<tripoint_abs_ms> zone_manager::get_near( const zone_type_id &type,
-        const tripoint_abs_ms &where, int range, const item *it, const faction_id &fac ) const
+        const tripoint_abs_ms &where, int range, const item *it, const faction_id &fac,
+        bool exclude_personal ) const
 {
     const auto &point_set = get_point_set( type, fac );
     std::unordered_set<tripoint_abs_ms> near_point_set;
@@ -928,8 +952,11 @@ std::unordered_set<tripoint_abs_ms> zone_manager::get_near( const zone_type_id &
     for( const tripoint_abs_ms &point : point_set ) {
         if( point.z() == where.z() ) {
             if( square_dist( point, where ) <= range ) {
+                if( exclude_personal && !has_nonpersonal( type, point, fac ) ) {
+                    continue;
+                }
                 if( ( type != zone_type_LOOT_CUSTOM && type != zone_type_LOOT_ITEM_GROUP ) ||
-                    ( it != nullptr && custom_loot_has( point, it, type, fac ) ) ) {
+                    ( it != nullptr && custom_loot_has( point, it, type, fac, exclude_personal ) ) ) {
                     near_point_set.insert( point );
                 }
             }
@@ -940,8 +967,11 @@ std::unordered_set<tripoint_abs_ms> zone_manager::get_near( const zone_type_id &
     for( const tripoint_abs_ms &point : vzone_set ) {
         if( point.z() == where.z() ) {
             if( square_dist( point, where ) <= range ) {
+                if( exclude_personal && !has_nonpersonal( type, point, fac ) ) {
+                    continue;
+                }
                 if( ( type != zone_type_LOOT_CUSTOM && type != zone_type_LOOT_ITEM_GROUP ) ||
-                    ( it != nullptr && custom_loot_has( point, it, type, fac ) ) ) {
+                    ( it != nullptr && custom_loot_has( point, it, type, fac, exclude_personal ) ) ) {
                     near_point_set.insert( point );
                 }
             }
@@ -990,43 +1020,44 @@ cata::optional<tripoint_abs_ms> zone_manager::get_nearest( const zone_type_id &t
 }
 
 zone_type_id zone_manager::get_near_zone_type_for_item( const item &it,
-        const tripoint_abs_ms &where, int range, const faction_id &fac ) const
+        const tripoint_abs_ms &where, int range, const faction_id &fac,
+        bool exclude_personal ) const
 {
     const item_category &cat = it.get_category_of_contents();
+    const auto has_destination = [this, &where, range, &it, &fac, exclude_personal](
+                                     const zone_type_id &type ) {
+        return !get_near( type, where, range, &it, fac, exclude_personal ).empty();
+    };
 
-    if( has_near( zone_type_LOOT_CUSTOM, where, range, fac ) ) {
-        if( !get_near( zone_type_LOOT_CUSTOM, where, range, &it, fac ).empty() ) {
-            return zone_type_LOOT_CUSTOM;
-        }
+    if( has_destination( zone_type_LOOT_CUSTOM ) ) {
+        return zone_type_LOOT_CUSTOM;
     }
-    if( has_near( zone_type_LOOT_ITEM_GROUP, where, range, fac ) ) {
-        if( !get_near( zone_type_LOOT_ITEM_GROUP, where, range, &it, fac ).empty() ) {
-            return zone_type_LOOT_ITEM_GROUP;
-        }
+    if( has_destination( zone_type_LOOT_ITEM_GROUP ) ) {
+        return zone_type_LOOT_ITEM_GROUP;
     }
     if( it.has_flag( STATIC( flag_id( "FIREWOOD" ) ) ) ) {
-        if( has_near( zone_type_LOOT_WOOD, where, range, fac ) ) {
+        if( has_destination( zone_type_LOOT_WOOD ) ) {
             return zone_type_LOOT_WOOD;
         }
     }
     if( it.is_corpse() ) {
-        if( has_near( zone_type_LOOT_CORPSE, where, range, fac ) ) {
+        if( has_destination( zone_type_LOOT_CORPSE ) ) {
             return zone_type_LOOT_CORPSE;
         }
     }
     if( it.typeId() == itype_disassembly ) {
-        if( has_near( zone_type_zone_disassemble, where, range, fac ) ) {
+        if( has_destination( zone_type_zone_disassemble ) ) {
             return zone_type_zone_disassemble;
         }
     }
 
     cata::optional<zone_type_id> zone_check_first = cat.priority_zone( it );
-    if( zone_check_first && has_near( *zone_check_first, where, range, fac ) ) {
+    if( zone_check_first && has_destination( *zone_check_first ) ) {
         return *zone_check_first;
     }
 
     cata::optional<zone_type_id> zone_cat = cat.zone();
-    if( zone_cat && has_near( *zone_cat, where, range, fac ) ) {
+    if( zone_cat && has_destination( *zone_cat ) ) {
         return *cat.zone();
     }
 
@@ -1057,14 +1088,14 @@ zone_type_id zone_manager::get_near_zone_type_for_item( const item &it,
 
         if( it_food != nullptr ) {
             if( it_food->get_comestible()->comesttype == "DRINK" ) {
-                if( perishable && has_near( zone_type_LOOT_PDRINK, where, range, fac ) ) {
+                if( perishable && has_destination( zone_type_LOOT_PDRINK ) ) {
                     return zone_type_LOOT_PDRINK;
-                } else if( has_near( zone_type_LOOT_DRINK, where, range, fac ) ) {
+                } else if( has_destination( zone_type_LOOT_DRINK ) ) {
                     return zone_type_LOOT_DRINK;
                 }
             }
 
-            if( perishable && has_near( zone_type_LOOT_PFOOD, where, range, fac ) ) {
+            if( perishable && has_destination( zone_type_LOOT_PFOOD ) ) {
                 return zone_type_LOOT_PFOOD;
             }
         }

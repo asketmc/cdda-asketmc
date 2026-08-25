@@ -26,6 +26,7 @@
 #include "overmap.h"
 #include "overmap_types.h"
 #include "overmapbuffer.h"
+#include "stomach.h"
 #include "type_id.h"
 
 static const oter_str_id oter_cabin( "cabin" );
@@ -208,6 +209,57 @@ TEST_CASE( "npc_checks_each_nearby_camp_for_accessible_food", "[overmap][camp][n
     get_avatar().camps = previous_camp_index;
     followers->food_supply = previous_food_supply;
     followers->consumes_food = previously_consumed_food;
+}
+
+TEST_CASE( "npc camp water uses stomach capacity", "[overmap][camp][npc][needs]" )
+{
+    overmap *const test_overmap = overmap_buffer.get_existing( point_abs_om() );
+    faction *const followers = get_avatar().get_faction();
+    REQUIRE( test_overmap != nullptr );
+    REQUIRE( followers != nullptr );
+
+    const tripoint_abs_omt camp_pos = project_combine( test_overmap->pos(),
+                                        tripoint_om_omt( 75, 75, 0 ) );
+    basecamp water_camp( "water camp", camp_pos );
+    water_camp.define_camp( camp_pos, "faction_base_bare_bones_NPC_camp_0", false );
+    water_camp.set_owner( followers->id );
+    REQUIRE( water_camp.has_water() );
+
+    standard_npc thirsty_npc( "thirsty camp visitor" );
+    thirsty_npc.set_fac( followers->id );
+    thirsty_npc.spawn_at_omt( camp_pos );
+    thirsty_npc.stomach.empty();
+    thirsty_npc.guts.empty();
+    thirsty_npc.set_hunger( 0 );
+
+    std::vector<basecamp> previous_camps = std::move( test_overmap->camps );
+    test_overmap->camps.clear();
+    const std::set<tripoint_abs_omt> previous_camp_index = get_avatar().camps;
+    overmap_buffer.add_camp( water_camp );
+    get_avatar().camps.clear();
+    get_avatar().camps.insert( camp_pos );
+
+    SECTION( "water enters the stomach" ) {
+        thirsty_npc.set_thirst( 200 );
+        const units::volume before = thirsty_npc.stomach.get_water();
+
+        CHECK( thirsty_npc.consume_food_from_camp() );
+        CHECK( thirsty_npc.stomach.get_water() > before );
+        CHECK( thirsty_npc.stomach.contains() <= thirsty_npc.stomach.capacity( thirsty_npc ) );
+    }
+
+    SECTION( "a full stomach refuses more water" ) {
+        const units::volume room = thirsty_npc.stomach.stomach_remaining( thirsty_npc );
+        thirsty_npc.stomach.ingest( { room, 0_ml, {} } );
+        thirsty_npc.set_thirst( 600 );
+        REQUIRE( thirsty_npc.get_thirst() > 40 );
+
+        CHECK_FALSE( thirsty_npc.consume_food_from_camp() );
+        CHECK( thirsty_npc.stomach.contains() <= thirsty_npc.stomach.capacity( thirsty_npc ) );
+    }
+
+    test_overmap->camps = std::move( previous_camps );
+    get_avatar().camps = previous_camp_index;
 }
 
 TEST_CASE( "set_and_get_overmap_scents", "[overmap]" )

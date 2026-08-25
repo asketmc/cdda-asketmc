@@ -520,19 +520,24 @@ class zone_manager
         void cache_vzones( map *pmap = nullptr );
         bool has( const zone_type_id &type, const tripoint_abs_ms &where,
                   const faction_id &fac = your_fac ) const;
+        bool has_nonpersonal( const zone_type_id &type, const tripoint_abs_ms &where,
+                              const faction_id &fac = your_fac ) const;
         bool has_near( const zone_type_id &type, const tripoint_abs_ms &where,
                        int range = MAX_DISTANCE, const faction_id &fac = your_fac ) const;
         bool has_loot_dest_near( const tripoint_abs_ms &where ) const;
         bool custom_loot_has( const tripoint_abs_ms &where, const item *it,
-                              const zone_type_id &ztype, const faction_id &fac = your_fac ) const;
+                              const zone_type_id &ztype, const faction_id &fac = your_fac,
+                              bool exclude_personal = false ) const;
         std::unordered_set<tripoint_abs_ms> get_near(
             const zone_type_id &type, const tripoint_abs_ms &where, int range = MAX_DISTANCE,
-            const item *it = nullptr, const faction_id &fac = your_fac ) const;
+            const item *it = nullptr, const faction_id &fac = your_fac,
+            bool exclude_personal = false ) const;
         cata::optional<tripoint_abs_ms> get_nearest(
             const zone_type_id &type, const tripoint_abs_ms &where, int range = MAX_DISTANCE,
             const faction_id &fac = your_fac ) const;
         zone_type_id get_near_zone_type_for_item( const item &it, const tripoint_abs_ms &where,
-                int range = MAX_DISTANCE, const faction_id &fac = your_fac ) const;
+                int range = MAX_DISTANCE, const faction_id &fac = your_fac,
+                bool exclude_personal = false ) const;
         std::vector<zone_data> get_zones( const zone_type_id &type, const tripoint_abs_ms &where,
                                           const faction_id &fac = your_fac ) const;
         const zone_data *get_zone_at( const tripoint_abs_ms &where, bool loot_only = false,
