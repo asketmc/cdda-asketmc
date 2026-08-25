@@ -233,8 +233,7 @@ TEST_CASE( "NPC camp mopping cleans its assigned zone", "[zones][npc][basecamp]"
     clear_avatar();
     clear_map();
     map &here = get_map();
-    npc &worker = spawn_npc( point( 60, 60 ), "test_talker" );
-    clear_character( worker );
+    standard_npc worker( "camp mopping worker", tripoint_zero );
     worker.set_fac( faction_your_followers );
     worker.i_add( item( itype_mop ) );
     const tripoint target = worker.pos() + tripoint_east;
