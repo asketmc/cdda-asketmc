@@ -2008,8 +2008,18 @@ void pickup_activity_actor::do_turn( player_activity &, Character &who )
         return;
     }
 
+    // Note what we are about to pick up while the locations still resolve, so a
+    // target that stops existing before its turn can still be named.
+    target_names.resize( target_items.size() );
+    for( size_t i = 0; i < target_items.size(); i++ ) {
+        if( target_names[i].empty() && target_items[i] ) {
+            target_names[i] = target_items[i]->tname();
+        }
+    }
+
     // False indicates that the player canceled pickup when met with some prompt
-    const bool keep_going = Pickup::do_pickup( target_items, quantities, autopickup, stash_successful );
+    const bool keep_going = Pickup::do_pickup( target_items, quantities, autopickup, stash_successful,
+                            &target_names );
 
     // If there are items left we ran out of moves, so continue the activity
     // Otherwise, we are done.

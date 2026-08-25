@@ -466,6 +466,14 @@ class pickup_activity_actor : public activity_actor
          */
         cata::optional<tripoint> starting_pos;
 
+        /**
+         * Names of the targets, refreshed each turn while their locations still
+         * resolve. Picking up several items spans multiple turns, and a target can
+         * stop existing in between, at which point its location can no longer name
+         * it. Diagnostics only, so this is rebuilt rather than saved.
+         */
+        std::vector<std::string> target_names; // NOLINT(cata-serialize)
+
     public:
         pickup_activity_actor( const std::vector<item_location> &target_items,
                                const std::vector<int> &quantities,

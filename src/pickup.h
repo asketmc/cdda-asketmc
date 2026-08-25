@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_PICKUP_H
 #define CATA_SRC_PICKUP_H
 
+#include <string>
 #include <vector>
 
 #include "cuboid_rectangle.h"
@@ -16,9 +17,14 @@ namespace Pickup
 /**
  * Returns `false` if the player was presented a prompt and decided to cancel the pickup.
  * `true` in other cases.
+ *
+ * @param target_names optional names of the targets, consumed in step with
+ * @ref targets.  Used only to describe a target whose item stopped existing
+ * before we got to it, since such a location can no longer name itself.
  */
 bool do_pickup( std::vector<item_location> &targets, std::vector<int> &quantities,
-                bool autopickup, bool &stash_successful );
+                bool autopickup, bool &stash_successful,
+                std::vector<std::string> *target_names = nullptr );
 bool query_thief();
 
 enum from_where : int {
