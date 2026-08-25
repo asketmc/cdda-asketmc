@@ -16,6 +16,7 @@
 #include "type_id.h"
 
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
+static const activity_id ACT_MULTIPLE_MOP( "ACT_MULTIPLE_MOP" );
 static const faction_id faction_your_followers( "your_followers" );
 static const field_type_str_id field_fd_blood( "fd_blood" );
 
@@ -171,6 +172,32 @@ TEST_CASE( "NPC loot sorting cannot use personal zones", "[zones][npc][activitie
         CHECK( _count_items_or_charges(
                    cargo_part->vehicle().get_items( cargo_part->part_index() ), food.typeId() ) == 1 );
     }
+}
+
+TEST_CASE( "NPC mopping fetches a stored mop", "[zones][npc][activities][mopping]" )
+{
+    clear_avatar();
+    clear_map();
+    map &here = get_map();
+    const tripoint origin = get_avatar().pos();
+    standard_npc worker( "mopping worker", origin );
+    worker.set_fac( faction_your_followers );
+    const tripoint target = origin + tripoint_east;
+    const tripoint tool_storage = origin + tripoint_west;
+    create_local_tile_zone( "Mopping", zone_type_MOPPING, target );
+    create_local_tile_zone( "Tools", zone_type_LOOT_TOOLS, tool_storage );
+    here.add_item_or_charges( tool_storage, item( "mop" ) );
+    here.add_field( target, field_type_id( "fd_blood" ), 1 );
+    REQUIRE_FALSE( worker.has_item_with( []( const item & it ) {
+        return it.has_flag( flag_id( "MOP" ) );
+    } ) );
+
+    worker.assign_activity( player_activity( ACT_MULTIPLE_MOP ) );
+    process_activity( worker );
+
+    REQUIRE( worker.get_wielded_item() );
+    CHECK( worker.get_wielded_item()->has_flag( flag_id( "MOP" ) ) );
+    CHECK( here.i_at( tool_storage ).empty() );
 }
 
 TEST_CASE( "NPC mopping cleans its assigned tile", "[zones][npc][activities][mopping]" )

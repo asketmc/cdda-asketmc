@@ -4000,9 +4000,6 @@ std::vector<npc::local_item_candidate> npc::find_local_food()
         if( value > 0.0f ) {
             result.push_back( { loc, value } );
         }
-        if( candidate.any_pockets_sealed() ) {
-            return;
-        }
         for( item *contained : candidate.all_items_top() ) {
             consider( *contained, item_location( loc, contained ), true );
         }
@@ -4026,7 +4023,8 @@ std::vector<npc::local_item_candidate> npc::find_local_food()
         }
 
         const optional_vpart_position vp = here.veh_at( p );
-        if( !vp || vp->vehicle().is_moving() || !vp->vehicle().is_owned_by( *this, true ) ) {
+        if( !vp || vp->vehicle().is_moving() || !vp->vehicle().has_owner() ||
+            !vp->vehicle().is_owned_by( *this ) ) {
             continue;
         }
         const cata::optional<vpart_reference> cargo = vp.part_with_feature( VPFLAG_CARGO, true );
@@ -4085,7 +4083,8 @@ std::vector<npc::local_item_candidate> npc::find_local_warm_clothing()
         }
 
         const optional_vpart_position vp = here.veh_at( p );
-        if( !vp || vp->vehicle().is_moving() || !vp->vehicle().is_owned_by( *this, true ) ) {
+        if( !vp || vp->vehicle().is_moving() || !vp->vehicle().has_owner() ||
+            !vp->vehicle().is_owned_by( *this ) ) {
             continue;
         }
         const cata::optional<vpart_reference> cargo = vp.part_with_feature( VPFLAG_CARGO, true );

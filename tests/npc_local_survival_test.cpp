@@ -23,6 +23,7 @@ static const faction_id faction_free_merchants( "free_merchants" );
 static const faction_id faction_your_followers( "your_followers" );
 static const itype_id itype_meat_fatty_cooked( "meat_fatty_cooked" );
 static const itype_id itype_meat_scrap_cooked( "meat_scrap_cooked" );
+static const itype_id itype_bottle_plastic( "bottle_plastic" );
 static const itype_id itype_sweater( "sweater" );
 static const itype_id itype_water_clean( "water_clean" );
 static const furn_str_id furn_f_toilet( "f_toilet" );
@@ -132,6 +133,19 @@ TEST_CASE_METHOD( local_survival_test_fixture, "NPC local food and clean water",
         CHECK( guy.consume_local_food( false ) );
         CHECK( guy.stomach.get_water() > water_before );
     }
+    SECTION( "sealed bottled clean water uses normal consumption" ) {
+        guy.set_thirst( 200 );
+        item bottle( itype_bottle_plastic );
+        REQUIRE( bottle.put_in( item( itype_water_clean, calendar::turn, 1 ),
+                                item_pocket::pocket_type::CONTAINER ).success() );
+        REQUIRE( bottle.seal() );
+        here.add_item_or_charges( food_pos, bottle );
+        const units::volume water_before = guy.stomach.get_water();
+
+        REQUIRE( contains_candidate( guy.find_local_food(), itype_water_clean ) );
+        CHECK( guy.consume_local_food( false ) );
+        CHECK( guy.stomach.get_water() > water_before );
+    }
     SECTION( "untreated terrain water is not directly ingested" ) {
         guy.set_thirst( 200 );
         here.ter_set( food_pos, ter_t_water_sh );
@@ -216,6 +230,21 @@ TEST_CASE_METHOD( local_survival_test_fixture, "NPC unlocked owned vehicle cargo
     } else {
         CHECK( contains_candidate( guy.find_local_food(), itype_meat_scrap_cooked ) );
     }
+}
+
+TEST_CASE_METHOD( local_survival_test_fixture, "NPC ignores ownerless vehicle cargo",
+                  "[npc][needs][vehicle]" )
+{
+    npc &guy = setup_survival_npc();
+    const tripoint target = guy.pos() + tripoint_east;
+    guy.set_hunger( 300 );
+    vehicle &veh = add_cargo_vehicle( target, guy, false );
+    veh.remove_owner();
+    const int cargo = veh.part_with_feature( 0, VPFLAG_CARGO, true );
+    REQUIRE( cargo >= 0 );
+    REQUIRE( veh.add_item( cargo, item( itype_meat_scrap_cooked ) ) );
+
+    CHECK( guy.find_local_food().empty() );
 }
 
 TEST_CASE_METHOD( local_survival_test_fixture, "NPC local warmth and shelter", "[npc][needs][warmth]" )
