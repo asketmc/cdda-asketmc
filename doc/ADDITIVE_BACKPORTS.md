@@ -191,6 +191,9 @@ manifest are actually imported.
 | --- | --- | --- |
 | Sleep, weather, camp water, mopping and sorting zones | #86016, #86257, #86254 | Adapted to 0.G APIs |
 | Warmth and local survival | #86004, #86035, #86052 | Adapted with ownership, zone and cargo guards |
+| Safe self/ally first aid | TLG #1603 (`5fd614b81aeb7de418b4ed239e5b7e8f93828cba`) | Adapted with a save-compatible follower rule and activity restoration |
+| Vitamin and food selection | TLG #2982 (`87448bac93398575e854128d00840b73d3f7c7ac`) | Adapted with deficiency bounds and starvation fallback |
+| Weapon comparison correctness | TLG #2746 (`336d552d6df48f73ddfd1f63f7572cd3ad15238b`) | Null and initialization fixes only; balance changes excluded |
 | Modern behavior tree and sorting actors | #86172, #86173, #83980, #84311 | Not imported |
 
 ## Additive data audit

@@ -542,10 +542,10 @@ std::string talker_npc::give_item_to( const bool to_use )
     bool taken = false;
     std::string reason = _( me_npc->chatbin.snip_give_nope );
     const item_location weapon = me_npc->get_wielded_item();
-    int our_ammo = me_npc->ammo_count_for( weapon );
-    int new_ammo = me_npc->ammo_count_for( loc );
-    const double new_weapon_value = me_npc->weapon_value( given, new_ammo );
     const item &weap = weapon ? *weapon : null_item_reference();
+    const int our_ammo = weap.is_gun() ? me_npc->ammo_count_for( weapon ) : 0;
+    const int new_ammo = given.is_gun() ? me_npc->ammo_count_for( loc ) : 0;
+    const double new_weapon_value = me_npc->weapon_value( given, new_ammo );
     const double cur_weapon_value = me_npc->weapon_value( weap, our_ammo );
     add_msg_debug( debugmode::DF_TALKER, "NPC evaluates own %s (%d ammo): %0.1f",
                    weap.typeId().str(), our_ammo, cur_weapon_value );

@@ -256,8 +256,8 @@
     {
       "type": "talk_topic",
       "id": "TALK_MISC_RULES",
-      "target_fingerprint": "20f698ed43d617dab317cd98ea908d79f0b045d0babbd186bb3b0820fce62f82",
-      "reason": "Lockable vehicle doors add explicit follower lock and unlock rules"
+      "target_fingerprint": "b5a9b3e5fb3a0350b780552252ab6755d7d6a6c68c736cdb3b01028f70836630",
+      "reason": "Follower lock, unlock, and safe ally-healing rules extend the existing miscellaneous rules dialogue"
     },
     {
       "type": "vehicle_part",

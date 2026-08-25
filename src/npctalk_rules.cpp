@@ -24,7 +24,7 @@ struct boolean_rule_entry {
     const char *disabled_description;
 };
 
-const std::array<boolean_rule_entry, 18> boolean_rules = { {
+const std::array<boolean_rule_entry, 19> boolean_rules = { {
         {
             ally_rule::use_guns, "Ranged weapons",
             "May use ranged weapons.", "Will not use ranged weapons."
@@ -56,6 +56,10 @@ const std::array<boolean_rule_entry, 18> boolean_rules = { {
         {
             ally_rule::allow_complain, "Report needs",
             "Will tell you when something is needed.", "Will stay quiet about unmet needs."
+        },
+        {
+            ally_rule::heal_others, "Heal allies",
+            "May use medical supplies on allies.", "Will save medical supplies for self-use."
         },
         {
             ally_rule::allow_pulp, "Pulp corpses",

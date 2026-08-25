@@ -2332,6 +2332,9 @@ double Character::gun_value( const item &weap, int ammo ) const
 {
     // TODO: Mods
     // TODO: Allow using a specified type of ammo rather than default or current
+    if( weap.is_null() ) {
+        return 0.0;
+    }
     if( !weap.type->gun ) {
         return 0.0;
     }
