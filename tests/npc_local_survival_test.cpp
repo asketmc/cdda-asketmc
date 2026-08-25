@@ -313,6 +313,7 @@ TEST_CASE_METHOD( local_survival_test_fixture, "NPC local warmth and shelter", "
         CHECK( guy.is_wearing( itype_sweater ) );
     }
     SECTION( "nearby indoor shelter" ) {
+        get_avatar().setpos( guy.pos() - tripoint_east );
         here.ter_set( guy.pos(), ter_t_dirt );
         here.ter_set( target, ter_t_floor );
         CHECK( guy.take_local_shelter() );
