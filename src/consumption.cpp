@@ -821,7 +821,8 @@ ret_val<edible_rating> Character::can_eat( const item &food ) const
     return ret_val<edible_rating>::make_success();
 }
 
-ret_val<edible_rating> Character::will_eat( const item &food, bool interactive ) const
+ret_val<edible_rating> Character::will_eat( const item &food, bool interactive,
+        const cata::optional<edible_rating> &ignored ) const
 {
     ret_val<edible_rating> ret = can_eat( food );
     if( !ret.success() ) {
@@ -895,6 +896,12 @@ ret_val<edible_rating> Character::will_eat( const item &food, bool interactive )
         }
     }
 
+    if( ignored ) {
+        consequences.erase( std::remove_if( consequences.begin(), consequences.end(),
+                                            [&]( const ret_val<edible_rating> &consequence ) {
+                                                return consequence.value() == *ignored;
+                                            } ), consequences.end() );
+    }
     if( !consequences.empty() ) {
         if( !interactive ) {
             return consequences.front();

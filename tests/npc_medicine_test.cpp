@@ -22,15 +22,18 @@ static const efftype_id effect_nausea( "nausea" );
 static const faction_id faction_your_followers( "your_followers" );
 
 static const itype_id itype_bandages( "bandages" );
+static const itype_id itype_apple( "apple" );
 static const itype_id itype_aspirin( "aspirin" );
 static const itype_id itype_flour( "flour" );
 static const itype_id itype_knife_chef( "knife_chef" );
 static const itype_id itype_meat_cooked( "meat_cooked" );
 static const itype_id itype_meat_frond( "meat_frond" );
+static const itype_id itype_human_cooked( "human_cooked" );
 static const itype_id itype_orange( "orange" );
 static const itype_id itype_vitamins( "vitamins" );
 
 static const skill_id skill_firstaid( "firstaid" );
+static const trait_id trait_ANTIFRUIT( "ANTIFRUIT" );
 
 static const vitamin_id vitamin_iron( "iron" );
 static const vitamin_id vitamin_vitC( "vitC" );
@@ -349,6 +352,32 @@ TEST_CASE( "Critically hungry NPC with nausea still prefers palatable food",
 
     CHECK( guy.consume_food() );
     CHECK( flour->charges == flour_charges );
+}
+
+TEST_CASE( "NPC nausea fallback preserves other dietary refusals",
+           "[npc][needs][food][nausea]" )
+{
+    npc &guy = setup_medicine_npc();
+    guy.set_hunger( 300 );
+    guy.set_stored_kcal( guy.get_healthy_kcal() / 3 );
+    guy.add_effect( effect_nausea, 30_minutes );
+
+    SECTION( "allergy" ) {
+        guy.toggle_trait( trait_ANTIFRUIT );
+        item_location apple = guy.i_add( item( itype_apple ) );
+        REQUIRE( apple );
+        const int charges = apple->charges;
+        CHECK_FALSE( guy.consume_food() );
+        CHECK( apple->charges == charges );
+    }
+
+    SECTION( "cannibalism" ) {
+        item_location human_meat = guy.i_add( item( itype_human_cooked ) );
+        REQUIRE( human_meat );
+        const int charges = human_meat->charges;
+        CHECK_FALSE( guy.consume_food() );
+        CHECK( human_meat->charges == charges );
+    }
 }
 
 TEST_CASE( "NPC weapon evaluation is initialized and favors a real weapon",

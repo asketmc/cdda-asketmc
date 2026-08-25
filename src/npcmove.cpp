@@ -3978,10 +3978,12 @@ bool npc::consume_food()
         for( item * const &food_item : inv_food ) {
             float cur_weight = rate_food( *this, *food_item, want_hunger, want_quench );
             // Note: will_eat is expensive, avoid calling it if possible
-            const bool willing = cur_weight > 0.0f && will_eat( *food_item ).success();
+            const ret_val<edible_rating> preference = will_eat( *food_item );
+            const bool willing = cur_weight > 0.0f && preference.success();
             const bool nausea_fallback = cur_weight > 0.0f && critical_hunger &&
                                          has_effect( effect_nausea ) && food_item->is_food() &&
-                                         can_eat( *food_item ).success();
+                                         !preference.success() && preference.value() == NAUSEA &&
+                                         will_eat( *food_item, false, NAUSEA ).success();
             if( cur_weight > best_weight && ( willing || nausea_fallback ) ) {
                 best_weight = cur_weight;
                 best_food = food_item;
