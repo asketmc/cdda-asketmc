@@ -95,7 +95,7 @@ vehicle &add_cargo_vehicle( const tripoint &p, npc &owner, bool locked )
         REQUIRE( veh->install_part( point_zero, vpart_cargo_lock ) >= 0 );
     }
     veh->set_owner( owner );
-    here.add_vehicle_to_cache( veh );
+    veh->is_locked = locked;
     return *veh;
 }
 
@@ -118,8 +118,13 @@ TEST_CASE_METHOD( local_survival_test_fixture, "NPC local food and clean water",
         guy.set_stored_kcal( 5000 );
         here.add_item_or_charges( food_pos, item( itype_meat_scrap_cooked ) );
 
-        REQUIRE( contains_candidate( guy.find_local_food(), itype_meat_scrap_cooked ) );
+        const std::vector<npc::local_item_candidate> candidates = guy.find_local_food();
+        REQUIRE( contains_candidate( candidates, itype_meat_scrap_cooked ) );
+        REQUIRE_FALSE( candidates.empty() );
+        const int consume_moves = to_moves<int>( guy.get_consume_time( *candidates.front().loc ) );
+        guy.moves = 10000;
         CHECK( guy.consume_local_food( false ) );
+        CHECK( guy.moves == 10000 - consume_moves );
         CHECK_FALSE( here.has_items( food_pos ) );
     }
     SECTION( "clean water uses normal consumption" ) {
@@ -232,6 +237,31 @@ TEST_CASE_METHOD( local_survival_test_fixture, "NPC unlocked owned vehicle cargo
     }
 }
 
+TEST_CASE_METHOD( local_survival_test_fixture, "NPC vehicle cargo lock state and mount",
+                  "[npc][needs][vehicle]" )
+{
+    npc &guy = setup_survival_npc();
+    const tripoint target = guy.pos() + tripoint_east;
+    guy.set_hunger( 300 );
+    vehicle &veh = add_cargo_vehicle( target, guy, true );
+    const int cargo = veh.part_with_feature( 0, VPFLAG_CARGO, true );
+    REQUIRE( cargo >= 0 );
+    REQUIRE( veh.add_item( cargo, item( itype_meat_scrap_cooked ) ) );
+
+    SECTION( "installed lock does not block unlocked cargo" ) {
+        veh.is_locked = false;
+        CHECK( contains_candidate( guy.find_local_food(), itype_meat_scrap_cooked ) );
+    }
+    SECTION( "lock on another mount does not protect this cargo" ) {
+        veh.remove_part( veh.part_with_feature( 0, "CARGO_LOCKING", true ) );
+        REQUIRE( veh.install_part( point_east, vpart_frame ) >= 0 );
+        REQUIRE( veh.install_part( point_east, vpart_box ) >= 0 );
+        REQUIRE( veh.install_part( point_east, vpart_cargo_lock ) >= 0 );
+        veh.is_locked = true;
+        CHECK( contains_candidate( guy.find_local_food(), itype_meat_scrap_cooked ) );
+    }
+}
+
 TEST_CASE_METHOD( local_survival_test_fixture, "NPC ignores ownerless vehicle cargo",
                   "[npc][needs][vehicle]" )
 {
@@ -259,6 +289,16 @@ TEST_CASE_METHOD( local_survival_test_fixture, "NPC local warmth and shelter", "
         CHECK( guy.wear_warmest_inventory_item() );
         CHECK( guy.is_wearing( itype_sweater ) );
     }
+    SECTION( "clothing must improve a dangerously cold body part" ) {
+        guy.set_all_parts_temp_conv( BODYTEMP_NORM );
+        guy.set_part_temp_conv( bodypart_id( "hand_l" ), BODYTEMP_VERY_COLD );
+        guy.i_add( item( itype_sweater ) );
+        guy.i_add( item( "gloves_winter" ) );
+        REQUIRE( guy.wear_warmest_inventory_item() );
+        CHECK( guy.is_wearing( itype_id( "gloves_winter" ) ) );
+        CHECK_FALSE( guy.is_wearing( itype_sweater ) );
+        CHECK_FALSE( guy.wear_warmest_inventory_item() );
+    }
     SECTION( "ground clothing" ) {
         here.add_item_or_charges( target, item( itype_sweater ) );
         CHECK( guy.wear_local_clothing( false ) );
@@ -277,6 +317,39 @@ TEST_CASE_METHOD( local_survival_test_fixture, "NPC local warmth and shelter", "
         here.ter_set( target, ter_t_floor );
         CHECK( guy.take_local_shelter() );
         CHECK( guy.pos() == target );
+    }
+    SECTION( "following NPC only seeks shelter inside follow distance" ) {
+        get_avatar().setpos( guy.pos() - tripoint_east );
+        const tripoint near_shelter = guy.pos() + tripoint_east;
+        const tripoint far_shelter = guy.pos() + tripoint( 6, 0, 0 );
+        REQUIRE( rl_dist( near_shelter, get_avatar().pos() ) <= guy.follow_distance() );
+        REQUIRE( rl_dist( far_shelter, get_avatar().pos() ) > guy.follow_distance() );
+        here.ter_set( near_shelter, ter_t_floor );
+        here.ter_set( far_shelter, ter_t_floor );
+        const std::vector<tripoint> shelters = guy.find_local_shelter();
+        CHECK( std::find( shelters.begin(), shelters.end(), near_shelter ) != shelters.end() );
+        CHECK( std::find( shelters.begin(), shelters.end(), far_shelter ) == shelters.end() );
+    }
+}
+
+TEST_CASE_METHOD( local_survival_test_fixture, "NPC survival priorities", "[npc][needs][warmth]" )
+{
+    npc &guy = setup_survival_npc();
+    guy.set_all_parts_temp_conv( BODYTEMP_VERY_COLD );
+    guy.i_add( item( itype_sweater ) );
+
+    SECTION( "danger blocks clothing changes" ) {
+        guy.address_needs( 6.0f );
+        CHECK_FALSE( guy.is_wearing( itype_sweater ) );
+    }
+    SECTION( "extreme hunger precedes clothing changes" ) {
+        guy.set_stored_kcal( guy.get_healthy_kcal() / 2 );
+        guy.set_hunger( 300 );
+        guy.i_add( item( itype_meat_scrap_cooked ) );
+        const int stomach_calories_before = guy.stomach.get_calories();
+        guy.address_needs( 0.0f );
+        CHECK( guy.stomach.get_calories() > stomach_calories_before );
+        CHECK_FALSE( guy.is_wearing( itype_sweater ) );
     }
 }
 

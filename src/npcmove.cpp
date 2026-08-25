@@ -11,6 +11,7 @@
 #include <numeric>
 #include <ostream>
 #include <tuple>
+#include <unordered_set>
 #include <vector>
 
 #include "active_item_cache.h"
@@ -1896,9 +1897,6 @@ npc_action npc::address_needs( float danger )
 
     const bool local_survival = is_player_ally();
     const bool cold = local_survival && needs_warmth();
-    if( cold && ( wear_warmest_inventory_item() || wear_local_clothing( false ) ) ) {
-        return npc_noop;
-    }
 
     // Extreme thirst or hunger, bypass safety check.
     if( get_thirst() > 80 ||
@@ -1924,7 +1922,8 @@ npc_action npc::address_needs( float danger )
         return npc_undecided;
     }
 
-    if( cold && ( wear_local_clothing( true ) || take_local_shelter() ) ) {
+    if( cold && ( wear_warmest_inventory_item() || wear_local_clothing( true ) ||
+                  take_local_shelter() ) ) {
         return npc_noop;
     }
 
@@ -3831,7 +3830,6 @@ bool npc::consume_food_from_camp()
                 const units::volume intake = std::min( wanted, stomach.stomach_remaining( *this ) );
                 if( intake > 0_ml ) {
                     stomach.ingest( { intake, 0_ml, {} } );
-                    moves -= 100;
                     complain_about( "camp_water_thanks", 1_hours,
                                     chatbin.snip_camp_water_thanks, false );
                     return true;
@@ -3931,18 +3929,37 @@ bool npc::needs_warmth() const
     return false;
 }
 
+float npc::cold_part_warmth_score( const item &candidate ) const
+{
+    const std::map<bodypart_id, int> current_warmth = worn.warmth( *this );
+    float score = 0.0f;
+    for( const bodypart_id &bp : get_all_body_parts() ) {
+        if( get_part_temp_conv( bp ) > BODYTEMP_VERY_COLD || !candidate.covers( bp ) ) {
+            continue;
+        }
+        const int candidate_warmth = candidate.get_warmth( bp );
+        const auto current = current_warmth.find( bp );
+        const int existing_warmth = current == current_warmth.end() ? 0 : current->second;
+        if( candidate_warmth > existing_warmth ) {
+            score += candidate_warmth - existing_warmth;
+        }
+    }
+    return score;
+}
+
 bool npc::wear_warmest_inventory_item()
 {
     if( !is_player_ally() ) {
         return false;
     }
     item_location best;
-    int best_warmth = 0;
+    float best_warmth = 0.0f;
     for( item_location &candidate : all_items_loc() ) {
-        if( candidate && !is_worn( *candidate ) && candidate->get_warmth() > best_warmth &&
+        const float warmth = candidate ? cold_part_warmth_score( *candidate ) : 0.0f;
+        if( candidate && !is_worn( *candidate ) && warmth > best_warmth &&
             can_wear( *candidate ).success() ) {
             best = candidate;
-            best_warmth = candidate->get_warmth();
+            best_warmth = warmth;
         }
     }
     if( !best ) {
@@ -3951,15 +3968,16 @@ bool npc::wear_warmest_inventory_item()
     return wear( best, false ).has_value();
 }
 
-static bool local_resource_tile_allowed( const npc &who, const tripoint &p )
+static bool local_resource_tile_allowed( const npc &who, const tripoint &p,
+        const std::unordered_set<tripoint_abs_ms> &personal_zone_points )
 {
     if( !who.is_player_ally() ) {
         return false;
     }
     map &here = get_map();
-    zone_manager &mgr = zone_manager::get_manager();
     const tripoint_abs_ms abs_p = here.getglobal( p );
-    return !g->check_zone( zone_type_NO_NPC_PICKUP, p ) && !mgr.has_personal( abs_p );
+    return !g->check_zone( zone_type_NO_NPC_PICKUP, p ) &&
+           personal_zone_points.count( abs_p ) == 0;
 }
 
 static bool local_resource_adjacent( const npc &who, const tripoint &target )
@@ -3974,7 +3992,8 @@ static bool local_resource_adjacent( const npc &who, const tripoint &target )
            !here.impassable( who.pos() + point( 0, delta.y ) );
 }
 
-std::vector<npc::local_item_candidate> npc::find_local_food()
+std::vector<npc::local_item_candidate> npc::find_local_items(
+    const std::function<float( item & )> &score )
 {
     std::vector<local_item_candidate> result;
     if( !is_player_ally() || !rules.has_flag( ally_rule::allow_pick_up ) ) {
@@ -3982,34 +4001,44 @@ std::vector<npc::local_item_candidate> npc::find_local_food()
     }
 
     map &here = get_map();
-    const int want_hunger = std::max( 0, get_hunger() );
-    const int want_quench = std::max( 0, get_thirst() );
-    const auto score = [&]( item &candidate ) {
-        if( !candidate.is_food() || !candidate.is_owned_by( *this, true ) ||
-            !will_eat( candidate ).success() ) {
-            return 0.0f;
-        }
-        return rate_food( candidate, want_hunger, want_quench );
-    };
-    std::function<void( item &, const item_location &, bool )> consider;
-    consider = [&]( item &candidate, const item_location &loc, bool parent_accessible ) {
-        if( !parent_accessible || !candidate.is_owned_by( *this, true ) ) {
+    const std::unordered_set<tripoint_abs_ms> personal_zone_points =
+        zone_manager::get_manager().get_personal_zone_points();
+    std::function<void( item &, const item_location & )> consider;
+    consider = [&]( item &candidate, const item_location &loc ) {
+        if( !candidate.is_owned_by( *this, true ) ) {
             return;
         }
         const float value = score( candidate );
         if( value > 0.0f ) {
             result.push_back( { loc, value } );
         }
+        // item_location actions handle unsealing when they remove or consume contents.
         for( item *contained : candidate.all_items_top() ) {
-            consider( *contained, item_location( loc, contained ), true );
+            consider( *contained, item_location( loc, contained ) );
         }
     };
 
     for( const tripoint &p : closest_points_first( pos(), 6 ) ) {
-        if( !sees( p ) || !local_resource_tile_allowed( *this, p ) ) {
+        if( !sees( p ) ) {
             continue;
         }
-        if( here.sees_some_items( p, *this ) && here.accessible_items( p ) ) {
+        const bool map_items_accessible = here.sees_some_items( p, *this ) &&
+                                          here.accessible_items( p );
+        const optional_vpart_position vp = here.veh_at( p );
+        cata::optional<vpart_reference> cargo;
+        if( vp && !vp->vehicle().is_moving() && vp->vehicle().has_owner() &&
+            vp->vehicle().is_owned_by( *this ) ) {
+            cargo = vp.part_with_feature( VPFLAG_CARGO, true );
+            if( cargo && vp->vehicle().is_locked &&
+                vp.part_with_feature( "CARGO_LOCKING", true ) ) {
+                cargo = cata::nullopt;
+            }
+        }
+        if( ( !map_items_accessible && !cargo ) ||
+            !local_resource_tile_allowed( *this, p, personal_zone_points ) ) {
+            continue;
+        }
+        if( map_items_accessible ) {
             for( item &candidate : here.i_at( p ) ) {
                 if( here.has_flag( ter_furn_flag::TFLAG_LIQUIDCONT, p ) &&
                     candidate.made_of( phase_id::LIQUID ) &&
@@ -4018,23 +4047,14 @@ std::vector<npc::local_item_candidate> npc::find_local_food()
                       here.has_flag( ter_furn_flag::TFLAG_TOILET_WATER, p ) ) ) {
                     continue;
                 }
-                consider( candidate, item_location( map_cursor( p ), &candidate ), true );
+                consider( candidate, item_location( map_cursor( p ), &candidate ) );
             }
         }
-
-        const optional_vpart_position vp = here.veh_at( p );
-        if( !vp || vp->vehicle().is_moving() || !vp->vehicle().has_owner() ||
-            !vp->vehicle().is_owned_by( *this ) ) {
-            continue;
-        }
-        const cata::optional<vpart_reference> cargo = vp.part_with_feature( VPFLAG_CARGO, true );
-        if( !cargo || cargo->has_feature( "LOCKED" ) ||
-            vp.part_with_feature( "CARGO_LOCKING", true ) ) {
-            continue;
-        }
-        for( item &candidate : cargo->vehicle().get_items( cargo->part_index() ) ) {
-            consider( candidate, item_location( vehicle_cursor( cargo->vehicle(),
-                      cargo->part_index() ), &candidate ), true );
+        if( cargo ) {
+            for( item &candidate : cargo->vehicle().get_items( cargo->part_index() ) ) {
+                consider( candidate, item_location( vehicle_cursor( cargo->vehicle(),
+                          cargo->part_index() ), &candidate ) );
+            }
         }
     }
 
@@ -4048,64 +4068,27 @@ std::vector<npc::local_item_candidate> npc::find_local_food()
     return result;
 }
 
+std::vector<npc::local_item_candidate> npc::find_local_food()
+{
+    const int want_hunger = std::max( 0, get_hunger() );
+    const int want_quench = std::max( 0, get_thirst() );
+    return find_local_items( [&]( item & candidate ) {
+        if( !candidate.is_food() || !will_eat( candidate ).success() ) {
+            return 0.0f;
+        }
+        return rate_food( candidate, want_hunger, want_quench );
+    } );
+}
+
 std::vector<npc::local_item_candidate> npc::find_local_warm_clothing()
 {
-    std::vector<local_item_candidate> result;
-    if( !is_player_ally() || !rules.has_flag( ally_rule::allow_pick_up ) ) {
-        return result;
-    }
-
-    map &here = get_map();
-    std::function<void( item &, const item_location &, bool )> consider;
-    consider = [&]( item &candidate, const item_location &loc, bool parent_accessible ) {
-        if( !parent_accessible || !candidate.is_owned_by( *this, true ) ) {
-            return;
+    return find_local_items( [&]( item & candidate ) {
+        const float warmth = cold_part_warmth_score( candidate );
+        if( warmth <= 0.0f || !can_wear( candidate ).success() ) {
+            return 0.0f;
         }
-        if( candidate.get_warmth() > 0 && can_wear( candidate ).success() ) {
-            result.push_back( { loc, static_cast<float>( candidate.get_warmth() ) } );
-        }
-        if( candidate.any_pockets_sealed() ) {
-            return;
-        }
-        for( item *contained : candidate.all_items_top() ) {
-            consider( *contained, item_location( loc, contained ), true );
-        }
-    };
-
-    for( const tripoint &p : closest_points_first( pos(), 6 ) ) {
-        if( !sees( p ) || !local_resource_tile_allowed( *this, p ) ) {
-            continue;
-        }
-        if( here.sees_some_items( p, *this ) && here.accessible_items( p ) ) {
-            for( item &candidate : here.i_at( p ) ) {
-                consider( candidate, item_location( map_cursor( p ), &candidate ), true );
-            }
-        }
-
-        const optional_vpart_position vp = here.veh_at( p );
-        if( !vp || vp->vehicle().is_moving() || !vp->vehicle().has_owner() ||
-            !vp->vehicle().is_owned_by( *this ) ) {
-            continue;
-        }
-        const cata::optional<vpart_reference> cargo = vp.part_with_feature( VPFLAG_CARGO, true );
-        if( !cargo || cargo->has_feature( "LOCKED" ) ||
-            vp.part_with_feature( "CARGO_LOCKING", true ) ) {
-            continue;
-        }
-        for( item &candidate : cargo->vehicle().get_items( cargo->part_index() ) ) {
-            consider( candidate, item_location( vehicle_cursor( cargo->vehicle(),
-                      cargo->part_index() ), &candidate ), true );
-        }
-    }
-
-    std::sort( result.begin(), result.end(), [this]( const local_item_candidate &lhs,
-    const local_item_candidate &rhs ) {
-        if( lhs.score != rhs.score ) {
-            return lhs.score > rhs.score;
-        }
-        return rl_dist( pos(), lhs.loc.position() ) < rl_dist( pos(), rhs.loc.position() );
+        return warmth;
     } );
-    return result;
 }
 
 std::vector<tripoint> npc::find_local_clean_water() const
@@ -4115,8 +4098,13 @@ std::vector<tripoint> npc::find_local_clean_water() const
         return result;
     }
     map &here = get_map();
+    const std::unordered_set<tripoint_abs_ms> personal_zone_points =
+        zone_manager::get_manager().get_personal_zone_points();
     for( const tripoint &p : closest_points_first( pos(), 6 ) ) {
-        if( !sees( p ) || !local_resource_tile_allowed( *this, p ) ) {
+        if( !sees( p ) ||
+            ( !here.ter( p ).obj().has_examine( iexamine::water_source ) &&
+              !here.furn( p ).obj().has_examine( iexamine::water_source ) ) ||
+            !local_resource_tile_allowed( *this, p, personal_zone_points ) ) {
             continue;
         }
         if( here.has_flag( ter_furn_flag::TFLAG_TOILET_WATER, p ) || here.has_flag(
@@ -4145,9 +4133,11 @@ std::vector<tripoint> npc::find_local_shelter() const
         return result;
     }
     const creature_tracker &creatures = get_creature_tracker();
+    const Character &player_character = get_player_character();
     for( const tripoint &p : closest_points_first( pos(), 6 ) ) {
         if( p != pos() && sees( p ) && here.passable( p ) &&
-            here.has_flag( ter_furn_flag::TFLAG_INDOORS, p ) && !creatures.creature_at( p ) ) {
+            here.has_flag( ter_furn_flag::TFLAG_INDOORS, p ) && !creatures.creature_at( p ) &&
+            ( !is_walking_with() || rl_dist( p, player_character.pos() ) <= follow_distance() ) ) {
             result.push_back( p );
         }
     }
@@ -4165,9 +4155,11 @@ std::vector<tripoint> npc::find_local_harvest() const
     }
     map &here = get_map();
     zone_manager &mgr = zone_manager::get_manager();
+    const std::unordered_set<tripoint_abs_ms> personal_zone_points =
+        mgr.get_personal_zone_points();
     for( const tripoint &p : closest_points_first( pos(), 6 ) ) {
         const tripoint_abs_ms abs_p = here.getglobal( p );
-        if( !sees( p ) || !local_resource_tile_allowed( *this, p ) ||
+        if( !sees( p ) || !local_resource_tile_allowed( *this, p, personal_zone_points ) ||
             mgr.has( zone_type_FARM_PLOT, abs_p ) ) {
             continue;
         }

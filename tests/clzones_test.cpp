@@ -1,4 +1,5 @@
 #include <iosfwd>
+#include <unordered_set>
 #include <vector>
 
 #include "activity_actor_definitions.h"
@@ -17,6 +18,7 @@
 
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 static const activity_id ACT_MULTIPLE_MOP( "ACT_MULTIPLE_MOP" );
+static const efftype_id effect_blind( "blind" );
 static const faction_id faction_your_followers( "your_followers" );
 static const field_type_str_id field_fd_blood( "fd_blood" );
 
@@ -86,14 +88,15 @@ TEST_CASE( "NPC work ignores personal zones", "[zones][npc][basecamp]" )
     const tripoint personal_pos( 60, 60, 0 );
     const tripoint shared_pos = personal_pos + tripoint_east;
 
-    create_tile_zone( "Personal", zone_type_LOOT_UNSORTED,
-                      get_map().getglobal( personal_pos ).raw(), false, true );
-    create_tile_zone( "Shared", zone_type_LOOT_UNSORTED,
-                      get_map().getglobal( shared_pos ).raw() );
+    create_local_tile_zone( "Personal", zone_type_LOOT_UNSORTED, personal_pos, false, true );
+    create_local_tile_zone( "Shared", zone_type_LOOT_UNSORTED, shared_pos );
 
     CHECK_FALSE( zm.has_nonpersonal( zone_type_LOOT_UNSORTED,
                                     get_map().getglobal( personal_pos ) ) );
     CHECK( zm.has_nonpersonal( zone_type_LOOT_UNSORTED, get_map().getglobal( shared_pos ) ) );
+    const std::unordered_set<tripoint_abs_ms> personal_points = zm.get_personal_zone_points();
+    CHECK( personal_points.count( get_map().getglobal( personal_pos ) ) == 1 );
+    CHECK( personal_points.count( get_map().getglobal( shared_pos ) ) == 0 );
 }
 
 TEST_CASE( "NPC loot sorting cannot use personal zones", "[zones][npc][activities]" )
@@ -188,6 +191,7 @@ TEST_CASE( "NPC mopping fetches a stored mop", "[zones][npc][activities][mopping
     create_local_tile_zone( "Tools", zone_type_LOOT_TOOLS, tool_storage );
     here.add_item_or_charges( tool_storage, item( "mop" ) );
     here.add_field( target, field_type_id( "fd_blood" ), 1 );
+    REQUIRE( here.terrain_moppable( tripoint_bub_ms( target ) ) );
     REQUIRE_FALSE( worker.has_item_with( []( const item & it ) {
         return it.has_flag( flag_id( "MOP" ) );
     } ) );
@@ -219,7 +223,8 @@ TEST_CASE( "NPC mopping cleans its assigned tile", "[zones][npc][activities][mop
     player_activity mop_activity;
     mop_activity.placement = here.getglobal( target );
     REQUIRE( here.bub_from_abs( mop_activity.placement ).raw() == target );
-    REQUIRE_FALSE( worker.is_blind() );
+    worker.add_effect( effect_blind, 1_turns, true );
+    REQUIRE( worker.is_blind() );
     mop_activity_actor actor( 15 );
     actor.start( mop_activity, worker );
     actor.finish( mop_activity, worker );
@@ -243,10 +248,9 @@ TEST_CASE( "NPC sorting leaves personal supplies in place", "[zones][npc][baseca
     const tripoint shared_src = worker.pos() + tripoint_west;
     const tripoint destination = worker.pos() + tripoint_north;
 
-    create_tile_zone( "Personal", zone_type_LOOT_UNSORTED,
-                      here.getglobal( personal_src ).raw(), false, true );
-    create_tile_zone( "Shared", zone_type_LOOT_UNSORTED, here.getglobal( shared_src ).raw() );
-    create_tile_zone( "Food", zone_type_LOOT_FOOD, here.getglobal( destination ).raw() );
+    create_local_tile_zone( "Personal", zone_type_LOOT_UNSORTED, personal_src, false, true );
+    create_local_tile_zone( "Shared", zone_type_LOOT_UNSORTED, shared_src );
+    create_local_tile_zone( "Food", zone_type_LOOT_FOOD, destination );
     here.add_item_or_charges( personal_src, item( itype_sandwich_cheese_grilled ) );
     here.add_item_or_charges( shared_src, item( itype_sandwich_cheese_grilled ) );
 

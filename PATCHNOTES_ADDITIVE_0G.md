@@ -99,7 +99,9 @@ without revealing locations or rare loot pools.
   permitted nearby ground and vehicle storage, then seek nearby indoor shelter.
 - Hungry and thirsty followers can use permitted food and clean water from the
   ground or unlocked owned vehicle cargo. Ownership, pickup rules, personal
-  zones, and no-NPC-pickup zones are respected.
+  zones, and no-NPC-pickup zones are respected. With the existing **Allow
+  pickup** follower rule enabled, unowned ground supplies are intentionally
+  eligible; disable it or use a protected zone to reserve dropped supplies.
 - Seriously starving followers may forage nearby edible wild plants after
   camp, carried, ground, and cargo food are exhausted. Farms and protected
   zones are never foraged automatically.

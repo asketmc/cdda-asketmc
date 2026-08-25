@@ -159,7 +159,7 @@ TEST_CASE( "serialized_camps_are_indexed_when_an_overmap_loads", "[overmap][camp
     get_avatar().camps = previous_camp_index;
 }
 
-TEST_CASE( "npc_checks_each_nearby_camp_for_accessible_food", "[overmap][camp][npc]" )
+TEST_CASE( "npc checks each nearby camp for accessible food and water", "[overmap][camp][npc]" )
 {
     overmap *const test_overmap = overmap_buffer.get_existing( point_abs_om() );
     faction *const followers = get_avatar().get_faction();
@@ -204,9 +204,7 @@ TEST_CASE( "npc_checks_each_nearby_camp_for_accessible_food", "[overmap][camp][n
     followers->consumes_food = true;
     const int calories_before = followers->food_supply.calories;
 
-    hungry_npc.moves = 100;
     CHECK( hungry_npc.consume_food_from_camp() );
-    CHECK( hungry_npc.moves == 0 );
     CHECK( hungry_npc.get_thirst() <= 40 );
     CHECK_FALSE( hungry_npc.consume_food_from_camp() );
 

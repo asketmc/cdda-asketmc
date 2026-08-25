@@ -199,6 +199,11 @@ manifest are actually imported.
 | Activity-actor sorting rewrites | #83980, #84311 | Not applicable to the legacy direct sorting implementation |
 | TLG medical and weapon-selection rewrites | TLG #1603, #2746, #2982 | Deferred: target already self-heals/allied-heals; remaining changes alter combat or require later medicine AI |
 
+Local scavenging uses the existing **Allow pickup** follower rule as its opt-in.
+Unowned ground items are eligible, while personal and no-NPC-pickup zones remain
+hard exclusions. Vehicle cargo additionally requires matching ownership; a
+cargo lock blocks only its own mount while the vehicle is locked.
+
 Active NPC temperature effects are refreshed every turn; the heavier needs
 update remains throttled. Save-load catch-up advances temperature, wetness, and
 frostbite by up to two days of elapsed turns under the current conditions. The

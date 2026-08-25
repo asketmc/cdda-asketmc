@@ -1123,7 +1123,10 @@ class npc : public Character
             float score = 0.0f;
         };
         bool needs_warmth() const;
+        float cold_part_warmth_score( const item &candidate ) const;
         bool wear_warmest_inventory_item();
+        std::vector<local_item_candidate> find_local_items(
+            const std::function<float( item & )> &score );
         std::vector<local_item_candidate> find_local_food();
         std::vector<local_item_candidate> find_local_warm_clothing();
         std::vector<tripoint> find_local_clean_water() const;
