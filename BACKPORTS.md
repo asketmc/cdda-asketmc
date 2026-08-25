@@ -12,6 +12,7 @@ evidence remain in the linked reports and player patch notes.
 | H5 interface and ASCII-art QoL | Integrated selected behavior | [H5 report](H5_INTERFACE_QOL_BACKPORT_REPORT.md) |
 | H6 anti-grind QoL | Integrated selected behavior | [H6 report](H6_ANTIGRIND_BACKPORT_REPORT.md) |
 | Backup generator | Integrated | [Generator report](H6_BACKUP_GENERATOR_BACKPORT_REPORT.md) |
+| Crafting, inventory, and repair performance | Integrated selected behavior | [BN #917](https://github.com/cataclysmbnteam/Cataclysm-BN/pull/917), [BN #1117](https://github.com/cataclysmbnteam/Cataclysm-BN/pull/1117), [BN #8221](https://github.com/cataclysmbnteam/Cataclysm-BN/pull/8221) |
 | H3-H6 delivery ledger | Resolved; exclusions recorded | Reports above |
 
 Primary donor provenance is recorded per feature in the reports above and in

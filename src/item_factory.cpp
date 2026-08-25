@@ -5063,12 +5063,18 @@ std::vector<const itype *> Item_factory::find( const std::function<bool( const i
 {
     std::vector<const itype *> res;
 
-    std::vector<const itype *> opts = item_controller->all();
-
-    std::copy_if( opts.begin(), opts.end(), std::back_inserter( res ),
-    [&func]( const itype * e ) {
-        return func( *e );
-    } );
+    for( const std::pair<const itype_id, itype> &e : m_templates ) {
+        const itype *i = &e.second;
+        if( func( *i ) ) {
+            res.push_back( i );
+        }
+    }
+    for( const std::pair<const itype_id, std::unique_ptr<itype>> &e : m_runtimes ) {
+        const itype *i = e.second.get();
+        if( func( *i ) ) {
+            res.push_back( i );
+        }
+    }
 
     return res;
 }

@@ -862,6 +862,12 @@ class inventory_selector
 
     public:
         std::string action_bound_to_key( char key ) const;
+        /**
+         * Returns every key in this context that is bound to an action.
+         * Warning: may contain duplicates.  Cheaper than calling
+         * action_bound_to_key() once per candidate letter.
+         */
+        std::vector<char> all_bound_keys() const;
 };
 
 template <>

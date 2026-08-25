@@ -2146,7 +2146,7 @@ units::volume pocket_data::max_contains_volume() const
     }
 
     // Find all valid ammo itypes
-    std::vector<const itype *> ammo_types = Item_factory::find( [&]( const itype & t ) {
+    std::vector<const itype *> ammo_types = item_controller->find( [&]( const itype & t ) {
         return t.ammo && ammo_restriction.count( t.ammo->type );
     } );
     // Figure out which has the greatest volume and calculate on that basis

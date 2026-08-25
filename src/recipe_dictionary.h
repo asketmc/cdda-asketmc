@@ -87,6 +87,16 @@ class recipe_dictionary
 
 extern recipe_dictionary recipe_dict;
 
+using recipe_filter = std::function<bool( const recipe &r )>;
+
+/**
+ * Builds a filter matching only recipes that use @p c as a component.
+ * Passing this to Character::get_available_recipes() lets the expensive book and
+ * helper walks reject non-matching recipes before they are inserted, which is far
+ * cheaper than building the full subset and filtering afterwards.
+ */
+recipe_filter recipe_filter_by_component( const itype_id &c );
+
 class recipe_subset
 {
     public:

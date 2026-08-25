@@ -651,6 +651,10 @@ class input_context
         }
 #endif
 
+        const std::vector<std::string> &get_registered_actions() const {
+            return registered_actions;
+        }
+
         /**
          * Register an action with this input context.
          *

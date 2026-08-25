@@ -8,6 +8,8 @@
 Recent integrated fixes include vehicle and general tileset directional
 normalization. Modern UltiCa and SurveyorsMap four-direction arrays are adapted
 to the 0.G N/E/S/W contract; legacy compatibility sheets remain unchanged.
+Selected recipe lookup, inventory-letter assignment, and repair-selector paths
+use bounded caches and early filtering without changing their displayed results.
 
 ## Fast validation
 

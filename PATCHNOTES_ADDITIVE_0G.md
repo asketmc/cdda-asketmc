@@ -5,6 +5,14 @@ No public binary release has yet been published from this repository.
 
 ## Crash and rotation fixes
 
+- Item-description recipe searches now filter learned, book, e-reader, and
+  helper recipes while collecting them instead of building the full recipe set.
+- Automatic inventory-letter assignment gathers reserved keys once and ignores
+  modifier-only bindings when choosing plain inventory letters.
+- The repair selector caches repeated chance and material-count calculations
+  while preserving the displayed success, damage, and component values.
+- TODO: add granular Catch coverage for recipe-source filtering, modified-key
+  invlet reservation, and repair-cache equivalence; the Windows build is the P0 gate.
 - Fixed an NPC dialogue crash when closing the final categorized talk topic.
 - Normalized current UltiCa and SurveyorsMap directional sprites to the 0.G
   rotation contract. This fixes east/west mirroring for vehicles, diagonal
