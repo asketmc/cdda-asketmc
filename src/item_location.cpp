@@ -587,6 +587,9 @@ class item_location::impl::item_in_container : public item_location::impl
         item_in_container( const item_location &container, item *which ) :
             impl( which ), container( container ) {}
 
+        item_in_container( const item_location &container, int idx ) :
+            impl( idx ), container( container ) {}
+
         void serialize( JsonOut &js ) const override {
             js.start_object();
             js.member( "idx", calc_index() );
@@ -596,10 +599,13 @@ class item_location::impl::item_in_container : public item_location::impl
         }
 
         item *unpack( int idx ) const override {
-            if( idx < 0 || static_cast<size_t>( idx ) >= target()->num_item_stacks() ) {
+            if( idx < 0 || !container ) {
                 return nullptr;
             }
-            std::list<const item *> all_items = container->all_items_ptr();
+            std::list<const item *> all_items = container->all_items_top();
+            if( static_cast<size_t>( idx ) >= all_items.size() ) {
+                return nullptr;
+            }
             auto iter = all_items.begin();
             std::advance( iter, idx );
             if( iter != all_items.end() ) {
@@ -808,19 +814,25 @@ void item_location::deserialize( const JsonObject &obj )
     } else if( type == "in_container" ) {
         item_location parent;
         obj.read( "parent", parent );
-        if( !parent.ptr->valid() ) {
+        if( parent.where_recursive() == item_location::type::character ) {
+            // Character activities are deserialized before their owning NPC
+            // has been registered.  Keep character-rooted container indices
+            // lazy until the location is first used.
+            ptr.reset( new impl::item_in_container( parent, idx ) );
+        } else if( !parent.ptr->valid() ) {
             debugmsg( "parent location does not point to valid item" );
             ptr.reset( new impl::item_on_map( map_cursor( pos ), idx ) ); // drop on ground
             return;
-        }
-        const std::list<item *> parent_contents = parent->all_items_top();
-        if( idx > -1 && idx < static_cast<int>( parent_contents.size() ) ) {
-            auto iter = parent_contents.begin();
-            std::advance( iter, idx );
-            ptr.reset( new impl::item_in_container( parent, *iter ) );
         } else {
-            // probably pointing to the wrong item
-            debugmsg( "contents index greater than contents size" );
+            const std::list<item *> parent_contents = parent->all_items_top();
+            if( idx > -1 && idx < static_cast<int>( parent_contents.size() ) ) {
+                auto iter = parent_contents.begin();
+                std::advance( iter, idx );
+                ptr.reset( new impl::item_in_container( parent, *iter ) );
+            } else {
+                // probably pointing to the wrong item
+                debugmsg( "contents index greater than contents size" );
+            }
         }
     }
 }
