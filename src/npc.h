@@ -1385,7 +1385,7 @@ class npc : public Character
          * Update body, but throttled.
          */
         void npc_update_body();
-        void update_bodytemp_and_wetness();
+        void update_bodytemp_and_wetness( const time_duration &elapsed = 1_turns );
 
         bool get_known_to_u() const;
 

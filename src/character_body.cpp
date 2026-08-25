@@ -79,7 +79,7 @@ static const trait_id trait_URSINE_FUR( "URSINE_FUR" );
 
 static const vitamin_id vitamin_blood( "blood" );
 
-void Character::update_body_wetness( const w_point &weather )
+void Character::update_body_wetness( const w_point &weather, const time_duration &elapsed )
 {
     // Average number of turns to go from completely soaked to fully dry
     // assuming average temperature and humidity
@@ -102,6 +102,10 @@ void Character::update_body_wetness( const w_point &weather )
                           weather.temperature ) - 65.0f ) ) / 100.0f;
     weather_mult = std::max( 0.1f, weather_mult );
 
+    // Catch-up is bounded because these legacy counters use int arithmetic;
+    // two days already converges temperature and exhausts meaningful wetness.
+    const int elapsed_turns = std::max( 1, std::min( to_turns<int>( elapsed ),
+                                       to_turns<int>( 2_days ) ) );
     for( const bodypart_id &bp : get_all_body_parts() ) {
 
         const int temp_conv = get_part_temp_conv( bp );
@@ -138,14 +142,14 @@ void Character::update_body_wetness( const w_point &weather )
 
             const int drench_cap = get_part_drench_capacity( bp );
             const float dry_per_turn = static_cast<float>( drench_cap ) / turns_to_dry;
-            mod_part_wetness( bp, roll_remainder( dry_per_turn ) * -1 );
+            mod_part_wetness( bp, roll_remainder( dry_per_turn * elapsed_turns ) * -1 );
 
             // Make evaporation reduce body heat
             // if under 50 in the menu or 7500 temp_conv you should be able to regulate temperature by sweating
             // with current calcs a character moving towards 7500 heat will at most move 5 temperature points
             // down to not having a slowdown
             if( !bp->has_flag( json_flag_IGNORE_TEMP ) ) {
-                mod_part_temp_cur( bp, roll_remainder( 4 * clothing_mult ) * -1 );
+                mod_part_temp_cur( bp, roll_remainder( 4 * clothing_mult * elapsed_turns ) * -1 );
             }
         }
 
@@ -400,13 +404,16 @@ Hurricane : 100 mph (920 hPa)
 HURRICANE : 185 mph (880 hPa) [Ref: Hurricane Wilma]
 */
 
-void Character::update_bodytemp()
+void Character::update_bodytemp( const time_duration &elapsed )
 {
     if( has_trait( trait_DEBUG_NOTEMP ) ) {
         set_all_parts_temp_conv( BODYTEMP_NORM );
         set_all_parts_temp_cur( BODYTEMP_NORM );
         return;
     }
+    // Keep long-unloaded NPCs from overflowing legacy per-turn counters.
+    const int elapsed_turns = std::max( 1, std::min( to_turns<int>( elapsed ),
+                                       to_turns<int>( 2_days ) ) );
     weather_manager &weather_man = get_weather();
     /* Cache calls to g->get_temperature( player position ), used in several places in function */
     const units::temperature player_local_temp = weather_man.get_temperature( pos() );
@@ -549,7 +556,7 @@ void Character::update_bodytemp()
         int blister_count = has_bark ? -5 : 0; // If the counter is high, your skin starts to burn
 
         if( get_part_frostbite_timer( bp ) > 0 ) {
-            mod_part_frostbite_timer( bp, -std::max( 5, h_radiation ) );
+            mod_part_frostbite_timer( bp, -std::max( 5, h_radiation ) * elapsed_turns );
         }
         // 111F (44C) is a temperature in which proteins break down: https://en.wikipedia.org/wiki/Burn
         blister_count += h_radiation - 111 > 0 ?
@@ -657,10 +664,11 @@ void Character::update_bodytemp()
         int rounding_error = 0;
         // If temp_diff is small, the player cannot warm up due to rounding errors. This fixes that.
         if( temp_difference < 0 && temp_difference > -600 ) {
-            rounding_error = 1;
+            rounding_error = std::min( elapsed_turns, -temp_difference );
         }
         if( temp_before != cur_temp_conv ) {
-            set_part_temp_cur( bp, static_cast<int>( temp_difference * std::exp( -0.002 ) + cur_temp_conv +
+            set_part_temp_cur( bp, static_cast<int>( temp_difference *
+                               std::exp( -0.002 * elapsed_turns ) + cur_temp_conv +
                                rounding_error ) );
         }
 
@@ -672,12 +680,13 @@ void Character::update_bodytemp()
             mod_part_temp_conv( bp, clothing_warmth_adjusted_bonus );
             rounding_error = 0;
             if( temp_difference < 0 && temp_difference > -600 ) {
-                rounding_error = 1;
+                rounding_error = std::min( elapsed_turns, -temp_difference );
             }
             const int new_temp_conv = get_part_temp_conv( bp );
             if( temp_before != new_temp_conv ) {
                 temp_difference = get_part_temp_cur( bp ) - new_temp_conv;
-                set_part_temp_cur( bp, static_cast<int>( temp_difference * std::exp( -0.002 ) + new_temp_conv +
+                set_part_temp_cur( bp, static_cast<int>( temp_difference *
+                                   std::exp( -0.002 * elapsed_turns ) + new_temp_conv +
                                    rounding_error ) );
             }
         }
@@ -719,7 +728,7 @@ void Character::update_bodytemp()
             remove_effect( effect_hot_speed, bp );
         }
 
-        update_frostbite( bp, bp_windpower, warmth_per_bp );
+        update_frostbite( bp, bp_windpower, warmth_per_bp, elapsed_turns );
 
         // Warn the player if condition worsens
         if( temp_before > BODYTEMP_FREEZING && temp_after < BODYTEMP_FREEZING ) {
@@ -789,7 +798,8 @@ void Character::update_bodytemp()
 }
 
 void Character::update_frostbite( const bodypart_id &bp, const int FBwindPower,
-                                  const std::map<bodypart_id, int> &warmth_per_bp )
+                                  const std::map<bodypart_id, int> &warmth_per_bp,
+                                  const int elapsed_turns )
 {
     // FROSTBITE - only occurs to hands, feet, face
     /**
@@ -839,7 +849,7 @@ void Character::update_frostbite( const bodypart_id &bp, const int FBwindPower,
                                             ( Ftemperature < 10 && Ftemperature >= -5 && FBwindPower < 20 &&
                                               -4 * Ftemperature + 3 * FBwindPower - 20 >= 0 ) ) ) {
             if( get_part_frostbite_timer( bp ) < 2000 ) {
-                mod_part_frostbite_timer( bp, 3 );
+                mod_part_frostbite_timer( bp, 3 * elapsed_turns );
             }
             if( one_in( 100 ) && !has_effect( effect_frostbite, bp.id() ) ) {
                 add_msg( m_warning, _( "Your %s will be frostnipped in the next few hours." ),
@@ -853,7 +863,7 @@ void Character::update_frostbite( const bodypart_id &bp, const int FBwindPower,
                      ( Ftemperature < -5 && FBwindPower < 10 ) ||
                      ( Ftemperature < -5 && FBwindPower >= 10 &&
                        -4 * Ftemperature + 3 * FBwindPower - 170 >= 0 ) ) ) {
-            mod_part_frostbite_timer( bp, 8 );
+            mod_part_frostbite_timer( bp, 8 * elapsed_turns );
             if( one_in( 100 ) && intense < 2 ) {
                 add_msg( m_warning, _( "Your %s will be frostbitten within the hour!" ),
                          body_part_name( bp ) );
@@ -863,14 +873,14 @@ void Character::update_frostbite( const bodypart_id &bp, const int FBwindPower,
                    ( ( Ftemperature < -5 && FBwindPower >= 10 &&
                        -4 * Ftemperature + 3 * FBwindPower - 170 < 0 ) ||
                      ( Ftemperature < -35 && FBwindPower >= 10 ) ) ) {
-            mod_part_frostbite_timer( bp, 72 );
+            mod_part_frostbite_timer( bp, 72 * elapsed_turns );
             if( one_in( 100 ) && intense < 2 ) {
                 add_msg( m_warning, _( "Your %s will be frostbitten any minute now!" ),
                          body_part_name( bp ) );
             }
             // Risk free, so reduce frostbite timer
         } else {
-            mod_part_frostbite_timer( bp, -3 );
+            mod_part_frostbite_timer( bp, -3 * elapsed_turns );
         }
 
         int frostbite_timer = get_part_frostbite_timer( bp );

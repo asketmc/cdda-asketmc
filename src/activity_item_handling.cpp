@@ -118,6 +118,7 @@ static const quality_id qual_SAW_W( "SAW_W" );
 static const quality_id qual_WELD( "WELD" );
 
 static const requirement_id requirement_data_mining_standard( "mining_standard" );
+static const requirement_id requirement_data_mopping_standard( "mopping_standard" );
 
 static const trap_str_id tr_firewood_source( "tr_firewood_source" );
 
@@ -2282,31 +2283,26 @@ void activity_on_turn_move_loot( player_activity &act, Character &you )
             const int this_part = it->second ? src_part : -1;
 
             const zone_type_id id = mgr.get_near_zone_type_for_item( thisitem, abspos,
-                                    ACTIVITY_SEARCH_DISTANCE, _fac_id( you ) );
+                                    ACTIVITY_SEARCH_DISTANCE, _fac_id( you ), you.is_npc() );
 
             // checks whether the item is already on correct loot zone or not
             // if it is, we can skip such item, if not we move the item to correct pile
             // think empty bag on food pile, after you ate the content
-            if( id != zone_type_LOOT_CUSTOM && mgr.has( id, src, _fac_id( you ) ) ) {
+            if( id != zone_type_LOOT_CUSTOM &&
+                ( you.is_npc() ? mgr.has_nonpersonal( id, src, _fac_id( you ) ) :
+                  mgr.has( id, src, _fac_id( you ) ) ) ) {
                 continue;
             }
 
             if( id == zone_type_LOOT_CUSTOM &&
-                mgr.custom_loot_has( src, &thisitem, zone_type_LOOT_CUSTOM, _fac_id( you ) ) ) {
+                mgr.custom_loot_has( src, &thisitem, zone_type_LOOT_CUSTOM, _fac_id( you ),
+                                     you.is_npc() ) ) {
                 continue;
             }
 
             std::unordered_set<tripoint_abs_ms> dest_set =
-                mgr.get_near( id, abspos, ACTIVITY_SEARCH_DISTANCE, &thisitem, _fac_id( you ) );
-            if( you.is_npc() ) {
-                for( auto it_dest = dest_set.begin(); it_dest != dest_set.end(); ) {
-                    if( !mgr.has_nonpersonal( id, *it_dest, _fac_id( you ) ) ) {
-                        it_dest = dest_set.erase( it_dest );
-                    } else {
-                        ++it_dest;
-                    }
-                }
-            }
+                mgr.get_near( id, abspos, ACTIVITY_SEARCH_DISTANCE, &thisitem, _fac_id( you ),
+                              you.is_npc() );
 
             // if this item isn't going anywhere and its not sealed
             // check if it is in a unload zone or a strip corpse zone
@@ -2794,6 +2790,7 @@ static requirement_check_result generic_multi_activity_check_requirement(
                                      act_id == ACT_VEHICLE_REPAIR ||
                                      act_id == ACT_MULTIPLE_FISH ||
                                      act_id == ACT_MULTIPLE_MINE ||
+                                     act_id == ACT_MULTIPLE_MOP ||
                                      act_id == ACT_MULTIPLE_DIS ||
                                      ( act_id == ACT_MULTIPLE_CONSTRUCTION &&
                                        // TODO: fix point types
@@ -2829,6 +2826,7 @@ static requirement_check_result generic_multi_activity_check_requirement(
                reason == do_activity_reason::NEEDS_VEH_REPAIR ||
                reason == do_activity_reason::NEEDS_TREE_CHOPPING ||
                reason == do_activity_reason::NEEDS_FISHING || reason == do_activity_reason::NEEDS_MINING ||
+               reason == do_activity_reason::NEEDS_MOP ||
                reason == do_activity_reason::NEEDS_CRAFT ||
                reason == do_activity_reason::NEEDS_DISASSEMBLE ) {
         // we can do it, but we need to fetch some stuff first
@@ -2880,6 +2878,8 @@ static requirement_check_result generic_multi_activity_check_requirement(
             what_we_need = req_id;
         } else if( reason == do_activity_reason::NEEDS_MINING ) {
             what_we_need = requirement_data_mining_standard;
+        } else if( reason == do_activity_reason::NEEDS_MOP ) {
+            what_we_need = requirement_data_mopping_standard;
         } else if( reason == do_activity_reason::NEEDS_TILLING ||
                    reason == do_activity_reason::NEEDS_PLANTING ||
                    reason == do_activity_reason::NEEDS_CHOPPING ||
@@ -2935,7 +2935,8 @@ static requirement_check_result generic_multi_activity_check_requirement(
                            reason == do_activity_reason::NEEDS_TREE_CHOPPING ||
                            reason == do_activity_reason::NEEDS_VEH_DECONST ||
                            reason == do_activity_reason::NEEDS_VEH_REPAIR ||
-                           reason == do_activity_reason::NEEDS_MINING;
+                           reason == do_activity_reason::NEEDS_MINING ||
+                           reason == do_activity_reason::NEEDS_MOP;
         // is it even worth fetching anything if there isn't enough nearby?
         if( !are_requirements_nearby( tool_pickup ? loot_zone_spots : combined_spots, what_we_need, you,
                                       act_id, tool_pickup, src_loc ) ) {

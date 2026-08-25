@@ -193,12 +193,19 @@ work rather than importing its replacement behavior stack.
 | Area | Donor | Result |
 | --- | --- | --- |
 | NPC temperature, wetness, sleep, camp water | CleverRaven #86016 (`69e67579e0adf6bc345904242c40e88e1237d74d`) | Adapted to the 0.G NPC update and camp APIs |
-| Camp mopping job | CleverRaven #86257 (`4813d0e10e9baa048aea3f9e32afb77145fdda0c`) | Adapted; the target already had mopping and tool fetching |
+| Camp mopping job | CleverRaven #86257 (`4813d0e10e9baa048aea3f9e32afb77145fdda0c`) | Adapted to the legacy `mop`/`mop_folded` requirement and fetch path; no later MOP-quality migration |
 | Personal sorting-zone isolation | CleverRaven #86254 (`eba56896b357c633f17973c5442d3b69f7832895`) | Adapted to the legacy move-loot activity |
 | Crafting UI, bulk priorities, worker food/vitamins, larder medicine | #67458, #77715, #77573, #71546, #71670, #76025 | Already present |
 | Autonomous ground/vehicle scavenging and camp-resident state machine | #86035, #86052, #86172, #86173 | Deferred: requires the later global NPC behavior/mission stack |
 | Activity-actor sorting rewrites | #83980, #84311 | Not applicable to the legacy direct sorting implementation |
 | TLG medical and weapon-selection rewrites | TLG #1603, #2746, #2982 | Deferred: target already self-heals/allied-heals; remaining changes alter combat or require later medicine AI |
+
+Active NPC temperature effects are refreshed every turn; the heavier needs
+update remains throttled. Save-load catch-up advances temperature, wetness, and
+frostbite by up to two days of elapsed turns under the current conditions. The
+bound prevents overflow in legacy integer counters and is already enough for
+temperature convergence and full drying. This deliberately does not invent a
+historical weather trace that 0.G never persisted.
 
 ## Additive data audit
 
