@@ -37,6 +37,10 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
     def test_exact_zip_is_validated_before_prerelease(self) -> None:
         self.assertIn("Expected exactly one release archive", self.workflow)
         self.assertIn("--check-mods dda", self.workflow)
+        self.assertIn("Start-Process -FilePath '.\\cataclysm-tiles.exe'", self.workflow)
+        self.assertIn("-Wait -PassThru", self.workflow)
+        self.assertIn("$checkMods.ExitCode", self.workflow)
+        self.assertNotIn("$LASTEXITCODE", self.workflow)
         self.assertIn("needs: validate-windows-release", self.workflow)
         self.assertIn("--prerelease", self.workflow)
         self.assertNotIn("--clobber", self.workflow)
