@@ -3,6 +3,19 @@
 This repository begins with the integrated source snapshot documented below.
 The matching Windows Tiles+Sound package is published under GitHub Releases.
 
+## Windows audio recovery
+
+- Audio initialization now records the active SDL backend and available
+  playback devices in `debug.log`.
+- A transient endpoint failure is retried once. On Windows, an unavailable or
+  broken default backend automatically falls back to DirectSound and retries.
+  An explicitly selected `SDL_AUDIODRIVER` remains authoritative.
+- Soundpacks are parsed and preloaded only after the mixer opens successfully,
+  preventing one device error from cascading into misleading soundpack errors.
+- SDL3 was deliberately not transplanted: its modern CDDA/BN implementation is
+  coupled to their full tiles, input, build, and packaging migrations. The
+  bounded SDL2 recovery path fixes the 0.G failure without replacing that stack.
+
 ## Crash and rotation fixes
 
 - EMP-damaged electronics now receive repairable faults instead of permanent
@@ -61,6 +74,33 @@ The matching Windows Tiles+Sound package is published under GitHub Releases.
 
 Spoiler-heavy lists are collapsed below. Normal sections explain mechanics
 without revealing locations or rare loot pools.
+
+## Followers and camp work
+
+- Followers now actually fall asleep when tired instead of repeatedly lying
+  down without recovering. Non-following NPCs no longer erase their fatigue.
+- NPC body temperature and wetness update while active and reconcile after an
+  unloaded NPC returns, so weather and shelter matter consistently. Unloaded
+  exposure uses the conditions at load time because historical per-NPC weather
+  is not stored by 0.G.
+- Camp water is ingested into the NPC stomach instead of instantly resetting
+  thirst, preserving the normal digestion model.
+- Camp residents can be assigned mopping from the existing job-priority menu;
+  they fetch either legacy mop item from loot storage before using the existing
+  mopping-zone workflow.
+- NPC automatic sorting ignores player-personal source and destination zones.
+  Shared camp and vehicle zones continue to work normally.
+- Focused Catch coverage exercises sleep, elapsed environmental updates,
+  camp-water stomach capacity, mop fetching, and static/custom/vehicle sorting
+  with personal-zone overlap.
+- The normal crafting-menu follower orders, camp crafting UI, worker larder,
+  vitamins, medicine/mutagen storage, follower-rules window, and bulk job
+  priority controls were already present and remain unchanged.
+
+The broader experimental autonomous-needs/foraging state machine was not
+copied wholesale: it depends on post-0.G NPC mission and behavior-tree
+infrastructure and would replace existing follower behavior rather than make a
+bounded additive correction.
 
 ## Visuals, sound, fonts, and interface
 

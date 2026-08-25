@@ -1130,11 +1130,15 @@ void npc::execute_action( npc_action action )
             // TODO: Handle empty path better
             if( best_spot == pos() || path.empty() ) {
                 move_pause();
-                if( !has_effect( effect_lying_down ) ) {
+                if( !in_sleep_state() ) {
                     activate_bionic_by_id( bio_soporific );
-                    add_effect( effect_lying_down, 30_minutes, false, 1 );
                     if( !player_character.in_sleep_state() ) {
                         add_msg_if_player_sees( *this, _( "%s lies down to sleep." ), get_name() );
+                    }
+                    if( can_sleep() ) {
+                        fall_asleep();
+                    } else {
+                        add_effect( effect_lying_down, 30_minutes, false, 1 );
                     }
                 }
             } else {
@@ -1939,9 +1943,7 @@ npc_action npc::address_needs( float danger )
     // TODO: More risky attempts at sleep when exhausted
     if( one_in( 3 ) && could_sleep() ) {
         if( !is_player_ally() ) {
-            // TODO: Make tired NPCs handle sleep offscreen
-            set_fatigue( 0 );
-            return npc_undecided;
+            return npc_sleep;
         }
 
         if( rules.has_flag( ally_rule::allow_sleep ) ||
@@ -3783,9 +3785,15 @@ bool npc::consume_food_from_camp()
     if( get_thirst() > 40 ) {
         for( basecamp *bcp : nearby_camps ) {
             if( bcp->has_water() && bcp->allowed_access_by( *this, true ) ) {
-                complain_about( "camp_water_thanks", 1_hours, chatbin.snip_camp_water_thanks, false );
-                set_thirst( 0 );
-                return true;
+                const units::volume wanted = std::max(
+                                                  0_ml, units::from_milliliter( get_thirst() * 5 ) );
+                const units::volume intake = std::min( wanted, stomach.stomach_remaining( *this ) );
+                if( intake > 0_ml ) {
+                    stomach.ingest( { intake, 0_ml, {} } );
+                    complain_about( "camp_water_thanks", 1_hours,
+                                    chatbin.snip_camp_water_thanks, false );
+                    return true;
+                }
             }
         }
     }

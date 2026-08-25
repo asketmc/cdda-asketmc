@@ -12,12 +12,16 @@ Selected recipe lookup, inventory-letter assignment, and repair-selector paths
 use bounded caches and early filtering without changing their displayed results.
 Character-rooted contained item locations now resolve lazily after unloaded NPCs
 are registered, preserving interrupted activity targets across save/load.
+Windows sound initialization now uses bounded retries, records backend/device
+diagnostics, falls back from a failed default backend to DirectSound, and skips
+soundpack loading when no mixer is available.
 
 ## Fast validation
 
 ```sh
 python -m unittest tools.test_h5_interface_qol tools.test_h6_antigrind \
   tools.test_h6_backup_generator \
+  tools.test_windows_audio_recovery \
   tools.gfx_tools.test_backport_tileset_release \
   tools.gfx_tools.test_build_ultica_hires \
   tools.gfx_tools.test_beauty_backport_assets \
@@ -28,9 +32,15 @@ python tools/additive_audit.py --target HEAD
 
 ## Release boundary
 
-`BUILD_INFO.txt` records the production command. Hosted checks cover portable
-Python/data contracts only. Tag `v0.G-additive-2026.08.25` identifies the
-Windows Tiles+Sound release; its asset checksum is published beside the ZIP.
-The full Catch build has a pre-existing EOC-test compile failure, so the P0
-release gates are the exact-tree Windows build, focused changed-object compile,
-`--check-mods dda`, and copied-save load smoke.
+`BUILD_INFO.txt` records the production command. Pull requests run the fast
+portable contracts and a real Windows x64 Tiles+Sound compile/link plus
+ephemeral deterministic-package gate using checksum-verified MXE GCC 11.2.
+Pull-request compiler outputs are not retained.
+
+A `v0.G-additive-*` tag must reproduce identical executable and ZIP hashes from
+two clean builds. The exact staged archive is then extracted on Windows, checked
+for full-SHA provenance, and run with `--check-mods dda`. It is published as an
+immutable prerelease until an operator downloads that asset and completes the
+copied-save load smoke on Windows. The full Catch build has a pre-existing
+EOC-test compile failure; the copied-save smoke remains the final release
+recommendation check.
