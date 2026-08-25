@@ -84,6 +84,7 @@
 #include "visitable.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
+#include "weather.h"
 #include "name.h"
 
 static const efftype_id effect_bouldering( "bouldering" );
@@ -3265,6 +3266,12 @@ void npc::on_unload()
 {
 }
 
+void npc::update_bodytemp_and_wetness( const time_duration &elapsed )
+{
+    update_bodytemp( elapsed );
+    update_body_wetness( *get_weather().weather_precise, elapsed );
+}
+
 // A throtled version of player::update_body since npc's don't need to-the-turn updates.
 void npc::npc_update_body()
 {
@@ -3272,6 +3279,9 @@ void npc::npc_update_body()
         update_body( last_updated, calendar::turn );
         last_updated = calendar::turn;
     }
+    // Temperature effects and drying are turn-based, so refresh them every
+    // active turn even though the heavier needs update remains throttled.
+    update_bodytemp_and_wetness();
 }
 
 void npc::on_load()
@@ -3324,6 +3334,10 @@ void npc::on_load()
             update_mental_focus();
         }
     }
+
+    // Approximate unloaded exposure using current conditions while preserving
+    // the elapsed-time convergence and drying rates.
+    update_bodytemp_and_wetness( std::max( dt, 1_turns ) );
 
     if( dt > 0_turns ) {
         // This ensures food is properly rotten at load
