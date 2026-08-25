@@ -23,14 +23,14 @@ static const faction_id faction_free_merchants( "free_merchants" );
 static const faction_id faction_your_followers( "your_followers" );
 
 static const itype_id itype_meat_fatty_cooked( "meat_fatty_cooked" );
-static const itype_id itype_sandwich_cheese_grilled( "sandwich_cheese_grilled" );
+static const itype_id itype_meat_scrap_cooked( "meat_scrap_cooked" );
 static const itype_id itype_sweater( "sweater" );
 static const itype_id itype_water_clean( "water_clean" );
 
 static const furn_str_id furn_f_toilet( "f_toilet" );
 static const ter_str_id ter_t_dirt( "t_dirt" );
 static const ter_str_id ter_t_floor( "t_floor" );
-static const ter_str_id ter_t_shrub( "t_shrub" );
+static const ter_str_id ter_t_underbrush( "t_underbrush" );
 static const ter_str_id ter_t_wall_glass( "t_wall_glass" );
 static const ter_str_id ter_t_water_sh( "t_water_sh" );
 
@@ -48,6 +48,8 @@ namespace
 npc &setup_survival_npc()
 {
     clear_avatar();
+    set_time_to_day();
+    get_weather().forced_temperature = units::from_celsius( 20 );
     clear_map();
     get_avatar().setpos( tripoint( 5, 5, 0 ) );
 
@@ -109,15 +111,16 @@ TEST_CASE( "NPC acquires local food and clean water", "[npc][needs][food]" )
     SECTION( "ground food is found and consumed" ) {
         guy.set_hunger( 300 );
         guy.set_stored_kcal( 5000 );
-        here.add_item_or_charges( food_pos, item( itype_sandwich_cheese_grilled ) );
+        here.add_item_or_charges( food_pos, item( itype_meat_scrap_cooked ) );
 
-        REQUIRE( contains_candidate( guy.find_local_food(), itype_sandwich_cheese_grilled ) );
+        REQUIRE( contains_candidate( guy.find_local_food(), itype_meat_scrap_cooked ) );
         CHECK( guy.consume_local_food( false ) );
         CHECK_FALSE( here.has_items( food_pos ) );
     }
 
     SECTION( "clean water uses normal consumption" ) {
         guy.set_thirst( 200 );
+        here.furn_set( food_pos, furn_str_id( "f_bathtub" ) );
         item clean_water( itype_water_clean, calendar::turn, 1 );
         here.add_item_or_charges( food_pos, clean_water );
         const units::volume water_before = guy.stomach.get_water();
@@ -153,26 +156,26 @@ TEST_CASE( "NPC local acquisition respects ownership and follower rules", "[npc]
 
     SECTION( "pickup disabled" ) {
         guy.rules.clear_flag( ally_rule::allow_pick_up );
-        here.add_item_or_charges( target, item( itype_sandwich_cheese_grilled ) );
+        here.add_item_or_charges( target, item( itype_meat_scrap_cooked ) );
         CHECK( guy.find_local_food().empty() );
     }
 
     SECTION( "another faction owns the food" ) {
-        item owned_food( itype_sandwich_cheese_grilled );
+        item owned_food( itype_meat_scrap_cooked );
         owned_food.set_owner( faction_free_merchants );
         here.add_item_or_charges( target, owned_food );
         CHECK( guy.find_local_food().empty() );
     }
 
     SECTION( "unowned food remains available" ) {
-        here.add_item_or_charges( target, item( itype_sandwich_cheese_grilled ) );
-        CHECK( contains_candidate( guy.find_local_food(), itype_sandwich_cheese_grilled ) );
+        here.add_item_or_charges( target, item( itype_meat_scrap_cooked ) );
+        CHECK( contains_candidate( guy.find_local_food(), itype_meat_scrap_cooked ) );
     }
 
     SECTION( "non-followers do not use local supplies" ) {
         guy.set_attitude( NPCATT_NULL );
         guy.set_fac( faction_free_merchants );
-        here.add_item_or_charges( target, item( itype_sandwich_cheese_grilled ) );
+        here.add_item_or_charges( target, item( itype_meat_scrap_cooked ) );
         CHECK_FALSE( guy.is_player_ally() );
         CHECK( guy.find_local_food().empty() );
     }
@@ -184,7 +187,7 @@ TEST_CASE( "NPC local acquisition respects protected zones", "[npc][needs][zones
     map &here = get_map();
     const tripoint target = guy.pos() + tripoint_east;
     guy.set_hunger( 300 );
-    here.add_item_or_charges( target, item( itype_sandwich_cheese_grilled ) );
+    here.add_item_or_charges( target, item( itype_meat_scrap_cooked ) );
 
     SECTION( "personal zone" ) {
         add_tile_zone( "Personal supplies", zone_type_LOOT_UNSORTED, target, true );
@@ -210,12 +213,12 @@ TEST_CASE( "NPC local acquisition uses only unlocked owned vehicle cargo",
     vehicle &veh = add_cargo_vehicle( target, guy, locked );
     const int cargo = veh.part_with_feature( 0, VPFLAG_CARGO, true );
     REQUIRE( cargo >= 0 );
-    REQUIRE( veh.add_item( cargo, item( itype_sandwich_cheese_grilled ) ) );
+    REQUIRE( veh.add_item( cargo, item( itype_meat_scrap_cooked ) ) );
 
     if( locked ) {
         CHECK( guy.find_local_food().empty() );
     } else {
-        CHECK( contains_candidate( guy.find_local_food(), itype_sandwich_cheese_grilled ) );
+        CHECK( contains_candidate( guy.find_local_food(), itype_meat_scrap_cooked ) );
     }
 }
 
@@ -272,7 +275,7 @@ TEST_CASE( "NPC local search skips an unreachable best food candidate", "[npc][n
     here.add_item_or_charges( unreachable, item( itype_meat_fatty_cooked ) );
 
     const tripoint fallback = guy.pos() + tripoint_east;
-    here.add_item_or_charges( fallback, item( itype_sandwich_cheese_grilled ) );
+    here.add_item_or_charges( fallback, item( itype_meat_scrap_cooked ) );
 
     REQUIRE( guy.sees( unreachable ) );
     REQUIRE( guy.find_local_food().size() == 2 );
@@ -289,9 +292,9 @@ TEST_CASE( "NPC local acquisition respects blocked diagonals", "[npc][needs][pat
     const tripoint target = guy.pos() + tripoint_south_east;
     here.ter_set( guy.pos() + tripoint_east, ter_t_wall_glass );
     here.ter_set( guy.pos() + tripoint_south, ter_t_wall_glass );
-    here.add_item_or_charges( target, item( itype_sandwich_cheese_grilled ) );
+    here.add_item_or_charges( target, item( itype_meat_scrap_cooked ) );
 
-    REQUIRE( contains_candidate( guy.find_local_food(), itype_sandwich_cheese_grilled ) );
+    REQUIRE( contains_candidate( guy.find_local_food(), itype_meat_scrap_cooked ) );
     CHECK_FALSE( guy.consume_local_food( false ) );
     CHECK( here.has_items( target ) );
 }
@@ -301,7 +304,7 @@ TEST_CASE( "NPC emergency foraging excludes protected land", "[npc][needs][forag
     npc &guy = setup_survival_npc();
     map &here = get_map();
     const tripoint target = guy.pos() + tripoint_east;
-    here.ter_set( target, ter_t_shrub );
+    here.ter_set( target, ter_t_underbrush );
 
     SECTION( "ordinary hunger does not trigger foraging" ) {
         CHECK_FALSE( guy.forage_local_food() );
@@ -312,7 +315,7 @@ TEST_CASE( "NPC emergency foraging excludes protected land", "[npc][needs][forag
         REQUIRE( guy.forage_local_food() );
         REQUIRE( guy.activity.id() == activity_id( "ACT_FORAGE" ) );
         process_activity( guy );
-        CHECK( here.ter( target ) != ter_t_shrub );
+        CHECK( here.ter( target ) != ter_t_underbrush );
     }
 
     SECTION( "farm plot is excluded" ) {
