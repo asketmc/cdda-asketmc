@@ -4,7 +4,6 @@
 #include "activity_actor_definitions.h"
 #include "cata_catch.h"
 #include "clzones.h"
-#include "field.h"
 #include "field_type.h"
 #include "item.h"
 #include "item_category.h"
@@ -193,11 +192,21 @@ TEST_CASE( "NPC mopping fetches a stored mop", "[zones][npc][activities][mopping
     } ) );
 
     worker.assign_activity( player_activity( ACT_MULTIPLE_MOP ) );
-    process_activity( worker );
+    int turns = 0;
+    while( worker.activity && turns++ < 100 ) {
+        worker.moves += worker.get_speed();
+        while( worker.moves > 0 && worker.activity ) {
+            worker.activity.do_turn( worker );
+        }
+    }
 
-    REQUIRE( worker.get_wielded_item() );
-    CHECK( worker.get_wielded_item()->has_flag( flag_id( "MOP" ) ) );
-    CHECK( here.i_at( tool_storage ).empty() );
+    CHECK( turns < 100 );
+    CHECK_FALSE( here.terrain_moppable( tripoint_bub_ms( target ) ) );
+    CHECK( worker.has_item_with( []( const item & it ) {
+        return it.has_flag( flag_id( "MOP" ) );
+    } ) );
+    CHECK_FALSE( worker.activity );
+    CHECK( worker.backlog.empty() );
 }
 
 TEST_CASE( "NPC sorting leaves personal supplies in place", "[zones][npc][basecamp]" )
@@ -226,32 +235,6 @@ TEST_CASE( "NPC sorting leaves personal supplies in place", "[zones][npc][baseca
     CHECK( here.has_items( personal_src ) );
     CHECK_FALSE( here.has_items( shared_src ) );
     CHECK( here.has_items( destination ) );
-}
-
-TEST_CASE( "NPC camp mopping cleans its assigned zone", "[zones][npc][basecamp]" )
-{
-    clear_avatar();
-    clear_map();
-    map &here = get_map();
-    standard_npc worker( "camp mopping worker", tripoint_zero );
-    worker.set_fac( faction_your_followers );
-    worker.i_add( item( itype_mop ) );
-    const tripoint target = worker.pos() + tripoint_east;
-    create_tile_zone( "Mopping", zone_type_MOPPING, here.getglobal( target ).raw() );
-    REQUIRE( here.add_field( target, field_fd_blood.id(), 1 ) );
-
-    worker.assign_activity( player_activity( ACT_MULTIPLE_MOP ) );
-    int turns = 0;
-    while( worker.activity && turns++ < 100 ) {
-        worker.moves += worker.get_speed();
-        while( worker.moves > 0 && worker.activity ) {
-            worker.activity.do_turn( worker );
-        }
-    }
-    CHECK( turns < 100 );
-    CHECK( here.field_at( target ).find_field( field_fd_blood.id() ) == nullptr );
-    CHECK_FALSE( worker.activity );
-    CHECK( worker.backlog.empty() );
 }
 
 TEST_CASE( "zone unloading ammo belts", "[zones][items][ammo_belt][activities][unload]" )
