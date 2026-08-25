@@ -12,12 +12,16 @@ Selected recipe lookup, inventory-letter assignment, and repair-selector paths
 use bounded caches and early filtering without changing their displayed results.
 Character-rooted contained item locations now resolve lazily after unloaded NPCs
 are registered, preserving interrupted activity targets across save/load.
+Windows sound initialization now uses bounded retries, records backend/device
+diagnostics, falls back from a failed default backend to DirectSound, and skips
+soundpack loading when no mixer is available.
 
 ## Fast validation
 
 ```sh
 python -m unittest tools.test_h5_interface_qol tools.test_h6_antigrind \
   tools.test_h6_backup_generator \
+  tools.test_windows_audio_recovery \
   tools.gfx_tools.test_backport_tileset_release \
   tools.gfx_tools.test_build_ultica_hires \
   tools.gfx_tools.test_beauty_backport_assets \
