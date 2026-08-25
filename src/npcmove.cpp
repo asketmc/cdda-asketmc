@@ -888,6 +888,9 @@ void npc::move()
     }
 
     map &here = get_map();
+    if( ai_cache.danger >= 0.01f ) {
+        deactivate_bionic_by_id( bio_nanobots );
+    }
     if( !ai_cache.dangerous_explosives.empty() ) {
         action = npc_escape_explosion;
     } else if( ( target == &player_character && attitude == NPCATT_FLEE_TEMP ) ||
