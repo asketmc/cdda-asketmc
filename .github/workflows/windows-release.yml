@@ -222,8 +222,8 @@ jobs:
           if ($manifest -notmatch [regex]::Escape('${{ github.sha }}')) { throw 'Packaged manifest lacks the full commit SHA' }
           Push-Location extracted
           try {
-            & .\cataclysm-tiles.exe --check-mods dda
-            if ($LASTEXITCODE -ne 0) { throw "--check-mods dda failed with exit code $LASTEXITCODE" }
+            $checkMods = Start-Process -FilePath '.\cataclysm-tiles.exe' -ArgumentList @('--check-mods', 'dda') -NoNewWindow -Wait -PassThru
+            if ($checkMods.ExitCode -ne 0) { throw "--check-mods dda failed with exit code $($checkMods.ExitCode)" }
           } finally {
             Pop-Location
           }

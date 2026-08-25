@@ -35,8 +35,22 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn("if: env.RELEASE_BUILD == 'true'", upload_section)
 
     def test_exact_zip_is_validated_before_prerelease(self) -> None:
-        self.assertIn("Expected exactly one release archive", self.workflow)
-        self.assertIn("--check-mods dda", self.workflow)
+        validation = self.workflow[
+            self.workflow.index("  validate-windows-release:") :
+            self.workflow.index("  publish-release:")
+        ]
+        self.assertIn("Expected exactly one release archive", validation)
+        self.assertIn(
+            "$checkMods = Start-Process -FilePath '.\\cataclysm-tiles.exe' "
+            "-ArgumentList @('--check-mods', 'dda') -NoNewWindow -Wait -PassThru",
+            validation,
+        )
+        self.assertIn(
+            'if ($checkMods.ExitCode -ne 0) { throw "--check-mods dda failed with exit code '
+            '$($checkMods.ExitCode)" }',
+            validation,
+        )
+        self.assertNotIn("$LASTEXITCODE", validation)
         self.assertIn("needs: validate-windows-release", self.workflow)
         self.assertIn("--prerelease", self.workflow)
         self.assertNotIn("--clobber", self.workflow)
