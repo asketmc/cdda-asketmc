@@ -255,14 +255,32 @@ TEST_CASE( "Camp worker finishes travel on arrival",
     REQUIRE( om != nullptr );
     test_camp_scope scope( *om, camp_pos, get_map().getglobal( worker.pos() ).raw() );
     scope.camp().add_assignee( worker.getID() );
-    worker.set_mission( NPC_MISSION_TRAVELLING );
-    worker.omt_path.push_back( camp_pos );
+    const tripoint_abs_omt expansion_pos = camp_pos + point( 1, 0 );
+    scope.camp().add_expansion( "faction_base_camp_0", expansion_pos );
+    worker.spawn_at_omt( expansion_pos );
 
-    worker.move();
+    SECTION( "loaded movement" ) {
+        worker.set_mission( NPC_MISSION_TRAVELLING );
+        worker.goal = camp_pos;
+        worker.omt_path.push_back( expansion_pos );
+        worker.move();
 
-    CHECK( worker.mission == NPC_MISSION_GUARD_ALLY );
-    CHECK( worker.omt_path.empty() );
-    CHECK( worker.camp_duty );
+        CHECK( worker.mission == NPC_MISSION_GUARD_ALLY );
+        CHECK( worker.omt_path.empty() );
+        CHECK( worker.camp_duty );
+    }
+
+    SECTION( "off-bubble movement" ) {
+        worker.set_mission( NPC_MISSION_TRAVELLING );
+        worker.goal = camp_pos;
+        worker.omt_path.push_back( expansion_pos );
+        worker.on_unload();
+        worker.return_to_assigned_camp();
+
+        CHECK( worker.mission == NPC_MISSION_GUARD_ALLY );
+        CHECK( worker.omt_path.empty() );
+        CHECK( worker.camp_duty );
+    }
 }
 
 TEST_CASE( "Urgent needs preserve stashed camp work",
