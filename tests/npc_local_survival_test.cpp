@@ -25,12 +25,14 @@ static const faction_id faction_your_followers( "your_followers" );
 static const itype_id itype_meat_fatty_cooked( "meat_fatty_cooked" );
 static const itype_id itype_sandwich_cheese_grilled( "sandwich_cheese_grilled" );
 static const itype_id itype_sweater( "sweater" );
+static const itype_id itype_water( "water" );
 static const itype_id itype_water_clean( "water_clean" );
 
+static const furn_str_id furn_f_toilet( "f_toilet" );
 static const ter_str_id ter_t_dirt( "t_dirt" );
 static const ter_str_id ter_t_floor( "t_floor" );
 static const ter_str_id ter_t_shrub( "t_shrub" );
-static const ter_str_id ter_t_wall_metal( "t_wall_metal" );
+static const ter_str_id ter_t_wall_glass( "t_wall_glass" );
 static const ter_str_id ter_t_water_sh( "t_water_sh" );
 
 static const vpart_id vpart_box( "box" );
@@ -66,7 +68,10 @@ npc &setup_survival_npc()
 void add_tile_zone( const std::string &name, const zone_type_id &type, const tripoint &p,
                     bool personal = false )
 {
-    const tripoint abs = get_map().getglobal( p ).raw();
+    tripoint abs = get_map().getglobal( p ).raw();
+    if( personal ) {
+        abs -= get_avatar().get_location().raw();
+    }
     zone_manager &mgr = zone_manager::get_manager();
     mgr.add( name, type, faction_your_followers, false, true, abs, abs, nullptr, personal );
     mgr.cache_data();
@@ -131,6 +136,14 @@ TEST_CASE( "NPC acquires local food and clean water", "[npc][needs][food]" )
         CHECK_FALSE( guy.drink_local_clean_water( false ) );
         CHECK( guy.stomach.get_water() == 0_ml );
     }
+
+    SECTION( "toilet water is not treated as clean ground water" ) {
+        guy.set_thirst( 200 );
+        here.furn_set( food_pos, furn_f_toilet );
+        here.add_item_or_charges( food_pos, item( itype_water, calendar::turn, 1 ) );
+        CHECK( guy.find_local_food().empty() );
+        CHECK( guy.find_local_clean_water().empty() );
+    }
 }
 
 TEST_CASE( "NPC local acquisition respects ownership and follower rules", "[npc][needs][rules]" )
@@ -156,6 +169,14 @@ TEST_CASE( "NPC local acquisition respects ownership and follower rules", "[npc]
     SECTION( "unowned food remains available" ) {
         here.add_item_or_charges( target, item( itype_sandwich_cheese_grilled ) );
         CHECK( contains_candidate( guy.find_local_food(), itype_sandwich_cheese_grilled ) );
+    }
+
+    SECTION( "non-followers do not use local supplies" ) {
+        guy.set_attitude( NPCATT_NULL );
+        guy.set_fac( faction_free_merchants );
+        here.add_item_or_charges( target, item( itype_sandwich_cheese_grilled ) );
+        CHECK_FALSE( guy.is_player_ally() );
+        CHECK( guy.find_local_food().empty() );
     }
 }
 
@@ -247,7 +268,7 @@ TEST_CASE( "NPC local search skips an unreachable best food candidate", "[npc][n
     const tripoint unreachable = guy.pos() + tripoint( 4, 0, 0 );
     for( const tripoint &wall : here.points_in_radius( unreachable, 1 ) ) {
         if( wall != unreachable ) {
-            here.ter_set( wall, ter_t_wall_metal );
+            here.ter_set( wall, ter_t_wall_glass );
         }
     }
     here.add_item_or_charges( unreachable, item( itype_meat_fatty_cooked ) );
@@ -255,6 +276,7 @@ TEST_CASE( "NPC local search skips an unreachable best food candidate", "[npc][n
     const tripoint fallback = guy.pos() + tripoint_east;
     here.add_item_or_charges( fallback, item( itype_sandwich_cheese_grilled ) );
 
+    REQUIRE( guy.sees( unreachable ) );
     REQUIRE( guy.find_local_food().size() == 2 );
     CHECK( guy.consume_local_food( true ) );
     CHECK( here.has_items( unreachable ) );
@@ -274,8 +296,11 @@ TEST_CASE( "NPC emergency foraging excludes protected land", "[npc][needs][forag
 
     SECTION( "severe hunger permits wild forage" ) {
         guy.set_stored_kcal( 5000 );
-        const std::vector<tripoint> harvest = guy.find_local_harvest();
-        CHECK( std::find( harvest.begin(), harvest.end(), target ) != harvest.end() );
+        REQUIRE( guy.forage_local_food() );
+        REQUIRE( guy.activity.id() == activity_id( "ACT_FORAGE" ) );
+        process_activity( guy );
+        CHECK_FALSE( guy.activity );
+        CHECK( here.ter( target ) != ter_t_shrub );
     }
 
     SECTION( "farm plot is excluded" ) {

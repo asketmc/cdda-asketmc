@@ -18,10 +18,13 @@
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 static const activity_id ACT_MULTIPLE_MOP( "ACT_MULTIPLE_MOP" );
 static const faction_id faction_your_followers( "your_followers" );
+static const field_type_str_id field_fd_blood( "fd_blood" );
 
 static const itype_id itype_556( "556" );
 static const itype_id itype_ammolink223( "ammolink223" );
 static const itype_id itype_belt223( "belt223" );
+static const itype_id itype_mop( "mop" );
+static const itype_id itype_sandwich_cheese_grilled( "sandwich_cheese_grilled" );
 
 static const vproto_id vehicle_prototype_shopping_cart( "shopping_cart" );
 
@@ -194,6 +197,61 @@ TEST_CASE( "NPC mopping fetches a stored mop", "[zones][npc][activities][mopping
     REQUIRE( worker.get_wielded_item() );
     CHECK( worker.get_wielded_item()->has_flag( flag_id( "MOP" ) ) );
     CHECK( here.i_at( tool_storage ).empty() );
+}
+
+TEST_CASE( "NPC sorting leaves personal supplies in place", "[zones][npc][basecamp]" )
+{
+    clear_avatar();
+    clear_map();
+    map &here = get_map();
+    npc &worker = spawn_npc( point( 60, 60 ), "test_talker" );
+    clear_character( worker );
+    worker.set_fac( faction_your_followers );
+    worker.set_attitude( NPCATT_FOLLOW );
+    const tripoint personal_src = worker.pos() + tripoint_east;
+    const tripoint shared_src = worker.pos() + tripoint_west;
+    const tripoint destination = worker.pos() + tripoint_north;
+
+    create_tile_zone( "Personal", zone_type_LOOT_UNSORTED,
+                      here.getglobal( personal_src ).raw(), false, true );
+    create_tile_zone( "Shared", zone_type_LOOT_UNSORTED, here.getglobal( shared_src ).raw() );
+    create_tile_zone( "Food", zone_type_LOOT_FOOD, here.getglobal( destination ).raw() );
+    here.add_item_or_charges( personal_src, item( itype_sandwich_cheese_grilled ) );
+    here.add_item_or_charges( shared_src, item( itype_sandwich_cheese_grilled ) );
+
+    worker.assign_activity( player_activity( ACT_MOVE_LOOT ) );
+    process_activity( worker );
+
+    CHECK( here.has_items( personal_src ) );
+    CHECK_FALSE( here.has_items( shared_src ) );
+    CHECK( here.has_items( destination ) );
+}
+
+TEST_CASE( "NPC camp mopping cleans its assigned zone", "[zones][npc][basecamp]" )
+{
+    clear_avatar();
+    clear_map();
+    map &here = get_map();
+    npc &worker = spawn_npc( point( 60, 60 ), "test_talker" );
+    clear_character( worker );
+    worker.set_fac( faction_your_followers );
+    worker.i_add( item( itype_mop ) );
+    const tripoint target = worker.pos() + tripoint_east;
+    create_tile_zone( "Mopping", zone_type_MOPPING, here.getglobal( target ).raw() );
+    REQUIRE( here.add_field( target, field_fd_blood.id(), 1 ) );
+
+    worker.assign_activity( player_activity( ACT_MULTIPLE_MOP ) );
+    int turns = 0;
+    while( worker.activity && turns++ < 100 ) {
+        worker.moves += worker.get_speed();
+        while( worker.moves > 0 && worker.activity ) {
+            worker.activity.do_turn( worker );
+        }
+    }
+    CHECK( turns < 100 );
+    CHECK( here.field_at( target ).find_field( field_fd_blood.id() ) == nullptr );
+    CHECK_FALSE( worker.activity );
+    CHECK( worker.backlog.empty() );
 }
 
 TEST_CASE( "zone unloading ammo belts", "[zones][items][ammo_belt][activities][unload]" )
