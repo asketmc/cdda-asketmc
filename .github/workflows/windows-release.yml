@@ -87,8 +87,9 @@ jobs:
           ccache --zero-stats
           ccache --max-size "${CCACHE_MAXSIZE}"
 
-          short_sha="${GITHUB_SHA:0:12}"
-          version="0.G-additive-${short_sha}"
+          build_sha="${GITHUB_SHA:0:12}"
+          asset_sha="${GITHUB_SHA:0:7}"
+          version="0.G-additive-${build_sha}"
           target="cataclysm-tiles.exe"
           if [[ "${RELEASE_BUILD}" == "true" ]]; then
             cat > VERSION.txt <<EOF
@@ -113,7 +114,7 @@ jobs:
 
           if [[ "${RELEASE_BUILD}" == "true" ]]; then
             source_zip="cataclysmdda-${version}.zip"
-            asset="cdda-0g-additive-asketmc-${short_sha}-windows-x64-tiles-sound.zip"
+            asset="cdda-0g-additive-asketmc-${asset_sha}-windows-x64-tiles-sound.zip"
             test -s "${source_zip}"
             mv "${source_zip}" "${asset}"
             sha256sum "${asset}" > SHA256SUMS.txt
@@ -149,11 +150,26 @@ jobs:
           sha256sum --check SHA256SUMS.txt
           asset=$(find . -maxdepth 1 -name 'cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip' -print -quit)
           test -n "${asset}"
+          release_date="${GITHUB_REF_NAME#v0.G-additive-}"
+          cat > RELEASE_NOTES.md <<EOF
+          Windows x64 Tiles+Sound release from public main at ${GITHUB_SHA}.
+
+          Highlights:
+          - packages the complete additive 0.G feature set documented in PATCHNOTES_ADDITIVE_0G.md
+          - builds the exact tagged source with the checksum-verified MXE GCC 11.2 toolchain
+          - contains no personal saves or configuration
+
+          Validation:
+          - Windows x64 Tiles+Sound compile and link
+          - release archive creation and SHA256 verification
+
+          A copied-save load smoke on real Windows hardware remains recommended before moving an existing world. See SHA256SUMS.txt for archive integrity.
+          EOF
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
             gh release upload "${GITHUB_REF_NAME}" "${asset}" SHA256SUMS.txt --clobber
           else
             gh release create "${GITHUB_REF_NAME}" "${asset}" SHA256SUMS.txt \
               --verify-tag \
-              --title "CDDA ${GITHUB_REF_NAME}" \
-              --generate-notes
+              --title "CDDA 0.G Additive ${release_date}" \
+              --notes-file RELEASE_NOTES.md
           fi
