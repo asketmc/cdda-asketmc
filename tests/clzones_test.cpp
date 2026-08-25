@@ -19,7 +19,7 @@
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 static const activity_id ACT_MULTIPLE_MOP( "ACT_MULTIPLE_MOP" );
 static const faction_id faction_your_followers( "your_followers" );
-static const field_type_id field_fd_blood( "fd_blood" );
+static const field_type_str_id field_fd_blood( "fd_blood" );
 
 static const itype_id itype_556( "556" );
 static const itype_id itype_ammolink223( "ammolink223" );
@@ -129,12 +129,14 @@ TEST_CASE( "NPC camp mopping cleans its assigned zone", "[zones][npc][basecamp]"
     worker.i_add( item( itype_mop ) );
     const tripoint target = worker.pos() + tripoint_east;
     create_tile_zone( "Mopping", zone_type_MOPPING, here.getglobal( target ).raw() );
-    REQUIRE( here.add_field( target, field_fd_blood, 1 ) );
+    REQUIRE( here.add_field( target, field_fd_blood.id(), 1 ) );
 
     worker.assign_activity( player_activity( ACT_MULTIPLE_MOP ) );
-    process_activity( worker );
-
-    CHECK( here.field_at( target ).find_field( field_fd_blood ) == nullptr );
+    for( int turn = 0; turn < 100 && here.terrain_moppable( tripoint_bub_ms( target ) ); ++turn ) {
+        worker.moves += worker.get_speed();
+        worker.activity.do_turn( worker );
+    }
+    CHECK( here.field_at( target ).find_field( field_fd_blood.id() ) == nullptr );
 }
 
 TEST_CASE( "zone unloading ammo belts", "[zones][items][ammo_belt][activities][unload]" )
