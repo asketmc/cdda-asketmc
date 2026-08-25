@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "name": "Ultica HiRes common-terrain pilot",
+  "tested_game_build": "d6ec466",
+  "source_sprite_size": [32, 32],
+  "reviewed_sprite_size": [64, 64],
+  "pixelscale": 0.5,
+  "tile_ids": {
+    "grass": "t_grass_season_summer",
+    "pavement": "t_pavement_season_summer",
+    "marker": "t_pavement_y"
+  },
+  "atlas": {
+    "file": "hires_pilot.png",
+    "columns": 8,
+    "sprite_count": 24
+  },
+  "generation": {
+    "surface": "reviewed raster edit",
+    "date": "2026-08-24",
+    "prompt_file": "PROMPTS.md",
+    "deterministic": false,
+    "canonical_inputs": "reviewed/*.png"
+  },
+  "toolchain": {
+    "python": ">=3.10,<3.14",
+    "numpy": "2.2.6",
+    "pillow": "12.3.0"
+  },
+  "validation_fixture": {
+    "raw_input": "source32 enlarged to 1024x1024 with nearest-neighbour scaling",
+    "candidate_pixel_sha256": {
+      "grass_summer_1": "4e67165c03e3bf65d36cf4e9bb0eb4f7c1796d893edec42beca47cb9c425d0bb",
+      "grass_summer_2": "bb20b71df3f2a7bb716f8f8f78fcccdd4bb263a560b45deae528f886413a54a4",
+      "grass_summer_3": "74e2b22574a15bb7f1bef345e2166e8d61a733b45d6cf57600f6cc972916cbb2",
+      "grass_summer_4": "c57a2cbf96a84554253e326c88753cf7ac8bcb68c1f1a2ac621d50a91ddbbdee",
+      "pavement_1": "63dd6c9bbb3e9fd7c6912207a4b38f4bf030871631500caf5f5e650d1ca0299b",
+      "pavement_2": "f950b15c3de5f875778e19a15e144a4187d160d3d009a6b4440939591f62166a",
+      "pavement_3": "53df0dfd245bf1e4a2a4bdc823dbce055916ac99af3f77e06629953f40514216",
+      "pavement_4": "5747525474e5f6335616f62876cb8a146da02837932aee496c498bf2b5ae4256",
+      "pavement_y": "5f4dfb45fe0dfb0dfbd6bc137179671a9096f9f10b3756dad5697bb4dba2e000"
+    }
+  },
+  "enhanced": [
+    {
+      "name": "grass_summer_1",
+      "family": "grass",
+      "tile_id": "t_grass_season_summer",
+      "slot": 0,
+      "reviewed_file": "reviewed/grass_summer_1.png",
+      "source_pixel_sha256": "7b7b54a571f81265bb0aab51e1874487d0b4d7ed694bdf5c28cbbd9a992dec08",
+      "reviewed_sha256": "bf622c4c6f6472d43864c3b701738820c27ba10f20a93681d6b133a777713845"
+    },
+    {
+      "name": "grass_summer_2",
+      "family": "grass",
+      "tile_id": "t_grass_season_summer",
+      "slot": 1,
+      "reviewed_file": "reviewed/grass_summer_2.png",
+      "source_pixel_sha256": "9958f178798a8bf37183799eb3f10eeb2c5e039fba5e608d072918522914b065",
+      "reviewed_sha256": "1ef5ad063c83c407424c63cfde3418f0aefbfc3dc1aa0ea221d655d4e31d107e"
+    },
+    {
+      "name": "grass_summer_3",
+      "family": "grass",
+      "tile_id": "t_grass_season_summer",
+      "slot": 2,
+      "reviewed_file": "reviewed/grass_summer_3.png",
+      "source_pixel_sha256": "2a074e5902114ae70d38c50e0c6077be177eadc7a285933ec4e40403f206b0d6",
+      "reviewed_sha256": "05c3aca0bd0cadf2cd7b1afd02bc7f484b985889c873755f2f74d047b98f6e94"
+    },
+    {
+      "name": "grass_summer_4",
+      "family": "grass",
+      "tile_id": "t_grass_season_summer",
+      "slot": 3,
+      "reviewed_file": "reviewed/grass_summer_4.png",
+      "source_pixel_sha256": "2a8c9db94a8227a55341710ae04d6906064e8c18446e510958ffb4872d334a67",
+      "reviewed_sha256": "3b7120928f45d37c880cfb9a87d6497a8c23ee9a7a945fa852dd854ae63c94fb"
+    },
+    {
+      "name": "pavement_1",
+      "family": "pavement",
+      "tile_id": "t_pavement_season_summer",
+      "slot": 4,
+      "reviewed_file": "reviewed/pavement_1.png",
+      "source_pixel_sha256": "f94b4de218ea369a4b89d23c87c2cfda56e7feba82427a72946cab0f6467a78e",
+      "reviewed_sha256": "7e9f44c1246677d3ed130d8e36f687320a5a6268bd18955a24d8a52c1b1c2144"
+    },
+    {
+      "name": "pavement_2",
+      "family": "pavement",
+      "tile_id": "t_pavement_season_summer",
+      "slot": 5,
+      "reviewed_file": "reviewed/pavement_2.png",
+      "source_pixel_sha256": "37b4be220a56a8679d2188161507604ebb0fefc5cd621e24fe97e3aebc870cfd",
+      "reviewed_sha256": "5a4a240eeb4913e761feac47ed2c793e47fac517993aa58897690bdc4cd6e809"
+    },
+    {
+      "name": "pavement_3",
+      "family": "pavement",
+      "tile_id": "t_pavement_season_summer",
+      "slot": 6,
+      "reviewed_file": "reviewed/pavement_3.png",
+      "source_pixel_sha256": "e3c60811a2faa58e64c55e05533055957f1ef1ab84517ad1fa3f4abb8a51f36d",
+      "reviewed_sha256": "caabeb828e12eb0e21b670ad2a89727fafd39f243c5f7a1a0b64deeb98bf3f22"
+    },
+    {
+      "name": "pavement_4",
+      "family": "pavement",
+      "tile_id": "t_pavement_season_summer",
+      "slot": 7,
+      "reviewed_file": "reviewed/pavement_4.png",
+      "source_pixel_sha256": "a89656be2937231a753b8327c6050ca921e7e3cceea1dbc03ac018ff083aeed4",
+      "reviewed_sha256": "dc002a941d737f02f6d22b38156634be63319463902df4fba87ecf539a3264f2"
+    },
+    {
+      "name": "pavement_y",
+      "family": "marker",
+      "tile_id": "t_pavement_y",
+      "slot": 8,
+      "reviewed_file": "reviewed/pavement_y.png",
+      "source_pixel_sha256": "bc0d9ac72a6829adb23a8d8281d756f8d6fcd8df76917af13144e1ff05162394",
+      "reviewed_sha256": "be84aa654eef66f9541ddf24b20e417aaf6dfd3acb7ff746dbe9366741e3a380"
+    }
+  ],
+  "support": {
+    "tile_id": "t_pavement_season_summer",
+    "mode": "2x_nearest",
+    "count": 15,
+    "additional_tile_order": [
+      "corner",
+      "t_connection",
+      "edge",
+      "end_piece",
+      "unconnected"
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "release_tag": "2026-08-23",
+  "release_commit": "1f1988c5e144473f894fcb1e2914af51fd08b7af",
+  "release_source": "https://github.com/I-am-Erk/CDDA-Tilesets",
+  "upstream_ids": 12184,
+  "legacy_ids_retained": 388,
+  "legacy_mapping_sha256": "812a2545002949099d6d5b75621895c0b44bcb3c0f23130e9835a0f4b65c3506",
+  "legacy_images": [
+    "compat_0g_fillergiant.png",
+    "compat_0g_fillerhoder.png",
+    "compat_0g_giant.png",
+    "compat_0g_human_body.png",
+    "compat_0g_human_body_plus.png",
+    "compat_0g_incomplete.png",
+    "compat_0g_incomplete_large.png",
+    "compat_0g_normal.png",
+    "compat_0g_small.png",
+    "compat_0g_tall.png"
+  ],
+  "hires_overlay": {
+    "atlas": "hires_pilot.png",
+    "enhanced_sprites": 9,
+    "support_sprites": 15,
+    "source_sprite_size": [
+      32,
+      32
+    ],
+    "reviewed_sprite_size": [
+      64,
+      64
+    ],
+    "pixelscale": 0.5,
+    "manifest": "tools/gfx_tools/ultica_hires/manifest.json",
+    "tested_game_build": "d6ec466"
+  },
+  "rotation_arrays_adapted": 2243
+}

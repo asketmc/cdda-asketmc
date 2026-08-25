@@ -1,0 +1,60 @@
+[
+  {
+    "type": "BOOK",
+    "id": "test_textbook_fabrication",
+    "name": { "str": "Test Fabrication 0 to 20" },
+    "description": "A testing fabrication book that brings your fabrication skill up to 20.",
+    "weight": "5000 g",
+    "volume": "1000 ml",
+    "material": [ "paper" ],
+    "symbol": "?",
+    "color": "blue",
+    "skill": "fabrication",
+    "required_level": 0,
+    "max_level": 20,
+    "intelligence": 8,
+    "time": "30 m"
+  },
+  {
+    "type": "BOOK",
+    "id": "test_ebook_scan_one_page",
+    "name": { "str": "one-page e-reader test book" },
+    "description": "A one-page book used to test e-reader scan boundaries.",
+    "weight": "5 g",
+    "volume": "5 ml",
+    "material": [ "paper" ],
+    "symbol": "?",
+    "color": "blue",
+    "time": "1 m",
+    "chapters": 1,
+    "fun": 0
+  },
+  {
+    "type": "BOOK",
+    "id": "test_ebook_scan_two_pages",
+    "name": { "str": "two-page e-reader test book" },
+    "description": "A two-page book used to test e-reader scan boundaries.",
+    "weight": "10 g",
+    "volume": "10 ml",
+    "material": [ "paper" ],
+    "symbol": "?",
+    "color": "blue",
+    "time": "1 m",
+    "chapters": 1,
+    "fun": 0
+  },
+  {
+    "type": "BOOK",
+    "id": "test_ebook_scan_thirty_pages",
+    "name": { "str": "thirty-page e-reader test book" },
+    "description": "A thirty-page book used to test e-reader charge boundaries.",
+    "weight": "150 g",
+    "volume": "150 ml",
+    "material": [ "paper" ],
+    "symbol": "?",
+    "color": "blue",
+    "time": "1 m",
+    "chapters": 1,
+    "fun": 0
+  }
+]

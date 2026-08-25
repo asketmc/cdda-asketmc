@@ -1,0 +1,1431 @@
+{
+  "schema_version": 3,
+  "baseline_commit": "d6ec466140839dd70c1a43671eb4a08b007695c2",
+  "core_roots": [ "data/json", "data/core", "data/raw" ],
+  "donor_repository": "https://github.com/neonspectra/Cataclysm-2040.git",
+  "allowed_core_changes": [
+    {
+      "type": "construction",
+      "id": "constr_deconstruct_simple",
+      "target_fingerprint": "ff20d4d5330865075e5ba20e37d5095957924cdc0969fc2918e19710f077ff57",
+      "reason": "H6 makes tool-free simple deconstruction fast while preserving the regular deconstruction path"
+    },
+    {
+      "type": "scenario",
+      "id": "isolationist",
+      "target_fingerprint": "df982469c137b6b57e9c8b3f86b4d527626177557782b9aa1f28acb7f9215338",
+      "reason": "H6 keeps the Safe Place scenario from selecting the exposed freshwater research station"
+    },
+    {
+      "type": "talk_topic",
+      "id": "TALK_ACTIVITIES",
+      "target_fingerprint": "ccbb117d93a00eeda4802d45b91c473bc83ecf6d434b527b55acc0fc45b93bf5",
+      "reason": "NPC activity menu additions used by the additive NPC and camp backports"
+    },
+    {
+      "type": "item_group",
+      "id": "supplies_mechanics",
+      "target_fingerprint": "7f9d493f45d25d31d615e8def8b0f1ddcf826df6565920f80b3256f456da38e2",
+      "reason": "One-cylinder diesel content adds the large single-cylinder diesel engine to the mechanics supply pool"
+    },
+    {
+      "type": "item_group",
+      "id": "supplies_mechanics_milspec",
+      "target_fingerprint": "78d6f4679838c1b461b64f794f5c95056776f3757931bd234b9d3134d64f6559",
+      "reason": "One-cylinder diesel content adds the large single-cylinder diesel engine to the military mechanics supply pool"
+    },
+    {
+      "type": "vehicle_part",
+      "id": "cargo_space",
+      "target_fingerprint": "947471bc2702fe99d9d47b8e0ebd9db859b14043c8728a4c837adc01d641d11b",
+      "reason": "Furniture tie-down hauling enables existing cargo spaces to carry movable furniture"
+    },
+    {
+      "type": "furniture",
+      "id": "f_active_backup_generator",
+      "target_fingerprint": "d61ed384c6056bac169bef9510cd633ea533be90c91ff0a8ea7c0b990aaa27e2",
+      "reason": "The backup generator can be converted to a portable 7.3 kW grid appliance while preserving its original bash and deconstruction yields"
+    },
+    {
+      "type": "recipe",
+      "field": "result",
+      "id": "fbmk_2_tanks",
+      "target_fingerprint": "e0f1d84d570e95e3230c7da7fc94dcf2126e3fd4e655b460df246dc7ad461ba3",
+      "reason": "Camp liquid handling adds tank-zone liquid recipes to the existing canteen expansion"
+    },
+    {
+      "type": "recipe",
+      "field": "result",
+      "id": "fbmk_2_vat",
+      "target_fingerprint": "33a63f0c48debba638d16c4bd7cfd09e32ebec5fcf018b8f11f6a37f9514fd6f",
+      "reason": "Camp liquid handling adds vat-zone liquid recipes to the existing canteen expansion"
+    },
+    {
+      "type": "recipe",
+      "field": "result",
+      "id": "fbmk_2_still",
+      "target_fingerprint": "63b5fec254a28f740a735d860a2cf69704fca4c5e8dedb9d7ff0ce41b328f562",
+      "reason": "Camp liquid handling adds still-zone liquid recipes to the existing canteen expansion"
+    },
+    {
+      "type": "recipe_group",
+      "id": "kitchen_recipes_1",
+      "target_fingerprint": "5901de9615a7cc802af863e8d5226b3a7114636b5151b486e74b5b27ffb21b78",
+      "reason": "Camp liquid recipes expose clean-water boiling in the existing camp kitchen group"
+    },
+    {
+      "type": "talk_topic",
+      "id": "TALK_LOOK_AT",
+      "target_fingerprint": "2ffeaf2fbba1df1c61ca82dcb6189970642da401266f44ebb1ae5dc3a3282047",
+      "reason": "NPC personality hints extend the shared observation dialogue definition"
+    },
+    {
+      "type": "talk_topic",
+      "id": "TALK_OPINION",
+      "target_fingerprint": "2ffeaf2fbba1df1c61ca82dcb6189970642da401266f44ebb1ae5dc3a3282047",
+      "reason": "NPC personality hints extend the shared observation dialogue definition"
+    },
+    {
+      "type": "talk_topic",
+      "id": "TALK_SHOUT",
+      "target_fingerprint": "2ffeaf2fbba1df1c61ca82dcb6189970642da401266f44ebb1ae5dc3a3282047",
+      "reason": "NPC personality hints extend the shared observation dialogue definition"
+    },
+    {
+      "type": "talk_topic",
+      "id": "TALK_SIZE_UP",
+      "target_fingerprint": "2ffeaf2fbba1df1c61ca82dcb6189970642da401266f44ebb1ae5dc3a3282047",
+      "reason": "NPC personality hints extend the shared observation dialogue definition"
+    },
+    {
+      "type": "talk_topic",
+      "id": "TALK_RANCH_DOCTOR_BIONICS",
+      "target_fingerprint": "631a1c761eff2cdde36a94c9d087908bc58f0c0e6dac6b1a2b6e5478ff2ca04e",
+      "reason": "Allied NPC CBM surgery adds install and removal services to the existing ranch doctor dialogue"
+    },
+    {
+      "type": "faction",
+      "id": "free_merchants",
+      "target_fingerprint": "9c3380ecafabc38d1f8b410e8d112e5e7dc578d33502c1de4bb88289d2b5772d",
+      "reason": "Static faction camps let refugee-center beggars use the Free Merchants' public water supply"
+    },
+    {
+      "type": "faction",
+      "id": "robofac",
+      "target_fingerprint": "92af93c586ecc88d3cfd329fc765f850f5cc01bcbed232e376794e757c862404",
+      "reason": "Static faction camps let Hub 01 auxiliaries use Hub 01 camp stores"
+    },
+    {
+      "type": "faction",
+      "id": "your_followers",
+      "target_fingerprint": "2725700617ce05b7622a7d0e465f56bc68b808a0e2e29a7405dd2032562746d4",
+      "reason": "Static faction camps preserve food depletion for player-owned camps while NPC faction stores remain abstract"
+    },
+    {
+      "type": "overmap_special",
+      "id": "Bee Hive",
+      "target_fingerprint": "d363d72c3d6d7417f610ab2605abd1d08ff0da4de00545aa5d9cf378b58e2eee",
+      "reason": "Static faction camps annotate the mutant bee hive with its camp owner and name"
+    },
+    {
+      "type": "overmap_special",
+      "id": "Cabin_Lapin",
+      "target_fingerprint": "a6cd8568805f601692e075a5f6b4f2d8c36d3af5a45711e42322b4421f2bdd3b",
+      "reason": "Static faction camps annotate Lapin's cabin with its camp owner and name"
+    },
+    {
+      "type": "overmap_special",
+      "id": "Isherwood Farms",
+      "target_fingerprint": "99777d3d8d98794572a66b705d3e4eeff819baafecafbf55b66a11c6235193a4",
+      "reason": "Static faction camps annotate the Isherwood sites with their camp owner and names"
+    },
+    {
+      "type": "overmap_special",
+      "id": "Island prison",
+      "target_fingerprint": "06c9b8e4bf72dde82fa0fd3286a2856b6cdea42753c712413b8e576a9e081c3f",
+      "reason": "Static faction camps annotate the island prison holdouts with their camp owner and name"
+    },
+    {
+      "type": "overmap_special",
+      "id": "New England Church Retreat",
+      "target_fingerprint": "ac6abb4506377ba37dd0c54c424eebb08fb53b07601df68fb673004080e73f0f",
+      "reason": "Static faction camps annotate the church retreat with its camp owner and name"
+    },
+    {
+      "type": "overmap_special",
+      "id": "Occupied Chem Lab",
+      "target_fingerprint": "56cbb143cf5aab253b040820c2920c3ffac9cc11f848357a81a9e68c20be2b66",
+      "reason": "Static faction camps annotate the occupied chemical lab with its camp owner and name"
+    },
+    {
+      "type": "overmap_special",
+      "id": "Occupied Lumbermill",
+      "target_fingerprint": "d1c02ef638dc481f43b452cb2cdf1e7ed2cd21bd00abfee2d277e46812d18221",
+      "reason": "Static faction camps annotate the occupied lumbermill with its camp owner and name"
+    },
+    {
+      "type": "overmap_special",
+      "id": "Occupied Scrap Yard",
+      "target_fingerprint": "921ed7c5a92e75d09ea6505d165956d709ab1053eaf509cf3d92d700a0d6bd7a",
+      "reason": "Static faction camps annotate the occupied scrap yard with its camp owner and name"
+    },
+    {
+      "type": "overmap_special",
+      "id": "bunker shop",
+      "target_fingerprint": "7158f2a0550bb55df0575376fd163431552f5a416b9a64f191772b874c457edd",
+      "reason": "Static faction camps annotate the bunker shop merchant with its camp owner and name"
+    },
+    {
+      "type": "overmap_special",
+      "id": "evac_center",
+      "target_fingerprint": "935e8a444a62b62e591afcec3f2a531046ffb0b4cb626c0e66a9070488760a27",
+      "reason": "Static faction camps annotate the refugee center with its camp owner and name"
+    },
+    {
+      "type": "overmap_special",
+      "id": "exodii_base",
+      "target_fingerprint": "67e38f9d2d650179340fee7fad24981de0d329cc0489ce4890a78b0afde6528f",
+      "reason": "Static faction camps annotate the Exodii base with its camp owner and name"
+    },
+    {
+      "type": "overmap_special",
+      "id": "hub_01",
+      "target_fingerprint": "7e44329df32df6c1985de95bf659c0823454bbc5a7d32dc5f94f6e84097c4b29",
+      "reason": "Static faction camps annotate Hub 01 with its camp owner and name"
+    },
+    {
+      "type": "overmap_special",
+      "id": "isolated_road",
+      "target_fingerprint": "655769f3706d20e1776f5bdc92a2fb0eed5fe7afa494ef582e2a7d1312eb0060",
+      "reason": "Static faction camps annotate the isolated artisans with their camp owner and name"
+    },
+    {
+      "type": "overmap_special",
+      "id": "ranch_camp",
+      "target_fingerprint": "f07429f3ae5895bf660424a9f041c11b0b5641baa72a64fdc9589250effe98eb",
+      "reason": "Static faction camps annotate Tacoma Commune with its camp owner and name"
+    },
+    {
+      "type": "talk_topic",
+      "id": "TALK_FRIEND",
+      "target_fingerprint": "93e525433c81f468370f3c44e7ca1efe7ba12d858f55ec23b4d5181972587691",
+      "reason": "The follower rules manager adds an entry point to the shared allied-NPC dialogue"
+    },
+    {
+      "type": "talk_topic",
+      "id": "TALK_GIVE_ITEM",
+      "target_fingerprint": "93e525433c81f468370f3c44e7ca1efe7ba12d858f55ec23b4d5181972587691",
+      "reason": "The follower rules manager adds an entry point to the shared allied-NPC dialogue"
+    },
+    {
+      "type": "talk_topic",
+      "id": "TALK_RADIO",
+      "target_fingerprint": "e6cb7bca3b552b6cc15218fe893e03023c64c939c59ce29daa82203d099f2e5c",
+      "reason": "The follower rules manager adds an entry point to the shared allied-NPC dialogue"
+    },
+    {
+      "type": "talk_topic",
+      "id": "TALK_USE_ITEM",
+      "target_fingerprint": "93e525433c81f468370f3c44e7ca1efe7ba12d858f55ec23b4d5181972587691",
+      "reason": "The follower rules manager adds an entry point to the shared allied-NPC dialogue"
+    },
+    {
+      "type": "widget",
+      "id": "vehicle_acf_label_layout",
+      "target_fingerprint": "6876ca45830cf9c5a9174541aede91a5d3d184c6a52533f42f397acee10e2510",
+      "reason": "Separate vehicle battery display adds the battery widget to the existing labeled row layout"
+    },
+    {
+      "type": "widget",
+      "id": "vehicle_acf_label_layout_columns",
+      "target_fingerprint": "30f7f2181763ca2796855661300607afefa32b525b6fe8746bddf62b1182035e",
+      "reason": "Separate vehicle battery display adds the battery widget to the existing labeled column layout"
+    },
+    {
+      "type": "widget",
+      "id": "vehicle_acf_no_label_layout",
+      "target_fingerprint": "e1e5400a7d862eb0c579b0d024de9314f15bf6a1a6fb2b9dafe0665e88729f90",
+      "reason": "Separate vehicle battery display adds the battery widget to the existing unlabeled row layout"
+    },
+    {
+      "type": "vehicle_part",
+      "id": "ap_standing_floodlight",
+      "target_fingerprint": "4a844f48e7ebde49710c19c7ccbf48b0336f197d12205d9eb85fd3088a635483",
+      "reason": "Directed floodlight integration changes the existing source appliance definition"
+    },
+    {
+      "type": "talk_topic",
+      "id": "TALK_MISC_RULES",
+      "target_fingerprint": "20f698ed43d617dab317cd98ea908d79f0b045d0babbd186bb3b0820fce62f82",
+      "reason": "Lockable vehicle doors add explicit follower lock and unlock rules"
+    },
+    {
+      "type": "vehicle_part",
+      "field": "abstract",
+      "id": "door_abstract",
+      "target_fingerprint": "480157ddffb832b8bd6aa24cc286acfbccc3be8c6f2eb0948ead19c5465bcdd9",
+      "reason": "Lockable vehicle doors mark existing door templates as lockable"
+    },
+    {
+      "type": "vehicle_part",
+      "field": "abstract",
+      "id": "hddoor_abstract",
+      "target_fingerprint": "6a049a907dce6ddadc5d4f2a334361018b059f4ad74cc96e127c23a175589dcc",
+      "reason": "Lockable vehicle doors mark existing heavy door templates as lockable"
+    },
+    {
+      "type": "vehicle_part",
+      "id": "door_motor",
+      "target_fingerprint": "273411712b220de88c9988435fff51f0eabfb27fd377783849d826cf9ff4023a",
+      "reason": "Lockable vehicle doors constrain the existing door motor to internal mounting"
+    },
+    {
+      "type": "vehicle_part",
+      "id": "door_shutter",
+      "target_fingerprint": "66ccf3272fd79ec65b10208224ae37d5a4e74e10653af6ed67eee46a6b31f148",
+      "reason": "Lockable vehicle doors mark the existing shutter door as lockable"
+    },
+    {
+      "type": "vehicle_part",
+      "id": "door_sliding",
+      "target_fingerprint": "d8f22e3bf43c2898c799fe7c946af5192a9a8c990a687ceca9324a1c60e17035",
+      "reason": "Lockable vehicle doors mark the existing sliding door as lockable"
+    },
+    {
+      "type": "vehicle_part",
+      "id": "door_trunk",
+      "target_fingerprint": "e0f81daf55d33d330bc88b71209ac835fdd49898a9fa9ed323b2940b9f0cbccc",
+      "reason": "Lockable vehicle doors mark the existing trunk door as lockable"
+    },
+    {
+      "type": "vehicle_part",
+      "id": "hddoor_trunk",
+      "target_fingerprint": "f77ac5188676cce7cb275742ec350cfbe106245b15aeb2e914d00d3420bb58cc",
+      "reason": "Lockable vehicle doors mark the existing heavy trunk door as lockable"
+    },
+    {
+      "type": "MONSTER",
+      "id": "mon_feral_scientist_scalpel",
+      "target_fingerprint": "3ac5742f38f8ec30fbfd2c70f62dc6f061c5156f541e9681ff4373f024aa80f6",
+      "reason": "CBM corpse recovery assigns a combined harvest that preserves the 0.G human sample"
+    },
+    {
+      "type": "MONSTER",
+      "id": "mon_zombie_bio_op",
+      "target_fingerprint": "10fa99febb2159bd3ec4ce9118a183222f44a309ba0a164b11bd7c075ba50c3c",
+      "reason": "CBM corpse recovery assigns the donor dissection harvest"
+    },
+    {
+      "type": "MONSTER",
+      "id": "mon_zombie_bio_op2",
+      "target_fingerprint": "29e02bbb6766a2b59c76ae92092b65ba661c5a96352b178811b5dc8bf8e87bac",
+      "reason": "CBM corpse recovery assigns the donor dissection harvest"
+    },
+    {
+      "type": "MONSTER",
+      "id": "mon_zombie_scientist",
+      "target_fingerprint": "fb040add58291e3fbb5df300939b184ab1a653f1890a5b6f0bc48df1786feee5",
+      "reason": "CBM corpse recovery assigns the donor dissection harvest"
+    },
+    {
+      "type": "MONSTER",
+      "id": "mon_zombie_soldier_blackops_1",
+      "target_fingerprint": "4970420869e8e40ec282c9dcd01f6da15a2919cf4ec2a883aca57b1fd25d83ec",
+      "reason": "CBM corpse recovery assigns the donor dissection harvest"
+    },
+    {
+      "type": "MONSTER",
+      "id": "mon_zombie_technician",
+      "target_fingerprint": "7426ce006e6ba038e859c9b091b7bef49f79772f8b2393a90474b29b9d308dd2",
+      "reason": "CBM corpse recovery assigns the donor dissection harvest"
+    },
+    {
+      "type": "item_group",
+      "id": "mon_zombie_scientist_death_drops",
+      "target_fingerprint": "317305081181ca0f4e7236cba23cc5761935c5c94282634f8d0b33136fff9ece",
+      "reason": "CBM corpse recovery adds the donor bionic drop group"
+    },
+    {
+      "type": "TOOL",
+      "id": "atomic_coffeepot",
+      "target_fingerprint": "a5bd694a5579415b66c57343cd0dd2a272e9c88ca509da200f8b05cef11a49ca",
+      "reason": "H1/H2 modular stations allow the existing tool to participate in vehicle remote-use crafting"
+    },
+    {
+      "type": "TOOL",
+      "id": "charcoal_cooker",
+      "target_fingerprint": "ee189a17b5a6ed2b5a75b1e4dfccef06a5aa9cafe1bb46389cecd7ad5cca9f99",
+      "reason": "H1/H2 modular stations allow the existing tool to participate in vehicle remote-use crafting"
+    },
+    {
+      "type": "TOOL",
+      "id": "chemistry_set",
+      "target_fingerprint": "171f8f63b3f48a8ad77fb55712ac293dfbab78ca883ddce4d92470d3d5ca47f9",
+      "reason": "H1/H2 modular stations allow the existing tool to participate in vehicle remote-use crafting"
+    },
+    {
+      "type": "TOOL",
+      "id": "coffeemaker",
+      "target_fingerprint": "2c36b5250d81d9570b6a35045def87b4e04be3d347daad0434a49027fc20ce33",
+      "reason": "H1/H2 modular stations allow the existing tool to participate in vehicle remote-use crafting"
+    },
+    {
+      "type": "TOOL",
+      "id": "con_mix",
+      "target_fingerprint": "d251c993153283e7ddb1b4cd06984e7a65eea280c129f25ca93560cd22f45265",
+      "reason": "H1/H2 modular stations allow the existing tool to participate in vehicle remote-use crafting"
+    },
+    {
+      "type": "TOOL",
+      "id": "esbit_stove",
+      "target_fingerprint": "37390f04912b230a1bc0d2744aea23922a2c0046e7848e4395353b7233e09f73",
+      "reason": "H1/H2 modular stations allow the existing tool to participate in vehicle remote-use crafting"
+    },
+    {
+      "type": "TOOL",
+      "id": "gasoline_cooker",
+      "target_fingerprint": "6bcf87c65407ea4a92352796ff60dbe28c642e47572c3b350a5cb5a788ccbd60",
+      "reason": "H1/H2 modular stations allow the existing tool to participate in vehicle remote-use crafting"
+    },
+    {
+      "type": "TOOL",
+      "id": "hotplate",
+      "target_fingerprint": "9207d183557e5c87809c02a2711007392004ac43c3eaa60d7e932ef7a555ab43",
+      "reason": "H1/H2 modular stations allow the existing tool to participate in vehicle remote-use crafting"
+    },
+    {
+      "type": "TOOL",
+      "id": "oil_cooker",
+      "target_fingerprint": "0ef9c29db72c42de97640c233bd1cd3e75b36503a4c3357dff61fdede1a188be",
+      "reason": "H1/H2 modular stations allow the existing tool to participate in vehicle remote-use crafting"
+    },
+    {
+      "type": "TOOL",
+      "id": "wire_draw_machine",
+      "target_fingerprint": "48851e36387dfae0728c0d90fdab1eba3fbf1d45079bf79a7247d2545f319924",
+      "reason": "H1/H2 modular stations allow the existing tool to participate in vehicle remote-use crafting"
+    },
+    {
+      "type": "TOOL",
+      "id": "large_repairkit",
+      "target_fingerprint": "916dc094430687cb89a860d6dffa34ac8119469677f718241b3e060301890a6a",
+      "reason": "Thermoplastic repair support lets plastic-capable workshop tools repair riot armor using thermoplastic resin chunks"
+    },
+    {
+      "type": "TOOL",
+      "id": "small_repairkit",
+      "target_fingerprint": "ea160cee91473d4894a5fb6b2b72a71ac040371eb5b23b7f8720e9f7cb232db9",
+      "reason": "Thermoplastic repair support lets plastic-capable workshop tools repair riot armor using thermoplastic resin chunks"
+    },
+    {
+      "type": "TOOL",
+      "id": "soldering_iron",
+      "target_fingerprint": "f56ad5197aca9048372c6b1c4e7639f3e581386af0d688c929bcac2b136b201f",
+      "reason": "Thermoplastic repair support lets plastic-capable workshop tools repair riot armor using thermoplastic resin chunks"
+    },
+    {
+      "type": "TOOL",
+      "id": "toolset_extended",
+      "target_fingerprint": "b4c7e6fd196fb2621c3d9a72629252d20e91209ce8d53fb2c1269c2f713d3d32",
+      "reason": "Thermoplastic repair support lets plastic-capable workshop tools repair riot armor using thermoplastic resin chunks"
+    },
+    {
+      "type": "AMMO",
+      "id": "10mm_fmj",
+      "target_fingerprint": "98efa585f59c0a216a81b7bc81ca983e0d046dc791897b36815b11e6e8c185c8",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 10mm_fmj"
+    },
+    {
+      "type": "AMMO",
+      "id": "12mm",
+      "target_fingerprint": "704283d52e1597ad0fe336335ab09990e3e937f4e2222c02530a5282811808a8",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 12mm"
+    },
+    {
+      "type": "AMMO",
+      "field": "abstract",
+      "id": "20x66_abstract",
+      "target_fingerprint": "d39d2191089f544900c0eefee68068137df5e4d273c26c383ac8139cecee5308",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 20x66_abstract"
+    },
+    {
+      "type": "AMMO",
+      "id": "20x66_beanbag",
+      "target_fingerprint": "5a35367cda42215bea242d252ec587b8f93d8a949037d211473edbef9eed558e",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 20x66_beanbag"
+    },
+    {
+      "type": "AMMO",
+      "id": "20x66_flare",
+      "target_fingerprint": "8f0587b08d1b4aa0be7fc23884db030cfe04cd01c2656415cef6d90ba24757f3",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 20x66_flare"
+    },
+    {
+      "type": "AMMO",
+      "id": "20x66_inc",
+      "target_fingerprint": "8ec633d9793dd9e2d3398b5663e5e0341acd4e8040cf233308a426ff908385ef",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 20x66_inc"
+    },
+    {
+      "type": "AMMO",
+      "id": "223",
+      "target_fingerprint": "372cce2db82e28da03fca5376bde9795e61f772aa7625f658c80c4ce696ae1d9",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 223"
+    },
+    {
+      "type": "AMMO",
+      "id": "22_blank",
+      "target_fingerprint": "bda3868398f0259d9aed2c0f6d63c2be6d3eac90d19cd15584181f24addb43e9",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 22_blank"
+    },
+    {
+      "type": "AMMO",
+      "id": "22_cb",
+      "target_fingerprint": "a555a2776a20f0daacfe5a5e7ffa3219c8b0d2ba92fc64c6940e81a342de3817",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 22_cb"
+    },
+    {
+      "type": "AMMO",
+      "id": "22_lr",
+      "target_fingerprint": "9ab7760086c6b00652b826a1d07c6b0f8f22c1ef060f3c699dd637ba7dd101bc",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 22_lr"
+    },
+    {
+      "type": "AMMO",
+      "id": "22_ratshot",
+      "target_fingerprint": "b9b3dc5d10286f88267f84f2ac682397c0506a358db2adfbe610652e9a1a221d",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 22_ratshot"
+    },
+    {
+      "type": "AMMO",
+      "id": "270win_jsp",
+      "target_fingerprint": "49e82f4e516791f7160c3bdf0ccf91864a69e4806963145f28b66041aa064657",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 270win_jsp"
+    },
+    {
+      "type": "AMMO",
+      "id": "3006",
+      "target_fingerprint": "18b4599a89d0fac46de24dbe7f225105d7bac78a9f6a248912e1c79d40fd65cb",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 3006"
+    },
+    {
+      "type": "AMMO",
+      "id": "3006_incendiary",
+      "target_fingerprint": "84c6c249925c1c528a6391869aaf37675f7d0da62603e0e4103008820ef93b17",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 3006_incendiary"
+    },
+    {
+      "type": "AMMO",
+      "id": "3006fmj",
+      "target_fingerprint": "f7485fa75ec2be8564e350b50d9315b920f162e491d6b906065c38c3f8f58ac6",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 3006fmj"
+    },
+    {
+      "type": "AMMO",
+      "id": "300_winmag",
+      "target_fingerprint": "7bc995aa26360c02a356b2908b5c7dd15c48ab041535be4eca3e8b38094c0ada",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 300_winmag"
+    },
+    {
+      "type": "AMMO",
+      "id": "300blk",
+      "target_fingerprint": "4c074344062416ed9802b21adc900d03b49cefb6f7c7d53e50a24a3fca575ca4",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 300blk"
+    },
+    {
+      "type": "AMMO",
+      "id": "762_51",
+      "target_fingerprint": "b1ce46ce974a5a54521d3f0011815613774b86ebf643c2d9c2b6e3582d2edd83",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 308"
+    },
+    {
+      "type": "AMMO",
+      "id": "30carbine",
+      "target_fingerprint": "cfd1046f3c80179027a3a0ef478e4f79e099ef3a80f25766d42583c3b7b0c617",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 30carbine"
+    },
+    {
+      "type": "AMMO",
+      "id": "32_acp",
+      "target_fingerprint": "a01b28dc617f0696441d0fa8e1a1afe5b651ee0d699b1357f80f5097c6cb55a4",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 32_acp"
+    },
+    {
+      "type": "AMMO",
+      "id": "357mag_fmj",
+      "target_fingerprint": "050ccfcd2542535fcc90a89c95d5a4b084cf1f7a1f6825699b0d8c6c82a0cd84",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 357mag_fmj"
+    },
+    {
+      "type": "AMMO",
+      "id": "357sig_fmj",
+      "target_fingerprint": "c3fd6eafa322b3758a42638addeb83915c53e7765fe3b9385571c43e32161590",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 357sig_fmj"
+    },
+    {
+      "type": "AMMO",
+      "id": "36navy",
+      "target_fingerprint": "3d6b10f6f86fe77fdbf01efc9958126113bea52a8708d22c024ee01a39241397",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 36navy"
+    },
+    {
+      "type": "AMMO",
+      "id": "380_FMJ",
+      "target_fingerprint": "f5c3952fdc5d49bd21e79cbd832494680159e998e4151baf8f60d6cf09882ac6",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 380_FMJ"
+    },
+    {
+      "type": "AMMO",
+      "id": "38_fmj",
+      "target_fingerprint": "b28abe9869b3caa8425e009b43ec60ae87356624af76cd12d2b18b3c0b3d57ba",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 38_special"
+    },
+    {
+      "type": "AMMO",
+      "id": "38super_fmj",
+      "target_fingerprint": "6517270ec8b62777a8393ec2405f875d85d7d4c32e4562f06c356548cd93f2f3",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 38super_fmj"
+    },
+    {
+      "type": "AMMO",
+      "id": "40fmj",
+      "target_fingerprint": "c577e857bd09d2413fbe06e27a4dddaa8fac22eb1e1d04fe0a7e798a698689f4",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40sw"
+    },
+    {
+      "type": "AMMO",
+      "id": "40x46mm_buckshot_m118",
+      "target_fingerprint": "09970c27e6dc634296065476596e7041a482fdd5b2f8d02b8abb31490a0ebc57",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x46mm_improvised"
+    },
+    {
+      "type": "AMMO",
+      "id": "40x46mm_buckshot_m199",
+      "target_fingerprint": "6bee084ea90811b4e1fe487bfa443c79f9173553b4e63e6df4b66573b757c0e5",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x46mm_improvised"
+    },
+    {
+      "type": "AMMO",
+      "id": "40x46mm_flechette_m118",
+      "target_fingerprint": "4f237786c8ddc306161708d0f611d3ae8a85b5b1dc074f25ea8240088f6157e4",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x46mm_improvised"
+    },
+    {
+      "type": "AMMO",
+      "id": "40x46mm_flechette_m199",
+      "target_fingerprint": "83444dbc9cf37c67d0e9fb29c08223506ef6b90ace560c269de1449291340269",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x46mm_improvised"
+    },
+    {
+      "type": "AMMO",
+      "id": "40x46mm_slug_m118",
+      "target_fingerprint": "bf448f15f87e32332a0dcd3be89314e6fc3393df85620d91056ec18b777e4854",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x46mm_improvised"
+    },
+    {
+      "type": "AMMO",
+      "id": "40x46mm_slug_m199",
+      "target_fingerprint": "f403e493fa05301831f7e76681c907f6e1473029566848c7d9435908aec123f2",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x46mm_improvised"
+    },
+    {
+      "type": "AMMO",
+      "id": "bp_40x46mm_buckshot_m118",
+      "target_fingerprint": "9b018fb3461898e1aaf975441f006d8f9fae966f1798a94d2ee50d3cfb90b86a",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x46mm_improvised"
+    },
+    {
+      "type": "AMMO",
+      "id": "bp_40x46mm_buckshot_m199",
+      "target_fingerprint": "38c6251c19f551784ab815ebbc4b86943f511f705e16c5f21e98438a191547fe",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x46mm_improvised"
+    },
+    {
+      "type": "AMMO",
+      "id": "bp_40x46mm_flechette_m118",
+      "target_fingerprint": "7fbcd9ff11da2fab095a83a6347fcf5523ea6b96556bb59df091f6897e1a3e0e",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x46mm_improvised"
+    },
+    {
+      "type": "AMMO",
+      "id": "bp_40x46mm_flechette_m199",
+      "target_fingerprint": "70244289fc1c586ba55a71618a60d6f508af56feb8b4b1c2c7be8b5abc914916",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x46mm_improvised"
+    },
+    {
+      "type": "AMMO",
+      "id": "bp_40x46mm_slug_m118",
+      "target_fingerprint": "4f50d10663d263399b9b19f1c44ec8fee26d47928097c450cfcb52e8d96264ec",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x46mm_improvised"
+    },
+    {
+      "type": "AMMO",
+      "id": "bp_40x46mm_slug_m199",
+      "target_fingerprint": "171a73941b3c7172a6afafe4dd960a91bd585cbbbf5fcfc93c025a3b2a95a577",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x46mm_improvised"
+    },
+    {
+      "type": "AMMO",
+      "id": "40x46mm_m1006",
+      "target_fingerprint": "0daa9a228e9c1a7318b653b6a8fce28ae9f8f8f817a35eddca4ac8720463e2f4",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x46mm_m1006"
+    },
+    {
+      "type": "AMMO",
+      "id": "40x46mm_m433",
+      "target_fingerprint": "02fb79d69cd9e339ad941b90276ca1cc2998ddb01620fbef876c464c5dd97986",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x46mm_m433"
+    },
+    {
+      "type": "AMMO",
+      "id": "40x46mm_m576",
+      "target_fingerprint": "e7898983192bb87c4b9bae091c2a633b5134b19643943c5c9d8f94a47ae2829e",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x46mm_m576"
+    },
+    {
+      "type": "AMMO",
+      "id": "40x46mm_m651",
+      "target_fingerprint": "6f713ede90585535f5c30a66515983019250fbced6c21e78b328c072569854d6",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x46mm_m651"
+    },
+    {
+      "type": "AMMO",
+      "id": "40x53mm_buckshot_m169",
+      "target_fingerprint": "977c59e0bb96ef730b1e22445db6843047c9443e331565359684c56237b8d2f9",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x53mm_improvised"
+    },
+    {
+      "type": "AMMO",
+      "id": "40x53mm_flechette_m169",
+      "target_fingerprint": "41fc58a843cb4af8ab53e925e451379bd596b41b79d79794cddd525785adf341",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x53mm_improvised"
+    },
+    {
+      "type": "AMMO",
+      "id": "40x53mm_slug_m169",
+      "target_fingerprint": "550b94f6727f0321f83ac6affc8c6c9a6bef3cc1b52b40ec3ed6e988b9d022c6",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x53mm_improvised"
+    },
+    {
+      "type": "AMMO",
+      "id": "bp_40x53mm_flechette_m169",
+      "target_fingerprint": "bef72a2815c1bf4e55d9297317732e08f7c05b2b9e7b1c46b7e9262dfaa4fe63",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x53mm_improvised"
+    },
+    {
+      "type": "AMMO",
+      "id": "bp_40x53mm_slug_m169",
+      "target_fingerprint": "970b71d9d7b31cffda890c1fe1d4f27c4aa451cc5a23cecea6658813220f5e32",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x53mm_improvised"
+    },
+    {
+      "type": "AMMO",
+      "id": "40x53mm_m1001",
+      "target_fingerprint": "5c0f148cc51fc2c2f682ffeddbafca019c6b237e353e509ebdc3a11c79c263eb",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x53mm_m1001"
+    },
+    {
+      "type": "AMMO",
+      "id": "40x53mm_m430a1",
+      "target_fingerprint": "a17a509984e228f17834b95024c9fe8e27db039bcdfc15453a6f5f6ec6509029",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 40x53mm_m430a1"
+    },
+    {
+      "type": "AMMO",
+      "id": "410shot_000",
+      "target_fingerprint": "ec62f9e4c7da88de8d4fbd13d7f97f9e92c8da94d1134741fe828add5df956d9",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 410shot_000"
+    },
+    {
+      "type": "AMMO",
+      "id": "44army",
+      "target_fingerprint": "8741bf8af1cdee2b7436fac8f281b828a726de3aec757cff89c175948ba84316",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 44army"
+    },
+    {
+      "type": "AMMO",
+      "id": "44fmj",
+      "target_fingerprint": "59b97ff731c8175186be00b08176abf9306b0f973e0d8ffe80878bfd6e53b979",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 44fmj"
+    },
+    {
+      "type": "AMMO",
+      "id": "44magnum",
+      "target_fingerprint": "a9b13ee5a9053cbd6cbb1d73c7b5d0599cb4643ad6a89b6d906e94ede9aefca9",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 44magnum"
+    },
+    {
+      "type": "AMMO",
+      "id": "454_Casull",
+      "target_fingerprint": "d50793e84dbc939a1f31b48881ce2fb4e9050ffa2fa108fc116e4af612e44d16",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 454_Casull"
+    },
+    {
+      "type": "AMMO",
+      "id": "4570_pen",
+      "target_fingerprint": "72be8b7ab5ff85c17e8e515cfcc85a81bc85a3a89a8f181c5aa400f69f9ae557",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 4570_pen"
+    },
+    {
+      "type": "AMMO",
+      "id": "4570_sp",
+      "target_fingerprint": "ded8a4302b7828335ff7d8bad96868c4c07ac0c7265c0486b6a5cf27dd1ae792",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 4570_sp"
+    },
+    {
+      "type": "AMMO",
+      "id": "45_acp",
+      "target_fingerprint": "f492cdf4a2f2dcc18276daa212a59388dd2c777a8654eb9e6c917fbf4a14d398",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 45_jhp"
+    },
+    {
+      "type": "AMMO",
+      "id": "45colt_jhp",
+      "target_fingerprint": "fff91fe8e7a9bb7b5ff05ca5a320f9c4e38fbdd497233e939b3b4c5fd34fe4e6",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 45colt_jhp"
+    },
+    {
+      "type": "AMMO",
+      "id": "460_rowland",
+      "target_fingerprint": "23fb916f443678317e9ff36db46d96e4f5c7dfea757a122ec2fe864110453e51",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 460_rowland"
+    },
+    {
+      "type": "AMMO",
+      "id": "46mm",
+      "target_fingerprint": "886bb9bcb3e77b3792a4096eb2f758ed0fb7ee0d8d3b09df32d7418e18f73c8f",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 46mm"
+    },
+    {
+      "type": "AMMO",
+      "id": "500_Magnum",
+      "target_fingerprint": "9ea8b6b198da47ac0ff87e44e548a9ecd2b5ad8f8b5f2702647d0cc0523de171",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 500_Magnum"
+    },
+    {
+      "type": "AMMO",
+      "id": "50_incendiary",
+      "target_fingerprint": "46e3c176e5b299709d9d00ed644cc0e501ec3a520afa1b142b1aa85db54ac4be",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 50_incendiary"
+    },
+    {
+      "type": "AMMO",
+      "id": "50_mk211",
+      "target_fingerprint": "8da5be212ce9a25d1f70388c6ba93b19dcafae9057eefc63a5322cc13cded8e4",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 50_mk211"
+    },
+    {
+      "type": "AMMO",
+      "id": "50bmg",
+      "target_fingerprint": "d41a1d0db106957478383cf3339dec043a8cf0ee62dd94e6e4d2b67b29b45f41",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 50bmg"
+    },
+    {
+      "type": "AMMO",
+      "id": "50match",
+      "target_fingerprint": "bf287dac4fc9793420e7f7c3f472a79e200c54ab8639d20064def89c112f0183",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 50match"
+    },
+    {
+      "type": "AMMO",
+      "id": "50ss",
+      "target_fingerprint": "98552681b3e2f4dfcec606758e50e87bbd2139283eb09e29de39001b84055640",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 50ss"
+    },
+    {
+      "type": "AMMO",
+      "id": "545",
+      "target_fingerprint": "007450f2e3d66e9773824de1c5cfe2434501979adbfdb4afbcb89a40274ff0bf",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 545"
+    },
+    {
+      "type": "AMMO",
+      "id": "545_ap",
+      "target_fingerprint": "ef183c54cf5f863ba2c66285264a44c9351d74a7e0243c85653a0b45d909a25d",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 545_ap"
+    },
+    {
+      "type": "AMMO",
+      "id": "556",
+      "target_fingerprint": "b43428c20e3abbed55907c62be03692effa29aa21db14017c9e71705160fa6d3",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 556"
+    },
+    {
+      "type": "AMMO",
+      "id": "556_incendiary",
+      "target_fingerprint": "a63087b35fe8ba81751ac2323c888aafc67cd3e98003e0ae02678c0114bbf3bb",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 556_incendiary"
+    },
+    {
+      "type": "AMMO",
+      "id": "556_m855a1",
+      "target_fingerprint": "f5800eba76beda2a3f45f793ade9980819ca2d0630935624dcc07fb567b76faf",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 556_m855a1"
+    },
+    {
+      "type": "AMMO",
+      "id": "57mm",
+      "target_fingerprint": "08c307464a3a109be8575731a52baee205fe6d9b9b78ef31bbc0073a64ffa710",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 57mm"
+    },
+    {
+      "type": "AMMO",
+      "id": "57mm_ss",
+      "target_fingerprint": "7b6f3374e8709755e3f5325053113c75d432825619e9f00f15dac286d2abc574",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 57mm_ss"
+    },
+    {
+      "type": "AMMO",
+      "id": "66mm_HEAT",
+      "target_fingerprint": "9294ef09b3e455354f396f87662ecbcec970d7c6110e0ea3dff6a3bb4f2dedd9",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 66mm_HEAT"
+    },
+    {
+      "type": "AMMO",
+      "id": "762_25",
+      "target_fingerprint": "0fb52b16c1b4dcb056fb62726d1d4c73d54c3706c971f6685686e7d75467fbdc",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 762_25"
+    },
+    {
+      "type": "AMMO",
+      "id": "762_51_incendiary",
+      "target_fingerprint": "8101872c3136792c94f0de4206018e5c420b66c297255a65cad62daa1882f08a",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 762_51_incendiary"
+    },
+    {
+      "type": "AMMO",
+      "id": "762_54R",
+      "target_fingerprint": "f1ca1063a0d626ba887a7220e176080cd1a297f3b2da9c7fb583fb5a07417d60",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 762_54R"
+    },
+    {
+      "type": "AMMO",
+      "id": "762_m87",
+      "target_fingerprint": "6a212a08ef2652098ddefb317d0b57665239e169af429008a2af9980824d0b8a",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 762_m87"
+    },
+    {
+      "type": "AMMO",
+      "id": "84x246mm_he",
+      "target_fingerprint": "b0ff3ffc6738bd8447fb44c2cb04fa5e344bb505f264150496a2da41b1c4f2f7",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 84x246mm_he"
+    },
+    {
+      "type": "AMMO",
+      "id": "84x246mm_hedp",
+      "target_fingerprint": "6fdda221a07fc718617d36c59019c263d9dffd93e9a528ea2ca7305df7c0431b",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 84x246mm_hedp"
+    },
+    {
+      "type": "AMMO",
+      "id": "84x246mm_smoke",
+      "target_fingerprint": "11eb3174c1f5790942b67a1325c020e4cd054687f13e6913e9f3b9bff7000a20",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 84x246mm_smoke"
+    },
+    {
+      "type": "AMMO",
+      "id": "8mm_caseless",
+      "target_fingerprint": "cb1877d8ba058690123160a61cc6649963bc2e0c7bf7082ec4bf48b156f7b42d",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 8mm_caseless"
+    },
+    {
+      "type": "AMMO",
+      "id": "9mm",
+      "target_fingerprint": "da75a155f5d2874d43311a6e1611be808723f4abf85c01e90c1f208a7b72c8f2",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 9mm"
+    },
+    {
+      "type": "AMMO",
+      "id": "9x18mm",
+      "target_fingerprint": "0b9809198fae31703baafb684316d5bc2f2b95923ef6e0600eb032411c247fea",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art 9x18mm"
+    },
+    {
+      "type": "AMMO",
+      "id": "atgm_heat",
+      "target_fingerprint": "929cd5e10608f380ba0818009da7b0a6fa1e7fc4df8ecb0c0009b63c60a87796",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art atgm_heat"
+    },
+    {
+      "type": "MAGAZINE",
+      "id": "battery_car",
+      "target_fingerprint": "919fe3dcc9ab490f50a947c2d324eab8771a36a7de315b057c07e7178ac30cd6",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art battery_car"
+    },
+    {
+      "type": "MAGAZINE",
+      "id": "battery_motorbike",
+      "target_fingerprint": "de559c7336339103ddc62bcde140058f4e241e8952cc12258e0aa88b35d302c4",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art battery_motorbike"
+    },
+    {
+      "type": "MAGAZINE",
+      "id": "battery_motorbike_small",
+      "target_fingerprint": "c4a86e3d545256a61678f17b9833c4f74a60717f6b6d7868a38b60f120e5e505",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art battery_motorbike_small"
+    },
+    {
+      "type": "AMMO",
+      "id": "brazing_rod_alloy",
+      "target_fingerprint": "e17eb4a5526038b406d90a367b8b1011abab0b46b2b213a9940888e5966f30bb",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art brazing_rod_alloy"
+    },
+    {
+      "type": "AMMO",
+      "id": "brazing_rod_bronze",
+      "target_fingerprint": "1e7e310b048146afaa82f234743822383d905aa39b4c576f3426eef99c9e5c76",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art brazing_rod_bronze"
+    },
+    {
+      "type": "AMMO",
+      "id": "cannon_shot",
+      "target_fingerprint": "eaed3ae09f8790e83a2a3fad3224e4b89453abce56949d911dcee9bf5d52f85c",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art cannon_shot"
+    },
+    {
+      "type": "AMMO",
+      "id": "combatnail",
+      "target_fingerprint": "22090dbf5f078133c08f5c392b71f9f6aa3fb611ea93675398a58a6532d1d2f8",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art combatnail"
+    },
+    {
+      "type": "AMMO",
+      "id": "flintlock_ammo",
+      "target_fingerprint": "6a18e10d722e8ca7aa1702be0d0d30a5284c6a5ef3151b13de4b3815d7cc03a6",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art flintlock_ammo"
+    },
+    {
+      "type": "AMMO",
+      "id": "flintlock_shot",
+      "target_fingerprint": "b165308e98bcbceed26a7bc2a0471645d8546c27cdf401d5eb72150da38e6699",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art flintlock_ammo"
+    },
+    {
+      "type": "GENERIC",
+      "id": "it_battery_mount",
+      "target_fingerprint": "16ae7288e934b435be886aac34139cf625f95e16b4bdf217fac7cd433b7a699d",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art it_battery_mount"
+    },
+    {
+      "type": "MAGAZINE",
+      "id": "large_storage_battery",
+      "target_fingerprint": "8dd5ef27f1fba977d175404ab07b092120080bc58eed58c9fca0591c19fc7262",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art large_storage_battery"
+    },
+    {
+      "type": "AMMO",
+      "id": "m235tpa",
+      "target_fingerprint": "2df3abdba91377e83caa3899c2865989ccbb7e8bd6291e58c7eff59b7a34aef8",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art m235tpa"
+    },
+    {
+      "type": "MAGAZINE",
+      "id": "medium_storage_battery",
+      "target_fingerprint": "ab443a7b90c500af561e44c64b79ebdcc43765bb499cef7f431b4815abcd29d7",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art medium_storage_battery"
+    },
+    {
+      "type": "AMMO",
+      "id": "nail",
+      "target_fingerprint": "c589918a37f82b2ac49bda2175a54ba994c38a6e0aabba961c9d8a93053f70a8",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art nail"
+    },
+    {
+      "type": "AMMO",
+      "id": "nuts_bolts",
+      "target_fingerprint": "c882e0fa07b2772224c55649e6dd37b0066dac368b0f5d16d541b52692750e45",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art nuts_bolts"
+    },
+    {
+      "type": "AMMO",
+      "id": "paintball",
+      "target_fingerprint": "da57e9d83d91feaa9b49b17d2a6f3b6e28a8ec686a221699917bcd5d3e0295b9",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art paintball"
+    },
+    {
+      "type": "AMMO",
+      "id": "shot_00",
+      "target_fingerprint": "8ec04d8f525846d1644163475653cebffc46640969b2309e6e8600d2d5e27032",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art shot_00"
+    },
+    {
+      "type": "AMMO",
+      "id": "shot_beanbag",
+      "target_fingerprint": "135ed5d79d3d51f8234913709d544b8e8d0c98a3bba8a541f7dac7cb1d3522de",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art shot_beanbag"
+    },
+    {
+      "type": "AMMO",
+      "id": "shot_bird",
+      "target_fingerprint": "7c0c750fc21d13ddf6371e46b887f9a0b0dccc3c6e3cbd1373c42c836f4bc7ad",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art shot_bird"
+    },
+    {
+      "type": "AMMO",
+      "id": "shot_dragon",
+      "target_fingerprint": "71900e29a0fd1981c168d3966a35274755143458facbc9d92c57a8adf721e69b",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art shot_dragon"
+    },
+    {
+      "type": "AMMO",
+      "id": "shot_flechette",
+      "target_fingerprint": "e3cac2ecfb2bd1fa781889c9ba86965fc40004d1a3585182297f50775ca09efb",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art shot_flechette"
+    },
+    {
+      "type": "AMMO",
+      "id": "shot_he",
+      "target_fingerprint": "f60be3f2ba65b6d48d83cc6017901a5ccf9b6ceb6e373e183c20abcd4d555051",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art shot_he"
+    },
+    {
+      "type": "AMMO",
+      "field": "abstract",
+      "id": "shot_paper_abstract",
+      "target_fingerprint": "9945d4b57c93a8c172b503c40ba7626c72b87d9adc737a1392882b3736cf5d98",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art shot_paper_abstract"
+    },
+    {
+      "type": "AMMO",
+      "id": "shot_scrap",
+      "target_fingerprint": "cbb8e1684199907131b8d48f2bb75f8701b497f20bb1119206b8f8c848cdbc80",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art shot_scrap"
+    },
+    {
+      "type": "AMMO",
+      "id": "shot_slug",
+      "target_fingerprint": "63762053bfd52097a734a7b86b7b85d90ef6d6170bdcdfbe022f568e9600af1e",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art shot_slug"
+    },
+    {
+      "type": "AMMO",
+      "id": "signal_flare",
+      "target_fingerprint": "2e8b08d852d4749bdc65567480c08e8a6161b78506d5a27a434e080dd69a0fd6",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art signal_flare"
+    },
+    {
+      "type": "AMMO",
+      "id": "sling-ready_grenade",
+      "target_fingerprint": "f8a8eec22058b10e132d9ebacff1ce30dee2ae388eaebd2fd32d18ba9c2df565",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art sling-ready_grenade"
+    },
+    {
+      "type": "AMMO",
+      "id": "sling-ready_homemade_grenade",
+      "target_fingerprint": "1a2a37c9a0070c2d4f57844837a0472e9c46651bb8f01bf82b6b0ba04df3414b",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art sling-ready_homemade_grenade"
+    },
+    {
+      "type": "AMMO",
+      "id": "sling-ready_homemade_grenade_2",
+      "target_fingerprint": "ac8c09ddbbcb9db98bcc19e9eec9cd6500fce1ca010c13f31426cfac7a07d351",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art sling-ready_homemade_grenade_2"
+    },
+    {
+      "type": "AMMO",
+      "id": "sling-ready_molotov",
+      "target_fingerprint": "af981acacd1e7a0a0f61a2b396c55929fc49e962e40a2a7c55961e4d6bff0f17",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art sling-ready_molotov"
+    },
+    {
+      "type": "AMMO",
+      "id": "sling-ready_small_homemade_grenade",
+      "target_fingerprint": "78e6352c0ebbc111dedfc5797ede009dc428d31f71760b464a6e68f5766c551c",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art sling-ready_small_homemade_grenade"
+    },
+    {
+      "type": "AMMO",
+      "id": "sling-ready_small_homemade_grenade_2",
+      "target_fingerprint": "490671442b468ad3c1e6d107353a82f06ec1a10bf165d0dc3db5c49682fd7ca2",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art sling-ready_small_homemade_grenade_2"
+    },
+    {
+      "type": "MAGAZINE",
+      "id": "small_storage_battery",
+      "target_fingerprint": "d708b6c48ee100002ee448861c7c89145dd12b5d1f304b2381cffb484322fdc6",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art small_storage_battery"
+    },
+    {
+      "type": "MAGAZINE",
+      "id": "storage_battery",
+      "target_fingerprint": "c23459cbcfd2342f77766413ccf9a515eb68efeb4b19832a6e2f923961059a97",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art storage_battery"
+    },
+    {
+      "type": "AMMO",
+      "id": "welding_rod_alloy",
+      "target_fingerprint": "814cc3637ba104f47809c336c729afcbdf1f9f96cb4a20d39098f9115981f57a",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art welding_rod_alloy"
+    },
+    {
+      "type": "AMMO",
+      "id": "welding_rod_steel",
+      "target_fingerprint": "c25baf2faa6ee911a8dc7e4b8412f5949d210ab992b358d792f1193aa114b45d",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art welding_rod_steel"
+    },
+    {
+      "type": "AMMO",
+      "id": "welding_wire_alloy",
+      "target_fingerprint": "a1366750253626bc9c897658e1d7ca5861e0e28689a989a0e9781f77e0f594a8",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art welding_wire_alloy"
+    },
+    {
+      "type": "AMMO",
+      "id": "welding_wire_steel",
+      "target_fingerprint": "5fc081551320d9f581bee7d20942dfbecc5ed3028c5a243155f40666023f74ec",
+      "reason": "H5 ASCII-art sync binds the existing item to net-new 0.H art welding_wire_steel"
+    },
+    {
+      "type": "activity_type",
+      "id": "ACT_EBOOKSAVE",
+      "target_fingerprint": "c6cbb596538b183ff33383c0c12985a080d16d8857ee422285b4c9899c1a4adb",
+      "reason": "H5 multi-book e-reader scanning stores a vector of selected books in the existing activity"
+    },
+    {
+      "type": "item_action",
+      "id": "EBOOKSAVE",
+      "target_fingerprint": "6cfbbdefb27cf48497132cdb66b7fc6055f2e8c8dc3f2404341f827633f7d4f4",
+      "reason": "H5 multi-book e-reader scanning updates the existing scan action prompt"
+    }
+  ],
+  "allowed_extension_files": [],
+  "allowed_anonymous_changes": [
+    {
+      "path": "data/json/mapgen/cabin.json",
+      "baseline_fingerprint": "0beb5152179177ff4c06aa07432fe4a8c483f7051af9011c897feac1741a7270",
+      "target_fingerprint": "2c813bf90a837f8beb2dbd2fd82d317e5d0aa425b3498bcf0b0daa1408944cc7",
+      "reason": "H6 replaces the guaranteed zombie at the selected cabin safe start with a generic human corpse item"
+    },
+    {
+      "path": "data/json/mapgen/farm.json",
+      "baseline_fingerprint": "999c5e7154c6d93e962216f03dc71b9f833ed20babeaa3e191ff61a6a1e6dc0c",
+      "target_fingerprint": "09ab95633cea32359929c075549df23f3368ea32cf4a0da64377e3a8d9710add",
+      "reason": "H6 replaces the guaranteed zombie group at the selected farm safe start with a generic human corpse item"
+    }
+  ],
+  "allowed_resource_changes": [],
+  "allowed_builtin_mod_changes": [
+    {
+      "mod_id": "aftershock",
+      "type": "overmap_special",
+      "id": "prepnet_orchard",
+      "target_fingerprint": "c52c268ae913a5e3dfe7dc0897ace7379b30fd26d649f443666c5a32179bac8b",
+      "reason": "PrepNet orchard gains its Aftershock static-camp ownership and display name"
+    },
+    {
+      "mod_id": "magiclysm",
+      "type": "city_building",
+      "id": "magic_shop",
+      "target_fingerprint": "0e665fbd5f8bf8219f271f2e20bb8aa4cd5cfdde65de7951d2a0547c061703a1",
+      "reason": "The healer's respite gains its Magiclysm static-camp ownership and display name"
+    },
+    {
+      "mod_id": "magiclysm",
+      "type": "overmap_special",
+      "id": "Lake Retreat",
+      "target_fingerprint": "40e9a6aab1d846a75211d03755f617aee24b82a51dfbf862da3bdf5cd116ee71",
+      "reason": "The Old Wizard lake retreat gains its Magiclysm static-camp ownership and display name"
+    },
+    {
+      "mod_id": "magiclysm",
+      "type": "overmap_special",
+      "id": "forge_of_wonders",
+      "target_fingerprint": "d3c93b70fcc1ee76550ecf324194a5907578ada43cf97dc40a7daf8f06dbfd0c",
+      "reason": "The Forge of Wonders gains its Magiclysm static-camp ownership and display name"
+    }
+  ],
+  "allowed_builtin_mod_anonymous_changes": [],
+  "allowed_builtin_mod_resource_changes": [],
+  "donor_imports": [
+    {
+      "key": "lockable_vehicle_doors",
+      "name": "Lockable vehicle doors",
+      "donor_commit": "0ccfe3659c71d6a982290b2cd201737c6942b9bb",
+      "classification": "core",
+      "required_paths": [
+        "data/json/npcs/common_chat/TALK_COMMON_ALLY.json",
+        "data/json/npcs/talk_tags.json",
+        "data/json/recipes/other/vehicle.json",
+        "data/json/vehicleparts/doors.json",
+        "data/json/vehicleparts/utilities.json",
+        "data/json/vehicleparts/vehicle_parts.json",
+        "data/json/vehicleparts/vp_flags.json"
+      ],
+      "required_entities": [
+        {
+          "type": "GENERIC",
+          "id": "door_lock",
+          "new_since_baseline": true,
+          "target_fingerprint": "941b3b3ac7cf44c470db30853dcc216533e10a1730932b334eed7ace86dff0de"
+        },
+        {
+          "type": "vehicle_part",
+          "id": "door_lock",
+          "new_since_baseline": true,
+          "target_fingerprint": "d249fa1324166757b9547a1826a5d05d16dbd9c6e1f8d3769d6403600779cd0f"
+        },
+        {
+          "type": "json_flag",
+          "id": "BOARD_INTERNAL",
+          "new_since_baseline": true,
+          "target_fingerprint": "b95fbed6f44bf349d898ec8def35e0e8ecfee606fad862ab371021cd07ddc736"
+        },
+        {
+          "type": "json_flag",
+          "id": "DOOR_LOCKING",
+          "new_since_baseline": true,
+          "target_fingerprint": "baa0eba3534b52844e3e8e7332469b19f682c3eaa1e38b1f31b52b9f9d6d998c"
+        },
+        {
+          "type": "json_flag",
+          "id": "LOCKABLE_DOOR",
+          "new_since_baseline": true,
+          "target_fingerprint": "da42196fdb045aa75b013ddd424684897a50d91b12d3654052d018cb051ff01f"
+        },
+        {
+          "type": "recipe",
+          "field": "result",
+          "id": "door_lock",
+          "new_since_baseline": true,
+          "target_fingerprint": "aec1e854723457810a740874d70fde0392d59701e44ac7d20803ab7273a39fa2"
+        },
+        {
+          "type": "snippet",
+          "field": "category",
+          "id": "<ally_rule_lock_doors_true_text>",
+          "new_since_baseline": true,
+          "target_fingerprint": "e8eaeffb49b0c55e30abb2293963670df3e2c982fbdb9c7f32d7342a3da2c637"
+        },
+        {
+          "type": "snippet",
+          "field": "category",
+          "id": "<ally_rule_lock_doors_false_text>",
+          "new_since_baseline": true,
+          "target_fingerprint": "5e8850e28c9f36c5010a8bf481adcc820771a8d1d2a1f62bbc13e129a69912bb"
+        },
+        {
+          "type": "snippet",
+          "field": "category",
+          "id": "<ally_rule_avoid_locks_true_text>",
+          "new_since_baseline": true,
+          "target_fingerprint": "b61d71011f8923b658e6c879d39b2be21aef2f403005314d7aa5dc3d883bbaa5"
+        },
+        {
+          "type": "snippet",
+          "field": "category",
+          "id": "<ally_rule_avoid_locks_false_text>",
+          "new_since_baseline": true,
+          "target_fingerprint": "d7d492e6f6cb6cc47414301301bcc4cea8226dc168c5908afda065b79bb378d0"
+        }
+      ]
+    },
+    {
+      "key": "cbm_corpse_recovery",
+      "name": "CBMs from zombie corpses",
+      "donor_commit": "b6da28650d025ca47a99ab7db9e066b378c8e49e",
+      "classification": "core",
+      "required_paths": [
+        "data/json/harvest_dissect.json",
+        "data/json/itemgroups/bionics.json",
+        "data/json/monsterdrops/zombie_lab.json",
+        "data/json/monsters/feral_humans.json",
+        "data/json/monsters/zed_lab.json",
+        "data/json/monsters/zed_misc.json",
+        "data/json/monsters/zed_soldiers.json"
+      ],
+      "required_entities": [
+        {
+          "type": "harvest",
+          "id": "dissect_bionics_mil",
+          "new_since_baseline": true,
+          "target_fingerprint": "1b28e6f6fbb9d64d4e5de7e9381fd76809292fd856fd638938c643d275ab4849"
+        },
+        {
+          "type": "harvest",
+          "id": "dissect_mon_zombie_bio_op",
+          "new_since_baseline": true,
+          "target_fingerprint": "cf269afb32b21919fcb3e1c05a265d708c222f9b92b7d7aae3fe974a0195b998"
+        },
+        {
+          "type": "harvest",
+          "id": "dissect_mon_zombie_bio_op2",
+          "new_since_baseline": true,
+          "target_fingerprint": "c0df5145ecdab72dc37df8b1e490714a1481244186f55a47eebe888d9870dceb"
+        },
+        {
+          "type": "harvest",
+          "id": "dissect_mon_zombie_scientist",
+          "new_since_baseline": true,
+          "target_fingerprint": "4d2646b78170edde02b27940548945a1fcc32ba85248f932537971408a1de7b3"
+        },
+        {
+          "type": "harvest",
+          "id": "dissect_feral_scientist_bionics",
+          "new_since_baseline": true,
+          "target_fingerprint": "0cc361cdec84f7a4bb388b89762ba3633da30338c9e4a99aeb80c63c6ac2887a"
+        },
+        {
+          "type": "harvest",
+          "id": "dissect_mon_zombie_technician",
+          "new_since_baseline": true,
+          "target_fingerprint": "bee9fc066156a9f7640eeb07514c6777be921542bf530c243b6667df9caa9c1e"
+        },
+        {
+          "type": "item_group",
+          "id": "bionics_op",
+          "new_since_baseline": true,
+          "target_fingerprint": "0dfdf4bf380939fdd0a3b92f129b60fcd6a389ebff9c1644aa874409cd9a334d"
+        },
+        {
+          "type": "item_group",
+          "id": "bionics_op2_def",
+          "new_since_baseline": true,
+          "target_fingerprint": "854850bd1587203b232f971adf2e5ffd8767d34049834de5d6fb74af16261039"
+        },
+        {
+          "type": "item_group",
+          "id": "bionics_op2_off",
+          "new_since_baseline": true,
+          "target_fingerprint": "822e85a6c1e19a242ac0d9bd9fef96b31a47cc923e199fed2d907217fb85dff8"
+        },
+        {
+          "type": "item_group",
+          "id": "bionics_op2_utl",
+          "new_since_baseline": true,
+          "target_fingerprint": "5224f4464226b97834ee679741580c732edfdf800e0ece86df32df3dd51a2833"
+        },
+        {
+          "type": "item_group",
+          "id": "bionics_subs",
+          "new_since_baseline": true,
+          "target_fingerprint": "79c2b74918ab6906090362af668176cf0777fe163377d738599e4e498128f626"
+        },
+        {
+          "type": "item_group",
+          "id": "bionics_tech",
+          "new_since_baseline": true,
+          "target_fingerprint": "1ee6ba4a2eaabeee75ae8377a82aa5ecf0f08759fe99cb3da1038a4d4b837852"
+        },
+        {
+          "type": "item_group",
+          "id": "bionics_sci",
+          "target_fingerprint": "a1070cbc4e240b39dc8ac74109a56e33106b9efac1f08e31ddbd99fb0928f2c7"
+        }
+      ]
+    },
+    {
+      "key": "useful_helicopters",
+      "name": "Useful Helicopters",
+      "donor_commit": "dec27b76f7ab44a37c84971c63bf9062b1fd2503",
+      "classification": "optional_mod",
+      "root": "data/mods/Useful_Helicopters_experimental",
+      "mod_id": "useful_helicopters",
+      "tree_fingerprint": "d5d0b4f4184c9d7566ad4150bafe6c46a5f15183923725ffb6107043ec9392bc",
+      "required_paths": [
+        "data/mods/Useful_Helicopters_experimental/modinfo.json",
+        "data/mods/Useful_Helicopters_experimental/useful_helicopters/hobbies.json",
+        "data/mods/Useful_Helicopters_experimental/useful_helicopters/vehicleparts/rotor.json"
+      ]
+    }
+  ]
+}

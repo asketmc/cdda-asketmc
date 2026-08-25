@@ -1,0 +1,6 @@
+[
+  {
+    "type": "camp_migration",
+    "camp_migrations": { "name": "PrepNet", "overmap_terrain": "prepnet_orchard", "faction": "Prepnet_Phyle" }
+  }
+]

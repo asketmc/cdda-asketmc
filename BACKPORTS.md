@@ -1,0 +1,20 @@
+# Backport Index
+
+This is the concise provenance index. Detailed behavior, exclusions, and test
+evidence remain in the linked reports and player patch notes.
+
+| Area | Status | Documentation |
+| --- | --- | --- |
+| H1/H2 vehicle workshop and energy | Integrated | [H1/H2 report](H1_H2_BACKPORT_REPORT.md) |
+| Visual, UI, sound, and tilesets | Integrated | [Visual/UI report](doc/VISUAL_UI_BACKPORT_REPORT.md) |
+| H3 EOC compatibility | Integrated selected APIs | [H3 report](H3_EOC_BACKPORT_REPORT.md) |
+| H4 visual multi-Z | Integrated selected behavior | [Patch notes](PATCHNOTES_ADDITIVE_0G.md) |
+| H5 interface and ASCII-art QoL | Integrated selected behavior | [H5 report](H5_INTERFACE_QOL_BACKPORT_REPORT.md) |
+| H6 anti-grind QoL | Integrated selected behavior | [H6 report](H6_ANTIGRIND_BACKPORT_REPORT.md) |
+| Backup generator | Integrated | [Generator report](H6_BACKUP_GENERATOR_BACKPORT_REPORT.md) |
+| H3-H6 delivery ledger | Resolved; exclusions recorded | Reports above |
+
+Primary donor provenance is recorded per feature in the reports above and in
+[the detailed additive ledger](doc/ADDITIVE_BACKPORTS.md). The project rule is
+additive transplantation: import the selected feature and its direct fixes,
+not the donor branch's unrelated gameplay or architecture changes.

@@ -1,0 +1,243 @@
+[
+  {
+    "abstract": "veh_tools_abstract",
+    "type": "GENERIC",
+    "name": { "str": "vehicle tool station" },
+    "category": "veh_parts",
+    "weight": "40000 g",
+    "volume": "20 L",
+    "price": 40000,
+    "price_postapoc": 2000,
+    "material": [ "steel" ],
+    "symbol": "&",
+    "color": "light_cyan"
+  },
+  {
+    "type": "GENERIC",
+    "id": "veh_tools_kitchen",
+    "copy-from": "veh_tools_abstract",
+    "name": { "str": "kitchen station" },
+    "description": "A mounted table with a water faucet, fume hood, tool drawers, electric connectors, and fuel valves.",
+    "looks_like": "kitchen_unit"
+  },
+  {
+    "type": "GENERIC",
+    "id": "veh_tools_workshop",
+    "copy-from": "veh_tools_abstract",
+    "name": { "str": "workshop station" },
+    "description": "A mounted table with tool drawers, heavy electric connectors, and fuel valves.",
+    "looks_like": "welding_rig"
+  },
+  {
+    "type": "GENERIC",
+    "id": "veh_tools_fabrication",
+    "copy-from": "veh_tools_abstract",
+    "name": { "str": "mounted fabrication bay" },
+    "description": "A reinforced mobile workbench combining kitchen and workshop tool hookups without replacing the older integrated rigs.",
+    "weight": "60000 g",
+    "volume": "30 L",
+    "looks_like": "workbench"
+  },
+  {
+    "type": "recipe",
+    "activity_level": "MODERATE_EXERCISE",
+    "result": "veh_tools_kitchen",
+    "category": "CC_ELECTRONIC",
+    "subcategory": "CSC_ELECTRONIC_PARTS",
+    "skill_used": "mechanics",
+    "skills_required": [ "electronics", 3 ],
+    "difficulty": 3,
+    "time": "1 h",
+    "autolearn": true,
+    "using": [ [ "welding_standard", 10 ] ],
+    "qualities": [ { "id": "HAMMER", "level": 2 }, { "id": "SAW_M", "level": 1 }, { "id": "WRENCH", "level": 1 } ],
+    "components": [
+      [ [ "frame", 1 ] ],
+      [ [ "water_faucet", 1 ] ],
+      [ [ "duct_tape", 100 ] ],
+      [ [ "sheet_metal", 4 ] ],
+      [ [ "pipe_fittings", 8 ] ],
+      [ [ "pipe", 16 ] ],
+      [ [ "hose", 2 ] ],
+      [ [ "power_supply", 2 ] ],
+      [ [ "cable", 40 ] ]
+    ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "MODERATE_EXERCISE",
+    "result": "veh_tools_workshop",
+    "category": "CC_ELECTRONIC",
+    "subcategory": "CSC_ELECTRONIC_PARTS",
+    "skill_used": "mechanics",
+    "skills_required": [ "electronics", 3 ],
+    "difficulty": 3,
+    "time": "1 h",
+    "autolearn": true,
+    "using": [ [ "welding_standard", 10 ] ],
+    "qualities": [ { "id": "HAMMER", "level": 2 }, { "id": "SAW_M", "level": 1 }, { "id": "WRENCH", "level": 1 } ],
+    "components": [
+      [ [ "frame", 1 ] ],
+      [ [ "duct_tape", 100 ] ],
+      [ [ "sheet_metal", 4 ] ],
+      [ [ "pipe_fittings", 4 ] ],
+      [ [ "pipe", 16 ] ],
+      [ [ "hose", 2 ] ],
+      [ [ "power_supply", 4 ] ],
+      [ [ "cable", 200 ] ]
+    ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "MODERATE_EXERCISE",
+    "result": "veh_tools_fabrication",
+    "category": "CC_ELECTRONIC",
+    "subcategory": "CSC_ELECTRONIC_PARTS",
+    "skill_used": "mechanics",
+    "skills_required": [ "electronics", 4 ],
+    "difficulty": 4,
+    "time": "2 h",
+    "autolearn": true,
+    "using": [ [ "welding_standard", 20 ] ],
+    "qualities": [ { "id": "HAMMER", "level": 2 }, { "id": "SAW_M", "level": 1 }, { "id": "WRENCH", "level": 2 } ],
+    "components": [
+      [ [ "frame", 1 ] ],
+      [ [ "water_faucet", 1 ] ],
+      [ [ "duct_tape", 200 ] ],
+      [ [ "sheet_metal", 8 ] ],
+      [ [ "pipe_fittings", 12 ] ],
+      [ [ "pipe", 24 ] ],
+      [ [ "hose", 4 ] ],
+      [ [ "power_supply", 6 ] ],
+      [ [ "cable", 300 ] ]
+    ]
+  },
+  {
+    "abstract": "veh_tools_part_abstract",
+    "type": "vehicle_part",
+    "breaks_into": [
+      { "count": [ 4, 6 ], "item": "steel_lump" },
+      { "count": [ 4, 6 ], "item": "steel_chunk" },
+      { "count": [ 4, 6 ], "item": "scrap" }
+    ],
+    "broken_color": "light_cyan",
+    "broken_symbol": "x",
+    "categories": [ "utility" ],
+    "color": "light_cyan",
+    "damage_modifier": 10,
+    "damage_reduction": { "all": 30 },
+    "durability": 80,
+    "size": "50 L",
+    "flags": [ "CARGO", "OBSTACLE", "FLAT_SURF", "VEH_TOOLS" ],
+    "allowed_tools": [
+      "aluminum_pan",
+      "angle_grinder",
+      "atomic_coffeepot",
+      "coffeemaker",
+      "copper_pan",
+      "cordless_drill",
+      "elec_hairtrimmer",
+      "elec_shears",
+      "electric_spinwheel",
+      "food_processor",
+      "large_repairkit",
+      "makeshift_sealer",
+      "makeshift_vacuum_mold",
+      "oil_press_manual",
+      "pan",
+      "polisher",
+      "pot",
+      "pot_aluminum",
+      "pot_copper",
+      "pot_makeshift",
+      "pot_makeshift_copper",
+      "iron_pot",
+      "press",
+      "puller",
+      "small_repairkit",
+      "soldering_iron",
+      "steel_pan",
+      "vac_mold",
+      "vac_sealer",
+      "water_purifier",
+      "wire_draw_machine",
+      "casserole",
+      "tongs",
+      "metalworking_tongs"
+    ],
+    "item": "veh_tools_abstract",
+    "location": "center",
+    "requirements": {
+      "install": { "skills": [ [ "mechanics", 3 ] ], "time": "60 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
+      "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
+      "repair": { "skills": [ [ "mechanics", 4 ] ], "time": "60 m", "using": [ [ "repair_welding_standard", 1 ], [ "soldering_standard", 10 ] ] }
+    },
+    "symbol": "&"
+  },
+  {
+    "type": "vehicle_part",
+    "id": "veh_tools_kitchen",
+    "copy-from": "veh_tools_part_abstract",
+    "description": "A mounted table with a water faucet, fume hood, tool drawers, electric connectors, and fuel valves.",
+    "item": "veh_tools_kitchen",
+    "looks_like": "kitchen_unit",
+    "pseudo_tools": [ { "id": "water_faucet" } ],
+    "extend": {
+      "allowed_tools": [
+        "chemistry_set",
+        "closed_loop_extractor_large",
+        "closed_loop_extractor_small",
+        "dehydrator",
+        "electrolysis_kit",
+        "electrolyzer_makeshift",
+        "hotplate",
+        "ketene_lamp",
+        "propane_cooker",
+        "vac_oven_small",
+        "vac_pump"
+      ]
+    }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "veh_tools_workshop",
+    "copy-from": "veh_tools_part_abstract",
+    "description": "A mounted table with tool drawers, heavy electric connectors, and fuel valves.",
+    "looks_like": "welding_rig",
+    "item": "veh_tools_workshop",
+    "extend": {
+      "allowed_tools": [ "cordless_impact_wrench", "reciprocating_saw", "welder", "welder_crude", "welding_kit" ]
+    }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "veh_tools_fabrication",
+    "copy-from": "veh_tools_part_abstract",
+    "description": "A reinforced mobile workbench with both kitchen and workshop hookups.",
+    "looks_like": "workbench",
+    "item": "veh_tools_fabrication",
+    "pseudo_tools": [ { "id": "water_faucet" } ],
+    "extend": {
+      "flags": [ "WORKBENCH" ],
+      "allowed_tools": [
+        "chemistry_set",
+        "closed_loop_extractor_large",
+        "closed_loop_extractor_small",
+        "dehydrator",
+        "electrolysis_kit",
+        "electrolyzer_makeshift",
+        "hotplate",
+        "ketene_lamp",
+        "propane_cooker",
+        "vac_oven_small",
+        "vac_pump",
+        "cordless_impact_wrench",
+        "reciprocating_saw",
+        "welder",
+        "welder_crude",
+        "welding_kit"
+      ]
+    },
+    "workbench": { "multiplier": 1.2, "mass": "200 kg", "volume": "30 L" }
+  }
+]

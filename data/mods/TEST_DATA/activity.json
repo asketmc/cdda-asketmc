@@ -1,0 +1,58 @@
+[
+  {
+    "id": "ACT_TEST_EOC_COMPLETE",
+    "type": "activity_type",
+    "activity_level": "MODERATE_EXERCISE",
+    "verb": "testing completion EOCs",
+    "based_on": "time",
+    "completion_eoc": "EOC_TEST_ACTIVITY_INCREMENT"
+  },
+  {
+    "id": "ACT_TEST_EOC_DURING",
+    "type": "activity_type",
+    "activity_level": "MODERATE_EXERCISE",
+    "verb": "testing per-turn EOCs",
+    "based_on": "time",
+    "do_turn_eoc": "EOC_TEST_ACTIVITY_INCREMENT"
+  },
+  {
+    "id": "ACT_TEST_EOC_COMPLETE_CANCEL",
+    "type": "activity_type",
+    "activity_level": "MODERATE_EXERCISE",
+    "verb": "testing completion EOC cancellation",
+    "based_on": "time",
+    "completion_eoc": "EOC_TEST_ACTIVITY_CANCEL"
+  },
+  {
+    "id": "ACT_TEST_EOC_COMPLETE_REPLACE",
+    "type": "activity_type",
+    "activity_level": "MODERATE_EXERCISE",
+    "verb": "testing completion EOC replacement",
+    "based_on": "time",
+    "completion_eoc": "EOC_TEST_ACTIVITY_REPLACE"
+  },
+  {
+    "id": "ACT_TEST_EOC_DURING_REPLACE",
+    "type": "activity_type",
+    "activity_level": "MODERATE_EXERCISE",
+    "verb": "testing per-turn EOC replacement",
+    "based_on": "time",
+    "do_turn_eoc": "EOC_TEST_ACTIVITY_REPLACE"
+  },
+  {
+    "id": "ACT_TEST_EOC_CANCEL",
+    "type": "activity_type",
+    "activity_level": "MODERATE_EXERCISE",
+    "verb": "testing activity cancellation",
+    "based_on": "time",
+    "do_turn_eoc": "EOC_TEST_ACTIVITY_CANCEL"
+  },
+  {
+    "id": "ACT_TEST_EOC_COMPLETE_REPLACE_SAME",
+    "type": "activity_type",
+    "activity_level": "MODERATE_EXERCISE",
+    "verb": "testing same-id completion EOC replacement",
+    "based_on": "time",
+    "completion_eoc": "EOC_TEST_ACTIVITY_REPLACE_SAME"
+  }
+]

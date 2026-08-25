@@ -1,0 +1,201 @@
+[
+  {
+    "type": "vehicle_part",
+    "id": "big_portable_fridge",
+    "copy-from": "minifridge",
+    "name": { "str": "food truck fridge" },
+    "looks_like": "minifridge",
+    "description": "A large commercial refrigerator.  When turned on, it cools the food inside and extends the time until it spoils.",
+    "epower": -51,
+    "size": "250 L",
+    "item": "big_portable_fridge"
+  },
+  {
+    "type": "vehicle_part",
+    "id": "chest_minifreezer",
+    "copy-from": "minifreezer",
+    "name": { "str": "chest minifreezer" },
+    "looks_like": "minifreezer",
+    "description": "A compact chest freezer.  When turned on, it freezes the food inside and prevents it from spoiling.",
+    "epower": -26,
+    "size": "99 L",
+    "item": "chest_minifreezer"
+  },
+  {
+    "type": "vehicle_part",
+    "id": "big_portable_freezer",
+    "copy-from": "minifreezer",
+    "name": { "str": "food truck freezer" },
+    "looks_like": "minifridge",
+    "description": "A large commercial freezer.  When turned on, it freezes the food inside and prevents it from spoiling.",
+    "epower": -211,
+    "size": "250 L",
+    "item": "big_portable_freezer"
+  },
+  {
+    "type": "vehicle_part",
+    "id": "fridgetank_large",
+    "copy-from": "fridgetank",
+    "name": { "str": "refrigerated tank (100 L)" },
+    "item": "fridgetank_large",
+    "durability": 170,
+    "description": "A 100 L refrigerated tank.  When turned on, it cools the liquid inside and extends the time until it spoils.",
+    "epower": -80,
+    "breaks_into": [
+      { "item": "steel_lump", "count": [ 2, 2 ] },
+      { "item": "steel_chunk", "count": [ 1, 2 ] },
+      { "item": "scrap", "count": [ 1, 5 ] }
+    ],
+    "requirements": {
+      "install": {
+        "skills": [ [ "mechanics", 1 ] ],
+        "time": "110 m",
+        "using": [ [ "vehicle_wrench_2", 1 ], [ "drilling_standard", 50 ] ]
+      },
+      "removal": { "skills": [ [ "mechanics", 1 ] ], "time": "65 m", "qualities": [ { "id": "WRENCH", "level": 2 } ] },
+      "repair": { "skills": [ [ "mechanics", 1 ] ], "time": "45 m", "using": [ [ "repair_welding_standard", 2 ] ] }
+    }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "metal_tray",
+    "name": { "str": "metal tray" },
+    "categories": [ "cargo" ],
+    "broken_color": "dark_gray",
+    "damage_modifier": 60,
+    "durability": 75,
+    "size": "15 L",
+    "item": "sheet_metal",
+    "location": "center",
+    "requirements": {
+      "install": { "skills": [ [ "fabrication", 1 ] ], "time": "5 m", "using": [ [ "vehicle_wrench_1", 1 ] ] },
+      "removal": { "skills": [ [ "fabrication", 1 ] ], "time": "5 m", "using": [ [ "vehicle_wrench_1", 1 ] ] },
+      "repair": {
+        "skills": [ [ "fabrication", 2 ], [ "mechanics", 2 ] ],
+        "time": "5 m",
+        "using": [ [ "repair_welding_standard", 1 ] ]
+      }
+    },
+    "flags": [ "CARGO", "BOARDABLE", "FLAT_SURF" ],
+    "breaks_into": "ig_vp_sheet_metal",
+    "symbol": "T",
+    "broken_symbol": "#"
+  },
+  {
+    "type": "vehicle_part",
+    "id": "compact_ASRG_containment",
+    "name": { "str": "advanced Stirling radioisotope generator" },
+    "looks_like": "f_compact_ASRG_containment",
+    "categories": [ "energy" ],
+    "color": "green_white",
+    "broken_color": "blue",
+    "damage_modifier": 80,
+    "durability": 400,
+    "description": "A military ASRG covered in heavy plating.  It provides constant, low power to a vehicle.",
+    "epower": 130,
+    "location": "center",
+    "item": "compact_ASRG_containment",
+    "requirements": {
+      "repair": {
+        "skills": [ [ "mechanics", 7 ] ],
+        "time": "60 m",
+        "using": [ [ "repair_welding_standard", 5 ], [ "soldering_standard", 5 ] ]
+      }
+    },
+    "flags": [ "OBSTACLE", "RADIOACTIVE", "COVERED", "PERPETUAL", "REACTOR" ],
+    "breaks_into": [
+      { "item": "scrap", "count": [ 4, 16 ] },
+      { "item": "steel_chunk", "count": [ 1, 6 ] },
+      { "item": "plutonium", "count": [ 0, 2 ] },
+      { "item": "lead", "charges": [ 12, 18 ] }
+    ],
+    "damage_reduction": { "all": 58 },
+    "symbol": "0",
+    "broken_symbol": "#"
+  },
+  {
+    "type": "vehicle_part",
+    "id": "medium_pressure_tank",
+    "name": { "str": "medium pressurized tank" },
+    "item": "medium_propane_tank",
+    "location": "fuel_source",
+    "symbol": "O",
+    "broken_symbol": "#",
+    "broken_color": "red",
+    "durability": 150,
+    "description": "A medium tank for pressurized gases.",
+    "categories": [ "movement" ],
+    "damage_modifier": 80,
+    "breaks_into": [
+      { "item": "steel_lump", "count": [ 2, 2 ] },
+      { "item": "steel_chunk", "count": [ 1, 2 ] },
+      { "item": "scrap", "count": [ 1, 5 ] }
+    ],
+    "requirements": {
+      "install": {
+        "skills": [ [ "mechanics", 1 ] ],
+        "time": "90 m",
+        "using": [ [ "vehicle_wrench_2", 1 ], [ "drilling_standard", 50 ] ]
+      },
+      "removal": { "skills": [ [ "mechanics", 1 ] ], "time": "45 m", "qualities": [ { "id": "WRENCH", "level": 2 } ] },
+      "repair": { "skills": [ [ "mechanics", 1 ] ], "time": "45 m", "using": [ [ "repair_welding_standard", 2 ] ] }
+    },
+    "flags": [ "GASTANK" ],
+    "damage_reduction": { "all": 28, "stab": 12 }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "ram_military",
+    "copy-from": "ram_blaze",
+    "name": { "str": "military composite ram" },
+    "item": "mil_plate",
+    "color": "green",
+    "broken_color": "green",
+    "durability": 875,
+    "breaks_into": [
+      { "item": "steel_lump", "count": [ 4, 6 ] },
+      { "item": "steel_chunk", "count": [ 4, 6 ] },
+      { "item": "scrap", "count": [ 4, 6 ] },
+      { "item": "ceramic_armor", "count": [ 0, 4 ] }
+    ],
+    "requirements": {
+      "install": { "skills": [ [ "mechanics", 6 ] ], "time": "60 m", "using": [ [ "welding_standard", 5 ] ] },
+      "removal": {
+        "skills": [ [ "mechanics", 4 ] ],
+        "time": "30 m",
+        "using": [ [ "vehicle_weld_removal", 1 ], [ "vehicle_wrench_2", 1 ] ]
+      },
+      "repair": {}
+    },
+    "extend": { "flags": [ "NO_REPAIR" ] },
+    "damage_reduction": { "all": 75, "bullet": 131 }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "trunk_sedan",
+    "name": { "str": "sedan trunk" },
+    "looks_like": "trunk",
+    "categories": [ "cargo" ],
+    "color": "brown",
+    "broken_color": "brown",
+    "damage_modifier": 80,
+    "durability": 350,
+    "size": "200 L",
+    "item": "frame",
+    "location": "center",
+    "requirements": {
+      "install": { "skills": [ [ "mechanics", 1 ] ], "time": "60 m", "using": [ [ "welding_standard", 5 ] ] },
+      "removal": {
+        "skills": [ [ "mechanics", 2 ] ],
+        "time": "30 m",
+        "using": [ [ "vehicle_weld_removal", 1 ], [ "vehicle_wrench_2", 1 ] ]
+      },
+      "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "60 m", "using": [ [ "repair_welding_standard", 2 ] ] }
+    },
+    "flags": [ "CARGO", "LOCKABLE_CARGO", "COVERED", "SIMPLE_PART", "HALF_BOARD" ],
+    "breaks_into": "ig_vp_frame",
+    "damage_reduction": { "all": 30 },
+    "symbol": "H",
+    "broken_symbol": "#"
+  }
+]

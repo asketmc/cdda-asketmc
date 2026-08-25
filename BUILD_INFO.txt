@@ -1,0 +1,18 @@
+CDDA 0.G Additive build reference
+=================================
+
+Authoritative branch: main
+Vanilla 0.G foundation: d6ec466140839dd70c1a43671eb4a08b007695c2
+
+Windows x64 Tiles+Sound production command (WSL with MXE GCC 11):
+
+make -j6 VERSION=0.G-additive-<revision> \
+  CROSS=/opt/mxe/usr/bin/x86_64-w64-mingw32.static.gcc11- \
+  CCACHE=1 RELEASE=1 TILES=1 SOUND=1 LOCALIZE=0 RUNTESTS=0 \
+  LINTJSON=0 ASTYLE=0 WARNINGS=-w LIBBACKTRACE=1 \
+  tests cataclysm-tiles.exe
+
+The executable must report the requested revision with --version. Run focused
+tests, the additive audit, --check-mods dda, and a copied-save load smoke before
+publishing a release. This file is a command reference, not proof that a given
+commit has been packaged.

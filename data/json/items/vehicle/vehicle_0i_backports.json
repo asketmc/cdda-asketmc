@@ -1,0 +1,70 @@
+[
+  {
+    "type": "GENERIC",
+    "id": "big_portable_fridge",
+    "copy-from": "minifridge",
+    "name": { "str": "food truck fridge" },
+    "description": "A heavy and bulky fridge with little wheels for easier transportation.  Its sections and separators let it be installed in a vehicle while keeping the contents secure.",
+    "weight": "67 kg",
+    "volume": "490 L",
+    "longest_side": "1615 mm",
+    "price": "2200 USD",
+    "price_postapoc": "10 USD",
+    "insulation": 7,
+    "pocket_data": [
+      { "pocket_type": "CONTAINER", "rigid": true, "max_contains_volume": "250 L", "max_contains_weight": "700 kg" }
+    ]
+  },
+  {
+    "type": "GENERIC",
+    "id": "chest_minifreezer",
+    "copy-from": "minifridge",
+    "name": { "str": "chest minifreezer" },
+    "description": "A compact chest freezer designed as a mobile solution for freezing food, though reaching items at the bottom can be awkward.",
+    "weight": "22940 g",
+    "volume": "238 L",
+    "longest_side": "843 mm",
+    "price": "249 USD",
+    "price_postapoc": "8 USD",
+    "insulation": 4,
+    "pocket_data": [
+      { "pocket_type": "CONTAINER", "rigid": true, "max_contains_volume": "99 L", "max_contains_weight": "300 kg" }
+    ]
+  },
+  {
+    "type": "GENERIC",
+    "id": "big_portable_freezer",
+    "copy-from": "minifridge",
+    "name": { "str": "food truck freezer" },
+    "description": "A heavy and bulky freezer with little wheels for easier transportation.  Its sections and separators let it be installed in a vehicle while keeping the contents secure.",
+    "weight": "72 kg",
+    "volume": "490 L",
+    "longest_side": "1615 mm",
+    "price": "3300 USD",
+    "price_postapoc": "12 USD",
+    "insulation": 7,
+    "pocket_data": [
+      { "pocket_type": "CONTAINER", "rigid": true, "max_contains_volume": "250 L", "max_contains_weight": "700 kg" }
+    ]
+  },
+  {
+    "type": "GENERIC",
+    "id": "fridgetank_large",
+    "copy-from": "fridgetank",
+    "name": { "str": "refrigerated tank (100 L)", "str_pl": "refrigerated tanks (100 L)" },
+    "description": "A 100 L refrigerated tank for keeping liquids cool.  Provides some insulation from outside weather.",
+    "looks_like": "fridgetank",
+    "insulation": 10,
+    "volume": "112 L",
+    "weight": "67 kg",
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "rigid": true,
+        "watertight": true,
+        "max_contains_volume": "100 L",
+        "max_contains_weight": "500 kg"
+      }
+    ]
+  }
+]

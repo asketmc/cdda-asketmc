@@ -1,0 +1,998 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_GAME_LOAD_EVENT",
+    "eoc_type": "EVENT",
+    "required_event": "game_load",
+    "effect": [
+      { "u_add_var": "event_fired", "type": "test", "context": "eoc", "value": "yes" },
+      {
+        "set_string_var": { "context_val": "cdda_version" },
+        "target_var": { "global_val": "test_event_cdda_version" }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_COMPUTER_TALKER",
+    "condition": "has_reason",
+    "effect": { "npc_add_var": "talker", "type": "test", "context": "eoc_computer", "value": "yes" }
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_CHARACTER_DIES_EVENT",
+    "eoc_type": "EVENT",
+    "required_event": "character_dies",
+    "effect": { "u_adjust_var": "event_count", "type": "test", "context": "npc_death", "adjustment": 1 }
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_CHARACTER_DIES_PREVENT_EVENT",
+    "eoc_type": "EVENT",
+    "required_event": "character_dies",
+    "condition": { "u_has_var": "prevent_via_event", "type": "test", "context": "npc_death", "value": "yes" },
+    "effect": [
+      { "u_adjust_var": "event_prevent_count", "type": "test", "context": "npc_death", "adjustment": 1 },
+      "u_prevent_death"
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_NPC_PREVENT_DEATH",
+    "eoc_type": "NPC_DEATH",
+    "effect": [
+      { "u_adjust_var": "eoc_count", "type": "test", "context": "npc_death", "adjustment": 1 },
+      "u_prevent_death"
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_NPC_DEATH_NO_PREVENT",
+    "eoc_type": "NPC_DEATH",
+    "effect": { "u_adjust_var": "eoc_count", "type": "test", "context": "npc_death", "adjustment": 1 }
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_CHARACTER_WIELDS_ITEM_EVENT",
+    "eoc_type": "EVENT",
+    "required_event": "character_wields_item",
+    "condition": { "compare_string": [ "knife_combat", { "context_val": "itype" } ] },
+    "effect": [
+      { "u_add_var": "last_event", "type": "test", "context": "event_talker", "value": "character_wields_item" },
+      { "npc_add_var": "last_event", "type": "test", "context": "event_talker", "value": "character_wields_item" }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_CHARACTER_WEARS_ITEM_EVENT",
+    "eoc_type": "EVENT",
+    "required_event": "character_wears_item",
+    "condition": { "compare_string": [ "backpack", { "context_val": "itype" } ] },
+    "effect": [
+      { "u_add_var": "last_event", "type": "test", "context": "event_talker", "value": "character_wears_item" },
+      { "npc_add_var": "last_event", "type": "test", "context": "event_talker", "value": "character_wears_item" }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_CHARACTER_WIELDS_ITEM_REMOVAL",
+    "eoc_type": "EVENT",
+    "required_event": "character_wields_item",
+    "condition": {
+      "and": [
+        { "compare_string": [ "sword_wood", { "context_val": "itype" } ] },
+        { "u_has_var": "remove_wielded", "type": "test", "context": "event_talker", "value": "yes" }
+      ]
+    },
+    "effect": { "u_remove_item_with": "sword_wood" }
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_CHARACTER_WEARS_ITEM_REMOVAL",
+    "eoc_type": "EVENT",
+    "required_event": "character_wears_item",
+    "condition": {
+      "and": [
+        { "compare_string": [ "test_backpack", { "context_val": "itype" } ] },
+        { "u_has_var": "remove_worn", "type": "test", "context": "event_talker", "value": "yes" }
+      ]
+    },
+    "effect": { "u_remove_item_with": "test_backpack" }
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_CHARACTER_UNWIELDS_ITEM_EVENT",
+    "eoc_type": "EVENT",
+    "required_event": "character_wields_item",
+    "condition": { "compare_string": [ "null", { "context_val": "itype" } ] },
+    "effect": { "u_add_var": "unwield", "type": "test", "context": "event_talker", "value": "yes" }
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_REMOVE_WIELDED_ITEM_EVENT",
+    "eoc_type": "EVENT",
+    "required_event": "character_wields_item",
+    "condition": { "u_has_var": "remove_wielded", "type": "test", "context": "event_talker", "value": "yes" },
+    "effect": { "u_remove_item_with": "knife_combat" }
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_REMOVE_WORN_ITEM_EVENT",
+    "eoc_type": "EVENT",
+    "required_event": "character_wears_item",
+    "condition": { "u_has_var": "remove_worn", "type": "test", "context": "event_talker", "value": "yes" },
+    "effect": { "u_remove_item_with": "backpack" }
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_CHARACTER_MELEE_CHARACTER_EVENT",
+    "eoc_type": "EVENT",
+    "required_event": "character_melee_attacks_character",
+    "effect": [
+      {
+        "u_add_var": "last_event",
+        "type": "test",
+        "context": "event_talker",
+        "value": "character_melee_attacks_character"
+      },
+      {
+        "npc_add_var": "last_event",
+        "type": "test",
+        "context": "event_talker",
+        "value": "character_melee_attacks_character"
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_CHARACTER_MELEE_MONSTER_EVENT",
+    "eoc_type": "EVENT",
+    "required_event": "character_melee_attacks_monster",
+    "effect": [
+      {
+        "u_add_var": "last_event",
+        "type": "test",
+        "context": "event_talker",
+        "value": "character_melee_attacks_monster"
+      },
+      {
+        "npc_add_var": "last_event",
+        "type": "test",
+        "context": "event_talker",
+        "value": "character_melee_attacks_monster"
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_CHARACTER_RANGED_CHARACTER_EVENT",
+    "eoc_type": "EVENT",
+    "required_event": "character_ranged_attacks_character",
+    "effect": [
+      {
+        "u_add_var": "last_event",
+        "type": "test",
+        "context": "event_talker",
+        "value": "character_ranged_attacks_character"
+      },
+      {
+        "npc_add_var": "last_event",
+        "type": "test",
+        "context": "event_talker",
+        "value": "character_ranged_attacks_character"
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_CHARACTER_RANGED_MONSTER_EVENT",
+    "eoc_type": "EVENT",
+    "required_event": "character_ranged_attacks_monster",
+    "effect": [
+      {
+        "u_add_var": "last_event",
+        "type": "test",
+        "context": "event_talker",
+        "value": "character_ranged_attacks_monster"
+      },
+      {
+        "npc_add_var": "last_event",
+        "type": "test",
+        "context": "event_talker",
+        "value": "character_ranged_attacks_monster"
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_CONTEXT_ROOT",
+    "effect": [
+      { "arithmetic": [ { "context_val": "var", "var_name": "simple" }, "=", { "const": 12 } ] },
+      {
+        "arithmetic": [
+          { "global_val": "var", "var_name": "test_context_simple" },
+          "=",
+          { "context_val": "var", "var_name": "simple" }
+        ]
+      },
+      { "run_eocs": "EOC_TEST_CONTEXT_CHILD" },
+      {
+        "arithmetic": [
+          { "global_val": "var", "var_name": "test_context_not_returned" },
+          "=",
+          { "context_val": "var", "var_name": "nested_simple" }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_CONTEXT_CHILD",
+    "effect": [
+      { "arithmetic": [ { "context_val": "var", "var_name": "nested_simple" }, "=", { "const": 7 } ] },
+      {
+        "arithmetic": [
+          { "global_val": "var", "var_name": "test_context_nested" },
+          "=",
+          { "context_val": "var", "var_name": "nested_simple" }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_VAR_INDIRECTION",
+    "effect": [
+      { "set_string_var": "key1", "target_var": { "context_val": "testing" } },
+      { "arithmetic": [ { "var_val": "var", "var_name": "testing" }, "=", { "const": 5 } ] },
+      {
+        "arithmetic": [
+          { "global_val": "var", "var_name": "test_var_global" },
+          "=",
+          { "global_val": "var", "var_name": "key1" },
+          "+",
+          { "var_val": "var", "var_name": "testing" }
+        ]
+      },
+      { "set_string_var": "u_key1", "target_var": { "context_val": "testing" } },
+      { "arithmetic": [ { "var_val": "var", "var_name": "testing" }, "=", { "const": 3 } ] },
+      {
+        "arithmetic": [
+          { "global_val": "var", "var_name": "test_var_u" },
+          "=",
+          { "u_val": "var", "var_name": "key1" },
+          "+",
+          { "var_val": "var", "var_name": "testing" }
+        ]
+      },
+      { "set_string_var": "_key1", "target_var": { "context_val": "testing" } },
+      { "arithmetic": [ { "var_val": "var", "var_name": "testing" }, "=", { "const": 2 } ] },
+      {
+        "arithmetic": [
+          { "global_val": "var", "var_name": "test_var_context" },
+          "=",
+          { "context_val": "var", "var_name": "key1" },
+          "+",
+          { "var_val": "var", "var_name": "testing" }
+        ]
+      },
+      { "set_string_var": "v_key1", "target_var": { "context_val": "testing" } },
+      { "set_string_var": "_key2", "target_var": { "context_val": "key1" } },
+      { "arithmetic": [ { "var_val": "var", "var_name": "testing" }, "=", { "const": 1 } ] },
+      {
+        "arithmetic": [
+          { "global_val": "var", "var_name": "test_var_nested" },
+          "=",
+          { "context_val": "var", "var_name": "key2" },
+          "+",
+          { "var_val": "var", "var_name": "testing" }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_STRING_VAR_INDIRECTION",
+    "effect": [
+      { "set_string_var": "test_string_key1", "target_var": { "context_val": "testing" } },
+      { "set_string_var": "Works", "target_var": { "global_val": "test_string_key1" } },
+      {
+        "set_string_var": { "var_val": "testing" },
+        "target_var": { "global_val": "test_string_key2" }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_STORED_CONDITION_ROOT",
+    "effect": [
+      {
+        "set_condition": "positive_input",
+        "condition": {
+          "compare_int": [ { "context_val": "var", "var_name": "stored_input" }, ">", { "const": 0 } ]
+        }
+      },
+      { "run_eocs": "EOC_TEST_STORED_CONDITION_FIXED" },
+      {
+        "set_string_var": "positive_input",
+        "target_var": { "context_val": "stored_condition_name" }
+      },
+      { "run_eocs": "EOC_TEST_STORED_CONDITION_VARIABLE" }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_STORED_CONDITION_FIXED",
+    "condition": { "get_condition": "positive_input" },
+    "effect": [
+      { "set_string_var": "1", "target_var": { "global_val": "test_stored_condition_fixed" } }
+    ],
+    "false_effect": [
+      { "set_string_var": "0", "target_var": { "global_val": "test_stored_condition_fixed" } }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_STORED_CONDITION_VARIABLE",
+    "condition": { "get_condition": { "context_val": "stored_condition_name" } },
+    "effect": [
+      { "set_string_var": "1", "target_var": { "global_val": "test_stored_condition_variable" } }
+    ],
+    "false_effect": [
+      { "set_string_var": "0", "target_var": { "global_val": "test_stored_condition_variable" } }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_ACTIVATE_MUTATION",
+    "effect": [ { "u_activate_trait": "TEST_EOC_MUTATION_ONESHOT" } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_ADD_TRAIT_VARIANTS",
+    "effect": [
+      { "u_add_trait": "eye_color", "variant": "brown" },
+      { "npc_add_trait": "eye_color", "variant": { "context_val": "npc_variant" } }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_IF_ELSE",
+    "effect": [
+      {
+        "if": { "compare_int": [ { "context_val": "var", "var_name": "if_input" }, ">", { "const": 0 } ] },
+        "then": [
+          { "set_string_var": "true", "target_var": { "global_val": "test_if_else_branch" } },
+          {
+            "if": { "compare_int": [ { "context_val": "var", "var_name": "if_input" }, ">", { "const": 5 } ] },
+            "then": { "set_string_var": "high", "target_var": { "global_val": "test_if_else_nested" } },
+            "else": { "set_string_var": "low", "target_var": { "global_val": "test_if_else_nested" } }
+          }
+        ],
+        "else": [
+          { "set_string_var": "false", "target_var": { "global_val": "test_if_else_branch" } },
+          {
+            "if": { "compare_int": [ { "context_val": "var", "var_name": "if_input" }, "==", { "const": 0 } ] },
+            "then": { "set_string_var": "zero", "target_var": { "global_val": "test_if_else_nested" } },
+            "else": { "set_string_var": "negative", "target_var": { "global_val": "test_if_else_nested" } }
+          }
+        ]
+      },
+      {
+        "if": { "compare_int": [ { "context_val": "var", "var_name": "if_input" }, "<", { "const": -100 } ] },
+        "then": { "set_string_var": "unexpected", "target_var": { "global_val": "test_if_else_no_else" } }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_DEACTIVATE_CURRENT_MUTATION",
+    "effect": [ { "u_deactivate_trait": { "context_val": "this" } } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_RUN_INV_ALL",
+    "effect": [ { "u_run_inv_eocs": "all", "true_eocs": [ "EOC_TEST_RUN_INV_MARK_ALL" ] } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_RUN_INV_MARK_ALL",
+    "effect": [ { "npc_add_var": "all", "type": "test", "context": "inventory_eoc", "value": "yes" } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_RUN_INV_WORN",
+    "effect": [
+      {
+        "u_run_inv_eocs": "all",
+        "true_eocs": [ "EOC_TEST_RUN_INV_MARK_WORN" ],
+        "search_data": [ { "id": "backpack", "worn_only": true } ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_RUN_INV_MARK_WORN",
+    "effect": [ { "npc_add_var": "worn", "type": "test", "context": "inventory_eoc", "value": "yes" } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_RUN_INV_WOOD",
+    "effect": [
+      {
+        "u_run_inv_eocs": "all",
+        "true_eocs": [ "EOC_TEST_RUN_INV_MARK_WOOD" ],
+        "search_data": [ { "material": "wood", "wielded_only": true } ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_RUN_INV_MARK_WOOD",
+    "effect": [ { "npc_add_var": "wood", "type": "test", "context": "inventory_eoc", "value": "yes" } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_RUN_INV_FLAG",
+    "effect": [
+      {
+        "u_run_inv_eocs": "all",
+        "true_eocs": [ "EOC_TEST_RUN_INV_MARK_FLAG" ],
+        "search_data": [ { "category": "weapons", "flags": [ "BELT_CLIP" ] } ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_RUN_INV_MARK_FLAG",
+    "effect": [ { "npc_add_var": "flag", "type": "test", "context": "inventory_eoc", "value": "yes" } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_RUN_INV_RANDOM",
+    "effect": [
+      {
+        "u_run_inv_eocs": "random",
+        "true_eocs": [ "EOC_TEST_RUN_INV_MARK_RANDOM" ],
+        "search_data": [ { "id": "backpack" } ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_RUN_INV_MARK_RANDOM",
+    "effect": [ { "npc_add_var": "random", "type": "test", "context": "inventory_eoc", "value": "yes" } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_RUN_INV_NO_MATCH",
+    "effect": [
+      {
+        "u_run_inv_eocs": "random",
+        "true_eocs": [ "EOC_TEST_RUN_INV_MARK_RANDOM" ],
+        "false_eocs": [ "EOC_TEST_RUN_INV_NO_MATCH_FALSE" ],
+        "search_data": [ { "id": "water" } ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_RUN_INV_INVALID",
+    "effect": [
+      {
+        "u_run_inv_eocs": { "context_val": "mode" },
+        "true_eocs": [ "EOC_TEST_RUN_INV_MARK_RANDOM" ],
+        "false_eocs": [ "EOC_TEST_RUN_INV_NO_MATCH_FALSE" ],
+        "search_data": [ { "id": "water" } ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_RUN_INV_NO_MATCH_FALSE",
+    "effect": [ { "u_add_var": "no_match", "type": "test", "context": "inventory_eoc", "value": "yes" } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_RUN_INV_MANUAL_NO_MATCH",
+    "effect": [
+      {
+        "u_run_inv_eocs": "manual",
+        "title": "Choose one test item",
+        "true_eocs": [ "EOC_TEST_RUN_INV_MARK_RANDOM" ],
+        "false_eocs": [ "EOC_TEST_RUN_INV_NO_MATCH_FALSE" ],
+        "search_data": [ { "id": "water" } ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_RUN_INV_MANUAL_MULT_NO_MATCH",
+    "effect": [
+      {
+        "u_run_inv_eocs": "manual_mult",
+        "title": "Choose several test items",
+        "true_eocs": [ "EOC_TEST_RUN_INV_MARK_RANDOM" ],
+        "false_eocs": [ "EOC_TEST_RUN_INV_NO_MATCH_FALSE" ],
+        "search_data": [ { "id": "water" } ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_RUN_INV_DYNAMIC",
+    "effect": [
+      {
+        "u_run_inv_eocs": { "context_val": "mode" },
+        "true_eocs": [ "EOC_TEST_RUN_INV_MARK_RANDOM" ],
+        "false_eocs": [ "EOC_TEST_RUN_INV_DYNAMIC_FALSE" ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_RUN_INV_DYNAMIC_FALSE",
+    "effect": [
+      { "u_adjust_var": "false_count", "type": "test", "context": "inventory_eoc", "adjustment": 1 }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_MARK_CURRENT_MUTATION",
+    "effect": [
+      { "arithmetic": [ { "global_val": "var", "var_name": "test_mutation_eoc" }, "=", { "const": 1 } ] },
+      {
+        "set_string_var": { "context_val": "this" },
+        "target_var": { "global_val": "test_mutation_context" }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_INCREMENT_MUTATION_EOC",
+    "effect": { "u_adjust_var": "count", "type": "test", "context": "mutation_eoc", "adjustment": 1 }
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_TRANSFORM_RADIUS",
+    "global": true,
+    "effect": [
+      { "u_location_variable": { "global_val": "test_transform" } },
+      {
+        "u_transform_radius": 5,
+        "ter_furn_transform": "test_grass_transform",
+        "target_var": { "global_val": "test_transform" }
+      },
+      {
+        "u_transform_radius": 5,
+        "ter_furn_transform": "test_dirt_transform",
+        "target_var": { "global_val": "test_transform" },
+        "time_in_future": "30 seconds"
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_TRANSFORM_LINE",
+    "global": true,
+    "effect": [
+      { "u_location_variable": { "global_val": "first" } },
+      { "npc_location_variable": { "global_val": "second" } },
+      {
+        "transform_line": "test_grass_transform",
+        "first": { "global_val": "first" },
+        "second": { "global_val": "second" }
+      }
+    ]
+  },
+  {
+    "type": "ter_furn_transform",
+    "id": "test_grass_transform",
+    "terrain": [ { "result": [ "t_dirt" ], "valid_terrain": [ "t_grass" ] } ]
+  },
+  {
+    "type": "ter_furn_transform",
+    "id": "test_dirt_transform",
+    "terrain": [ { "result": [ "t_grass" ], "valid_terrain": [ "t_dirt" ] } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_MAP_FLAGS",
+    "effect": [
+      {
+        "if": { "map_terrain_with_flag": "TRANSPARENT", "loc": { "context_val": "loc" } },
+        "then": { "set_string_var": "yes", "target_var": { "global_val": "test_map_terrain_flag" } },
+        "else": { "set_string_var": "no", "target_var": { "global_val": "test_map_terrain_flag" } }
+      },
+      {
+        "if": { "map_furniture_with_flag": "TRANSPARENT", "loc": { "context_val": "loc" } },
+        "then": { "set_string_var": "yes", "target_var": { "global_val": "test_map_furniture_flag" } },
+        "else": { "set_string_var": "no", "target_var": { "global_val": "test_map_furniture_flag" } }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_MAP_FLAGS_DEFAULT",
+    "effect": [
+      {
+        "if": { "map_terrain_with_flag": "TRANSPARENT" },
+        "then": { "set_string_var": "yes", "target_var": { "global_val": "test_map_terrain_flag" } },
+        "else": { "set_string_var": "no", "target_var": { "global_val": "test_map_terrain_flag" } }
+      },
+      {
+        "if": { "map_furniture_with_flag": "TRANSPARENT" },
+        "then": { "set_string_var": "yes", "target_var": { "global_val": "test_map_furniture_flag" } },
+        "else": { "set_string_var": "no", "target_var": { "global_val": "test_map_furniture_flag" } }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_MONSTER_TYPE_FLAG",
+    "condition": { "u_has_flag": "SEES" },
+    "effect": { "set_string_var": "yes", "target_var": { "global_val": "test_monster_type_flag" } }
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_FURNITURE_CONTEXT",
+    "effect": [
+      { "set_string_var": { "context_val": "this" }, "target_var": { "global_val": "test_furniture_this" } },
+      { "set_string_var": { "context_val": "pos" }, "target_var": { "global_val": "test_furniture_pos" } }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_MAP_SPAWN_DIRECT",
+    "effect": [ { "map_spawn_item": "knife_combat", "count": 2, "loc": { "context_val": "loc" } } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_MAP_SPAWN_CONTAINER",
+    "effect": [
+      {
+        "map_spawn_item": "water",
+        "count": 5,
+        "container": "jug_plastic",
+        "loc": { "context_val": "loc" }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_MAP_SPAWN_NONCHARGE_CONTAINER",
+    "effect": [
+      {
+        "map_spawn_item": "knife_combat",
+        "count": 2,
+        "container": "backpack",
+        "loc": { "context_val": "loc" }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_MAP_SPAWN_INVALID_CONTAINER",
+    "effect": [
+      {
+        "map_spawn_item": "knife_combat",
+        "container": "bottle_plastic",
+        "loc": { "context_val": "loc" }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_MAP_SPAWN_PARTIAL_CONTAINER",
+    "effect": [
+      {
+        "map_spawn_item": "knife_combat",
+        "count": 200,
+        "container": "backpack",
+        "loc": { "context_val": "loc" }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_MAP_SPAWN_GROUP",
+    "effect": [
+      {
+        "map_spawn_item": "test_tools_group",
+        "count": 9,
+        "container": "bottle_plastic",
+        "use_item_group": true,
+        "loc": { "context_val": "loc" }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_MAP_SPAWN_DEFAULT",
+    "effect": [ { "map_spawn_item": "knife_combat" } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_MAP_RUN_ALL",
+    "effect": [
+      {
+        "u_map_run_item_eocs": "all",
+        "loc": { "context_val": "loc" },
+        "min_radius": 1,
+        "max_radius": 2,
+        "search_data": [ { "id": "backpack" } ],
+        "true_eocs": [ "EOC_TEST_MAP_MARK_ALL" ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_MAP_MARK_ALL",
+    "effect": [ { "npc_add_var": "all", "type": "test", "context": "map_eoc", "value": "yes" } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_MAP_RUN_RANDOM",
+    "effect": [
+      {
+        "u_map_run_item_eocs": "random",
+        "loc": { "context_val": "loc" },
+        "min_radius": 1,
+        "max_radius": 2,
+        "search_data": [ { "id": "backpack" } ],
+        "true_eocs": [ "EOC_TEST_MAP_MARK_RANDOM" ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_MAP_MARK_RANDOM",
+    "effect": [ { "npc_add_var": "random", "type": "test", "context": "map_eoc", "value": "yes" } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_MAP_RUN_NO_MATCH",
+    "effect": [
+      {
+        "u_map_run_item_eocs": { "context_val": "mode" },
+        "loc": { "context_val": "loc" },
+        "max_radius": 2,
+        "search_data": [ { "id": "water" } ],
+        "true_eocs": [ "EOC_TEST_MAP_MARK_RANDOM" ],
+        "false_eocs": [ "EOC_TEST_MAP_FALSE_ONCE" ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_MAP_FALSE_ONCE",
+    "effect": [ { "u_adjust_var": "false_count", "type": "test", "context": "map_eoc", "adjustment": 1 } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_NPC_MAP_RUN_ALL",
+    "effect": [
+      {
+        "npc_map_run_item_eocs": "all",
+        "loc": { "context_val": "loc" },
+        "max_radius": 1,
+        "search_data": [ { "id": "backpack" } ],
+        "true_eocs": [ "EOC_TEST_NPC_MAP_MARK" ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_NPC_MAP_MARK",
+    "effect": [
+      { "u_add_var": "actor", "type": "test", "context": "map_eoc", "value": "yes" },
+      { "npc_add_var": "npc", "type": "test", "context": "map_eoc", "value": "yes" }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_FOREACH_ARRAY",
+    "effect": [
+      {
+        "foreach": "array",
+        "var": { "npc_val": "var", "var_name": "iterator", "type": "test", "context": "foreach" },
+        "target": [ "alpha", { "context_val": "dynamic" }, "omega" ],
+        "effect": [
+          { "npc_adjust_var": "array_count", "type": "test", "context": "foreach", "adjustment": 1 },
+          {
+            "if": {
+              "compare_string": [
+                "beta",
+                { "npc_val": "var", "var_name": "iterator", "type": "test", "context": "foreach" }
+              ]
+            },
+            "then": { "npc_add_var": "saw_beta", "type": "test", "context": "foreach", "value": "yes" }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_FOREACH_REGISTRIES",
+    "effect": [
+      {
+        "foreach": "ids",
+        "var": { "context_val": "foreach_id" },
+        "target": "flag",
+        "effect": {
+          "if": { "compare_string": [ "BELT_CLIP", { "context_val": "foreach_id" } ] },
+          "then": { "u_add_var": "saw_flag", "type": "test", "context": "foreach", "value": "yes" }
+        }
+      },
+      {
+        "foreach": "ids",
+        "var": { "context_val": "foreach_id" },
+        "target": "trait",
+        "effect": {
+          "if": { "compare_string": [ "TEST_DUMMY", { "context_val": "foreach_id" } ] },
+          "then": { "u_add_var": "saw_trait", "type": "test", "context": "foreach", "value": "yes" }
+        }
+      },
+      {
+        "foreach": "ids",
+        "var": { "context_val": "foreach_id" },
+        "target": "vitamin",
+        "effect": {
+          "if": { "compare_string": [ "test_vitv", { "context_val": "foreach_id" } ] },
+          "then": { "u_add_var": "saw_vitamin", "type": "test", "context": "foreach", "value": "yes" }
+        }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_FOREACH_GROUPS",
+    "effect": [
+      {
+        "foreach": "item_group",
+        "var": { "context_val": "foreach_id" },
+        "target": "test_tools_group",
+        "effect": [
+          { "u_adjust_var": "item_count", "type": "test", "context": "foreach", "adjustment": 1 },
+          {
+            "if": { "compare_string": [ "hammer", { "context_val": "foreach_id" } ] },
+            "then": { "u_add_var": "saw_hammer", "type": "test", "context": "foreach", "value": "yes" }
+          },
+          {
+            "if": { "compare_string": [ "bow_saw", { "context_val": "foreach_id" } ] },
+            "then": { "u_add_var": "saw_bow_saw", "type": "test", "context": "foreach", "value": "yes" }
+          }
+        ]
+      },
+      {
+        "foreach": "monstergroup",
+        "var": { "context_val": "foreach_id" },
+        "target": "test_top_level_mongroup",
+        "effect": [
+          { "u_adjust_var": "monster_count", "type": "test", "context": "foreach", "adjustment": 1 },
+          {
+            "if": { "compare_string": [ "mon_test_CBM", { "context_val": "foreach_id" } ] },
+            "then": { "u_add_var": "saw_direct_monster", "type": "test", "context": "foreach", "value": "yes" }
+          },
+          {
+            "if": { "compare_string": [ "mon_test_speed_desc_base", { "context_val": "foreach_id" } ] },
+            "then": { "u_add_var": "saw_nested_monster", "type": "test", "context": "foreach", "value": "yes" }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_DYNAMIC_RUN_ROOT",
+    "effect": [
+      {
+        "set_string_var": "EOC_TEST_DYNAMIC_RUN_VARIABLE",
+        "target_var": { "context_val": "selected_eoc" }
+      },
+      { "run_eocs": [ "EOC_TEST_DYNAMIC_RUN_FIXED", { "context_val": "selected_eoc" } ] }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_DYNAMIC_RUN_FIXED",
+    "effect": { "u_adjust_var": "fixed", "type": "test", "context": "dynamic_run", "adjustment": 1 }
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_DYNAMIC_RUN_VARIABLE",
+    "effect": { "u_adjust_var": "variable", "type": "test", "context": "dynamic_run", "adjustment": 1 }
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_DYNAMIC_QUEUE_ROOT",
+    "effect": [
+      {
+        "set_string_var": "EOC_TEST_DYNAMIC_QUEUE_VARIABLE",
+        "target_var": { "context_val": "selected_eoc" }
+      },
+      {
+        "queue_eocs": [ "EOC_TEST_DYNAMIC_QUEUE_FIXED", { "context_val": "selected_eoc" } ],
+        "time_in_future": 0
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_DYNAMIC_QUEUE_FIXED",
+    "effect": { "u_adjust_var": "fixed", "type": "test", "context": "dynamic_queue", "adjustment": 1 }
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_DYNAMIC_QUEUE_VARIABLE",
+    "effect": { "u_adjust_var": "variable", "type": "test", "context": "dynamic_queue", "adjustment": 1 }
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_QUERY_TILE_AVATAR",
+    "effect": [
+      {
+        "if": {
+          "u_query_tile": "anywhere",
+          "target_var": { "u_val": "anywhere_target", "type": "test", "context": "query_tile" },
+          "message": "Select any test tile",
+          "z_level": true
+        },
+        "then": { "u_adjust_var": "true_count", "type": "test", "context": "query_tile", "adjustment": 1 },
+        "else": { "u_adjust_var": "false_count", "type": "test", "context": "query_tile", "adjustment": 1 }
+      },
+      {
+        "if": {
+          "u_query_tile": "line_of_sight",
+          "target_var": { "u_val": "los_target", "type": "test", "context": "query_tile" },
+          "range": 7,
+          "message": "Select a visible test tile"
+        },
+        "then": { "u_adjust_var": "true_count", "type": "test", "context": "query_tile", "adjustment": 1 },
+        "else": { "u_adjust_var": "false_count", "type": "test", "context": "query_tile", "adjustment": 1 }
+      },
+      {
+        "if": {
+          "u_query_tile": "around",
+          "target_var": { "u_val": "around_target", "type": "test", "context": "query_tile" },
+          "message": "Select an adjacent test tile"
+        },
+        "then": { "u_adjust_var": "true_count", "type": "test", "context": "query_tile", "adjustment": 1 },
+        "else": { "u_adjust_var": "false_count", "type": "test", "context": "query_tile", "adjustment": 1 }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_QUERY_TILE_NON_AVATAR",
+    "effect": [
+      {
+        "if": {
+          "npc_query_tile": "anywhere",
+          "target_var": { "npc_val": "target", "type": "test", "context": "query_tile" }
+        },
+        "then": { "npc_adjust_var": "true_count", "type": "test", "context": "query_tile", "adjustment": 1 },
+        "else": { "npc_adjust_var": "false_count", "type": "test", "context": "query_tile", "adjustment": 1 }
+      },
+      {
+        "if": {
+          "npc_query_tile": "line_of_sight",
+          "target_var": { "npc_val": "target", "type": "test", "context": "query_tile" },
+          "range": 10,
+          "message": "Select a test tile"
+        },
+        "then": { "npc_adjust_var": "true_count", "type": "test", "context": "query_tile", "adjustment": 1 },
+        "else": { "npc_adjust_var": "false_count", "type": "test", "context": "query_tile", "adjustment": 1 }
+      },
+      {
+        "if": {
+          "npc_query_tile": "around",
+          "target_var": { "npc_val": "target", "type": "test", "context": "query_tile" }
+        },
+        "then": { "npc_adjust_var": "true_count", "type": "test", "context": "query_tile", "adjustment": 1 },
+        "else": { "npc_adjust_var": "false_count", "type": "test", "context": "query_tile", "adjustment": 1 }
+      }
+    ]
+  }
+]

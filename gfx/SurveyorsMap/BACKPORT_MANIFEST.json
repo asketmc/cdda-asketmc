@@ -1,0 +1,11 @@
+{
+  "release_tag": "2026-08-23",
+  "release_commit": "1f1988c5e144473f894fcb1e2914af51fd08b7af",
+  "release_source": "https://github.com/I-am-Erk/CDDA-Tilesets",
+  "upstream_ids": 3037,
+  "legacy_ids_retained": 65,
+  "legacy_images": [
+    "compat_0g_overmap.png"
+  ],
+  "rotation_arrays_adapted": 2133
+}

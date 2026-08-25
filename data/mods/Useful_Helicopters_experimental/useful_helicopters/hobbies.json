@@ -1,0 +1,21 @@
+[
+  {
+    "type": "profession",
+    "subtype": "hobby",
+    "id": "hobby_heli_pilot_useful",
+    "name": "Piloting (Useful Helicopters)",
+    "description": "You know how to safely operate a flying vehicle.",
+    "points": 0,
+    "skills": [ { "level": 2, "name": "driving" }, { "level": 2, "name": "mechanics" } ],
+    "proficiencies": [ "prof_helicopter_pilot" ]
+  },
+  {
+    "type": "profession",
+    "subtype": "hobby",
+    "id": "hobby_heli_mechanic",
+    "name": "Airframe and Powerplant Mechanic",
+    "description": "You are a certified A&P mechanic who is able to build and modify aircraft.",
+    "points": 0,
+    "proficiencies": [ "prof_aircraft_mechanic" ]
+  }
+]

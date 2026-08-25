@@ -1,0 +1,42 @@
+name: Lightweight quality
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  portable-contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Fetch immutable 0.G audit baseline
+        run: git fetch --no-tags --depth=1 https://github.com/CleverRaven/Cataclysm-DDA.git d6ec466140839dd70c1a43671eb4a08b007695c2
+      - name: Install graphics-test dependencies
+        run: python3 -m pip install --disable-pip-version-check -r tools/gfx_tools/ultica_hires/requirements.txt
+      - name: Python feature contracts
+        run: |
+          python3 -m unittest \
+            tools.test_h5_interface_qol \
+            tools.test_h6_antigrind \
+            tools.test_h6_backup_generator \
+            tools.gfx_tools.test_backport_tileset_release \
+            tools.gfx_tools.test_build_ultica_hires \
+            tools.gfx_tools.test_beauty_backport_assets \
+            tools.gfx_tools.test_visual_ui_donor_contracts
+      - name: Additive audit self-test
+        run: python3 tools/additive_audit.py --self-test
+      - name: Fail-closed additive audit
+        run: python3 tools/additive_audit.py --target HEAD
