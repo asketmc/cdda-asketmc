@@ -1,4 +1,4 @@
-name: Lightweight quality
+name: KISS PR gate
 
 on:
   pull_request:

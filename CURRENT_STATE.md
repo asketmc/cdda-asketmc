@@ -28,9 +28,13 @@ python tools/additive_audit.py --target HEAD
 
 ## Release boundary
 
-`BUILD_INFO.txt` records the production command. Hosted checks cover portable
-Python/data contracts only. Tag `v0.G-additive-2026.08.25` identifies the
-Windows Tiles+Sound release; its asset checksum is published beside the ZIP.
-The full Catch build has a pre-existing EOC-test compile failure, so the P0
-release gates are the exact-tree Windows build, focused changed-object compile,
-`--check-mods dda`, and copied-save load smoke.
+`BUILD_INFO.txt` records the production command. Pull requests run the fast
+portable contracts and a real Windows x64 Tiles+Sound compile/link gate using
+MXE GCC 11.2. Pull-request binaries are not retained. A
+`v0.G-additive-*` tag packages that exact commit and publishes its ZIP and
+SHA256 checksum to GitHub Releases.
+
+Tag `v0.G-additive-2026.08.25` identifies the current Windows Tiles+Sound
+release. The full Catch build has a pre-existing EOC-test compile failure, and
+cross-compilation cannot prove save behavior on Windows; a copied-save load
+smoke remains the final release recommendation check.

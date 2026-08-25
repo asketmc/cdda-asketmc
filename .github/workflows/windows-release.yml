@@ -1,0 +1,153 @@
+name: Windows build and release
+
+on:
+  pull_request:
+  push:
+    tags:
+      - "v0.G-additive-*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-build-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+
+jobs:
+  windows-compile:
+    name: Windows Tiles+Sound (MXE GCC 11)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_COMPRESS: "true"
+      CCACHE_MAXSIZE: 2G
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify release tag belongs to main
+        if: github.ref_type == 'tag'
+        run: git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
+
+      - name: Install host tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ccache zip
+
+      - name: Restore MXE toolchain
+        id: mxe-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/mxe
+          key: mxe-gcc11.2-x86_64-${{ hashFiles('build-scripts/libbacktrace-x86_64-w64-mingw32-sha256') }}
+
+      - name: Install verified MXE toolchain
+        if: steps.mxe-cache.outputs.cache-hit != 'true'
+        run: |
+          curl --fail --location --retry 3 \
+            --output mxe-x86_64.tar.xz \
+            https://github.com/BrettDong/MXE-GCC/releases/download/mxe-gcc-11.2/mxe-x86_64.tar.xz
+          curl --fail --location --retry 3 \
+            --output mxe-x86_64.tar.xz.sha256 \
+            https://github.com/BrettDong/MXE-GCC/releases/download/mxe-gcc-11.2/mxe-x86_64.tar.xz.sha256
+          sha256sum --check mxe-x86_64.tar.xz.sha256
+          tar -xJf mxe-x86_64.tar.xz -C "${RUNNER_TEMP}"
+
+          curl --fail --location --retry 3 \
+            --output libbacktrace-x86_64-w64-mingw32.tar.gz \
+            https://github.com/Qrox/libbacktrace/releases/download/2020-01-03/libbacktrace-x86_64-w64-mingw32.tar.gz
+          sha256sum --check build-scripts/libbacktrace-x86_64-w64-mingw32-sha256
+          tar -xzf libbacktrace-x86_64-w64-mingw32.tar.gz \
+            --exclude=LICENSE \
+            -C "${RUNNER_TEMP}/mxe/usr/x86_64-w64-mingw32.static.gcc11"
+
+      - name: Restore compiler cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-windows-gcc11-${{ github.sha }}
+          restore-keys: ccache-windows-gcc11-
+
+      - name: Compile and link Windows build
+        shell: bash
+        run: |
+          cross="${RUNNER_TEMP}/mxe/usr/bin/x86_64-w64-mingw32.static.gcc11-"
+          test -x "${cross}g++"
+          "${cross}g++" --version
+          ccache --zero-stats
+          ccache --max-size "${CCACHE_MAXSIZE}"
+
+          short_sha="${GITHUB_SHA:0:12}"
+          version="0.G-additive-${short_sha}"
+          target="cataclysm-tiles.exe"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            cat > VERSION.txt <<EOF
+          build type: Windows x64 Tiles+Sound
+          version: ${version}
+          commit sha: ${GITHUB_SHA}
+          commit url: https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}
+          EOF
+            target="bindist"
+          fi
+
+          make -j"$(nproc)" \
+            "VERSION=${version}" \
+            "CROSS=${cross}" \
+            CCACHE=1 RELEASE=1 TILES=1 SOUND=1 LOCALIZE=0 RUNTESTS=0 \
+            LINTJSON=0 ASTYLE=0 WARNINGS=-w BACKTRACE=1 LIBBACKTRACE=1 PCH=0 \
+            "${target}"
+
+          test -s cataclysm-tiles.exe
+          file cataclysm-tiles.exe | grep -q "PE32+ executable"
+          ccache --show-stats
+
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            source_zip="cataclysmdda-${version}.zip"
+            asset="cdda-0g-additive-asketmc-${short_sha}-windows-x64-tiles-sound.zip"
+            test -s "${source_zip}"
+            mv "${source_zip}" "${asset}"
+            sha256sum "${asset}" > SHA256SUMS.txt
+          fi
+
+      - name: Stage tagged release bundle
+        if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: |
+            cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip
+            SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 1
+
+  publish-release:
+    name: Publish tagged release
+    if: github.ref_type == 'tag'
+    needs: windows-compile
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: windows-release
+      - name: Verify and publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          sha256sum --check SHA256SUMS.txt
+          asset=$(find . -maxdepth 1 -name 'cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip' -print -quit)
+          test -n "${asset}"
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" "${asset}" SHA256SUMS.txt --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" "${asset}" SHA256SUMS.txt \
+              --verify-tag \
+              --title "CDDA ${GITHUB_REF_NAME}" \
+              --generate-notes
+          fi

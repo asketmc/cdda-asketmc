@@ -16,3 +16,16 @@ The executable must report the requested revision with --version. Run focused
 tests, the additive audit, --check-mods dda, and a copied-save load smoke before
 publishing a release. This file is a command reference, not proof that a given
 commit has been packaged.
+
+Hosted automation:
+
+- `KISS PR gate` runs the portable feature contracts and fail-closed additive
+  audit on pull requests.
+- `Windows build and release` compiles and links the Windows x64 Tiles+Sound
+  executable on pull requests using the cached, checksum-verified MXE GCC 11.2
+  toolchain. Pull-request builds do not upload binaries.
+- Pushing a `v0.G-additive-*` tag builds the same Windows target once, packages
+  it, writes `SHA256SUMS.txt`, and publishes both files to GitHub Releases.
+
+Hosted compilation does not replace the copied-save smoke test on real Windows
+hardware. That remains the final check before recommending a build for play.
