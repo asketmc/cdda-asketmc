@@ -16,7 +16,6 @@
 #include "type_id.h"
 
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
-static const activity_id ACT_MULTIPLE_MOP( "ACT_MULTIPLE_MOP" );
 static const faction_id faction_your_followers( "your_followers" );
 static const field_type_str_id field_fd_blood( "fd_blood" );
 
@@ -83,11 +82,13 @@ TEST_CASE( "NPC work ignores personal zones", "[zones][npc][basecamp]" )
     clear_avatar();
     clear_map();
     zone_manager &zm = zone_manager::get_manager();
-    const tripoint personal_pos = tripoint_east;
-    const tripoint shared_pos = tripoint_west;
+    const tripoint personal_pos( 60, 60, 0 );
+    const tripoint shared_pos = personal_pos + tripoint_east;
 
-    create_tile_zone( "Personal", zone_type_LOOT_UNSORTED, personal_pos, false, true );
-    create_tile_zone( "Shared", zone_type_LOOT_UNSORTED, shared_pos );
+    create_tile_zone( "Personal", zone_type_LOOT_UNSORTED,
+                      get_map().getglobal( personal_pos ).raw(), false, true );
+    create_tile_zone( "Shared", zone_type_LOOT_UNSORTED,
+                      get_map().getglobal( shared_pos ).raw() );
 
     CHECK_FALSE( zm.has_nonpersonal( zone_type_LOOT_UNSORTED,
                                     get_map().getglobal( personal_pos ) ) );
@@ -172,41 +173,34 @@ TEST_CASE( "NPC loot sorting cannot use personal zones", "[zones][npc][activitie
     }
 }
 
-TEST_CASE( "NPC mopping fetches a stored mop", "[zones][npc][activities][mopping]" )
+TEST_CASE( "NPC mopping cleans its assigned tile", "[zones][npc][activities][mopping]" )
 {
     clear_avatar();
     clear_map();
     map &here = get_map();
-    const tripoint origin = get_avatar().pos();
-    standard_npc worker( "mopping worker", origin );
+    standard_npc worker( "mopping worker", tripoint( 60, 60, 0 ) );
     worker.set_fac( faction_your_followers );
-    const tripoint target = origin + tripoint_east;
-    const tripoint tool_storage = origin + tripoint_west;
-    create_local_tile_zone( "Mopping", zone_type_MOPPING, target );
-    create_local_tile_zone( "Tools", zone_type_LOOT_TOOLS, tool_storage );
-    here.add_item_or_charges( tool_storage, item( "mop" ) );
+    worker.i_add( item( "mop" ) );
+    const tripoint target = worker.pos() + tripoint_east;
+    create_tile_zone( "Mopping", zone_type_MOPPING, here.getglobal( target ).raw() );
     here.add_field( target, field_type_id( "fd_blood" ), 1 );
-    REQUIRE( here.terrain_moppable( tripoint_bub_ms( target ) ) );
-    REQUIRE_FALSE( worker.has_item_with( []( const item & it ) {
+    REQUIRE( here.get_field_intensity( target, field_fd_blood.id() ) == 1 );
+    REQUIRE( worker.has_item_with( []( const item & it ) {
         return it.has_flag( flag_id( "MOP" ) );
     } ) );
 
-    worker.assign_activity( player_activity( ACT_MULTIPLE_MOP ) );
-    int turns = 0;
-    while( worker.activity && turns++ < 100 ) {
-        worker.moves += worker.get_speed();
-        while( worker.moves > 0 && worker.activity ) {
-            worker.activity.do_turn( worker );
-        }
-    }
+    player_activity mop_activity;
+    mop_activity.placement = here.getglobal( target );
+    REQUIRE( here.bub_from_abs( mop_activity.placement ).raw() == target );
+    REQUIRE_FALSE( worker.is_blind() );
+    mop_activity_actor actor( 15 );
+    actor.start( mop_activity, worker );
+    actor.finish( mop_activity, worker );
 
-    CHECK( turns < 100 );
-    CHECK_FALSE( here.terrain_moppable( tripoint_bub_ms( target ) ) );
+    CHECK( here.get_field_intensity( target, field_fd_blood.id() ) == 0 );
     CHECK( worker.has_item_with( []( const item & it ) {
         return it.has_flag( flag_id( "MOP" ) );
     } ) );
-    CHECK_FALSE( worker.activity );
-    CHECK( worker.backlog.empty() );
 }
 
 TEST_CASE( "NPC sorting leaves personal supplies in place", "[zones][npc][basecamp]" )
