@@ -1,6 +1,8 @@
 #include "cata_catch.h"
 #include "item.h"
 
+#include <algorithm>
+#include <array>
 #include <cmath>
 #include <initializer_list>
 #include <limits>
@@ -10,16 +12,22 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "enums.h"
+#include "explosion.h"
+#include "fault.h"
 #include "flag.h"
 #include "game.h"
 #include "item_factory.h"
 #include "item_pocket.h"
 #include "itype.h"
+#include "map.h"
+#include "map_helpers.h"
 #include "math_defines.h"
 #include "monstergenerator.h"
 #include "mtype.h"
+#include "options_helpers.h"
 #include "player_helpers.h"
 #include "ret_val.h"
+#include "rng.h"
 #include "test_data.h"
 #include "type_id.h"
 #include "units.h"
@@ -36,6 +44,107 @@ static const itype_id itype_test_mp3( "test_mp3" );
 static const itype_id itype_test_smart_phone( "test_smart_phone" );
 static const itype_id itype_test_snippet_description( "test_snippet_description" );
 static const itype_id itype_test_waterproof_bag( "test_waterproof_bag" );
+static const itype_id itype_smart_phone( "smart_phone" );
+
+static const std::array<fault_id, 3> repairable_emp_faults = {
+    fault_id( "fault_electronic_blown_fuse" ),
+    fault_id( "fault_electronic_blown_capacitor" ),
+    fault_id( "fault_electronic_shorted_circuit" )
+};
+
+static bool is_repairable_emp_fault( const fault_id &fault )
+{
+    return std::find( repairable_emp_faults.begin(), repairable_emp_faults.end(), fault ) !=
+           repairable_emp_faults.end();
+}
+
+TEST_CASE( "EMP faults disable electronics and provide repairs", "[item][fault][emp]" )
+{
+    for( const fault_id &fault : repairable_emp_faults ) {
+        item phone( itype_test_smart_phone );
+        phone.faults.insert( fault );
+        CHECK( phone.is_broken() );
+        CHECK_FALSE( fault->mending_methods().empty() );
+    }
+
+    item rebooting_phone( itype_test_smart_phone );
+    rebooting_phone.faults.insert( fault_id( "fault_emp_reboot" ) );
+    CHECK( rebooting_phone.is_broken() );
+    CHECK( rebooting_phone.needs_processing() );
+}
+
+TEST_CASE( "EMP reboot resolves or becomes repairable", "[item][fault][emp]" )
+{
+    rng_set_engine_seed( 424242 );
+    map &here = get_map();
+    const fault_id reboot_fault( "fault_emp_reboot" );
+    int successful_reboots = 0;
+    int shorted_reboots = 0;
+
+    for( int sample = 0; sample < 200; ++sample ) {
+        item phone( itype_smart_phone );
+        phone.faults.insert( reboot_fault );
+
+        for( int turn = 0; turn < 2000 && phone.has_fault( reboot_fault ); ++turn ) {
+            phone.process( here, nullptr, tripoint_zero );
+        }
+
+        REQUIRE_FALSE( phone.has_fault( reboot_fault ) );
+        if( phone.faults.empty() ) {
+            ++successful_reboots;
+        } else {
+            REQUIRE( phone.faults.size() == 1 );
+            const fault_id shorted_fault = *phone.faults.begin();
+            CHECK( is_repairable_emp_fault( shorted_fault ) );
+            CHECK_FALSE( shorted_fault->mending_methods().empty() );
+            ++shorted_reboots;
+        }
+    }
+
+    CHECK( successful_reboots > 0 );
+    CHECK( shorted_reboots > 0 );
+}
+
+TEST_CASE( "EMP blast wires repairable and temporary faults", "[item][fault][emp]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &guy = get_avatar();
+    map &here = get_map();
+    const tripoint blast = guy.pos() + tripoint_east;
+    override_option disable_electronics( "EMP_DISABLE_ELECTRONICS", "true" );
+
+    SECTION( "normal EMP applies a repairable fault and deactivates the item" ) {
+        override_option game_emp( "GAME_EMP", "false" );
+        item &phone = here.add_item( blast, item( itype_smart_phone ) );
+        phone.active = true;
+
+        explosion_handler::emp_blast( blast );
+
+        CHECK_FALSE( phone.active );
+        REQUIRE( phone.faults.size() == 1 );
+        CHECK( is_repairable_emp_fault( *phone.faults.begin() ) );
+        CHECK_FALSE( phone.has_own_flag( flag_ITEM_BROKEN ) );
+    }
+
+    SECTION( "game EMP schedules the item and completes its reboot" ) {
+        override_option game_emp( "GAME_EMP", "true" );
+        item &phone = here.add_item( blast, item( itype_smart_phone ) );
+        phone.active = true;
+        const fault_id reboot_fault( "fault_emp_reboot" );
+        REQUIRE( here.get_submaps_with_active_items().empty() );
+
+        explosion_handler::emp_blast( blast );
+
+        CHECK_FALSE( phone.active );
+        REQUIRE( phone.has_fault( reboot_fault ) );
+        REQUIRE_FALSE( here.get_submaps_with_active_items().empty() );
+        for( int turn = 0; turn < 2000 && phone.has_fault( reboot_fault ); ++turn ) {
+            here.process_items();
+        }
+        CHECK_FALSE( phone.has_fault( reboot_fault ) );
+    }
+}
 
 TEST_CASE( "item_description_snippets_expand_once", "[item][snippet]" )
 {
