@@ -10,6 +10,8 @@ normalization. Modern UltiCa and SurveyorsMap four-direction arrays are adapted
 to the 0.G N/E/S/W contract; legacy compatibility sheets remain unchanged.
 Selected recipe lookup, inventory-letter assignment, and repair-selector paths
 use bounded caches and early filtering without changing their displayed results.
+Character-rooted contained item locations now resolve lazily after unloaded NPCs
+are registered, preserving interrupted activity targets across save/load.
 
 ## Fast validation
 

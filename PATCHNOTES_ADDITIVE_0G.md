@@ -13,6 +13,9 @@ No public binary release has yet been published from this repository.
   while preserving the displayed success, damage, and component values.
 - TODO: add granular Catch coverage for recipe-source filtering, modified-key
   invlet reservation, and repair-cache equivalence; the Windows build is the P0 gate.
+- Fixed save/load resolution for items inside containers carried by unloaded
+  NPCs.  Interrupted follower and prisoner activities no longer emit cascades
+  of missing-owner, lost-target, and invalid-parent `item_location` errors.
 - Fixed an NPC dialogue crash when closing the final categorized talk topic.
 - Normalized current UltiCa and SurveyorsMap directional sprites to the 0.G
   rotation contract. This fixes east/west mirroring for vehicles, diagonal
