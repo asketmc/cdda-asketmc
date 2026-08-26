@@ -4,6 +4,7 @@
 #include "calendar.h"
 #include "cata_catch.h"
 #include "faction.h"
+#include "field_type.h"
 #include "game.h"
 #include "item.h"
 #include "json.h"
@@ -18,6 +19,9 @@ static const activity_id ACT_FIRSTAID( "ACT_FIRSTAID" );
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 static const activity_id ACT_WAIT_NPC( "ACT_WAIT_NPC" );
 
+static const bionic_id bio_nanobots( "bio_nanobots" );
+static const bionic_id bio_power_storage( "bio_power_storage" );
+
 static const efftype_id effect_nausea( "nausea" );
 
 static const faction_id faction_your_followers( "your_followers" );
@@ -28,6 +32,7 @@ static const itype_id itype_apple( "apple" );
 static const itype_id itype_aspirin( "aspirin" );
 static const itype_id itype_energy_drink( "energy_drink" );
 static const itype_id itype_flour( "flour" );
+static const itype_id itype_grenade_act( "grenade_act" );
 static const itype_id itype_knife_chef( "knife_chef" );
 static const itype_id itype_meat_cooked( "meat_cooked" );
 static const itype_id itype_meat_frond( "meat_frond" );
@@ -86,6 +91,14 @@ void finish_firstaid_only( npc &guy )
     }
     REQUIRE_FALSE( guy.activity.id() == ACT_FIRSTAID );
 }
+
+void activate_nanobots( npc &guy )
+{
+    guy.add_bionic( bio_power_storage );
+    guy.set_power_level( guy.get_max_power_level() );
+    give_and_activate_bionic( guy, bio_nanobots );
+    REQUIRE( guy.has_active_bionic( bio_nanobots ) );
+}
 } // namespace
 
 TEST_CASE( "NPC first aid starts only when safe", "[npc][needs][medicine]" )
@@ -103,7 +116,7 @@ TEST_CASE( "NPC first aid starts only when safe", "[npc][needs][medicine]" )
 
     SECTION( "self healing starts when safe" ) {
         CHECK( start_selected_healing( guy, 0.0f ) );
-        process_activity( guy );
+        finish_firstaid_only( guy );
         CHECK( guy.has_effect( efftype_id( "bandaged" ), arm ) );
     }
 }
@@ -126,7 +139,7 @@ TEST_CASE( "NPC ally healing follows the follower rule", "[npc][needs][medicine]
     SECTION( "ally healing enabled" ) {
         guy.rules.set_flag( ally_rule::allow_heal_others );
         CHECK( start_selected_healing( guy, 0.0f ) );
-        process_activity( guy );
+        finish_firstaid_only( guy );
         CHECK( patient.has_effect( efftype_id( "bandaged" ), arm ) );
     }
 }
@@ -331,6 +344,79 @@ TEST_CASE( "NPC healing preserves stashed work exactly once",
     CHECK( guy.activity.id() == ACT_WAIT_NPC );
     REQUIRE( guy.backlog.size() == 1 );
     CHECK( guy.backlog.front().id() == ACT_MOVE_LOOT );
+}
+
+TEST_CASE( "NPC healing preserves the complete activity backlog",
+           "[npc][needs][medicine][activity]" )
+{
+    npc &guy = setup_medicine_npc();
+    const bodypart_id arm( "arm_r" );
+    guy.apply_damage( nullptr, arm, 25 );
+    guy.i_add( item( itype_bandages ) );
+    guy.assign_activity( ACT_WAIT_NPC, 5000 );
+    guy.backlog.emplace_back( ACT_MOVE_LOOT );
+    REQUIRE_FALSE( guy.backlog.front().auto_resume );
+
+    REQUIRE( start_selected_healing( guy, 0.0f ) );
+    finish_firstaid_only( guy );
+
+    CHECK( guy.activity.id() == ACT_WAIT_NPC );
+    REQUIRE( guy.backlog.size() == 1 );
+    CHECK( guy.backlog.front().id() == ACT_MOVE_LOOT );
+    CHECK_FALSE( guy.backlog.front().auto_resume );
+}
+
+TEST_CASE( "NPC healing does not duplicate a naturally stashed backlog",
+           "[npc][needs][medicine][activity]" )
+{
+    npc &guy = setup_medicine_npc();
+    const bodypart_id arm( "arm_r" );
+    guy.apply_damage( nullptr, arm, 25 );
+    guy.i_add( item( itype_bandages ) );
+    guy.assign_activity( ACT_WAIT_NPC, 5000 );
+    guy.backlog.emplace_back( ACT_MOVE_LOOT );
+    guy.activity.placement = tripoint_abs_ms( tripoint( 100000, 100000, 0 ) );
+
+    REQUIRE( guy.check_outbounds_activity( guy.activity ) );
+    REQUIRE( guy.activity.is_null() );
+    REQUIRE( guy.has_stashed_activity() );
+    REQUIRE( guy.get_stashed_backlog_activity().id() == ACT_MOVE_LOOT );
+    REQUIRE( guy.backlog.size() == 1 );
+
+    REQUIRE( start_selected_healing( guy, 0.0f ) );
+    CHECK( guy.backlog.empty() );
+    finish_firstaid_only( guy );
+    REQUIRE( guy.has_stashed_activity() );
+    CHECK( guy.backlog.empty() );
+
+    guy.assign_stashed_activity();
+    CHECK( guy.activity.id() == ACT_WAIT_NPC );
+    REQUIRE( guy.backlog.size() == 1 );
+    CHECK( guy.backlog.front().id() == ACT_MOVE_LOOT );
+}
+
+TEST_CASE( "NPC nanobot healing stops for immediate hazards",
+           "[npc][needs][medicine][danger]" )
+{
+    npc &guy = setup_medicine_npc();
+    map &here = get_map();
+    activate_nanobots( guy );
+
+    SECTION( "hostile target" ) {
+        spawn_test_monster( "mon_zombie_hulk", guy.pos() + tripoint_east );
+    }
+    SECTION( "dangerous field" ) {
+        REQUIRE( here.add_field( guy.pos(), fd_acid, 2 ) );
+    }
+    SECTION( "imminent explosive" ) {
+        item grenade( itype_grenade_act );
+        grenade.active = true;
+        grenade.charges = 1;
+        here.add_item_or_charges( guy.pos() + tripoint_east, grenade );
+    }
+
+    guy.move();
+    CHECK_FALSE( guy.has_active_bionic( bio_nanobots ) );
 }
 
 TEST_CASE( "NPC uses vitamin medicine only for a deficiency", "[npc][needs][vitamins]" )

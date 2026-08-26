@@ -1375,7 +1375,9 @@ bool Character::has_stashed_activity() const
 void Character::assign_stashed_activity()
 {
     activity = stashed_outbounds_activity;
-    backlog.push_front( stashed_outbounds_backlog );
+    if( stashed_outbounds_backlog ) {
+        backlog.push_front( stashed_outbounds_backlog );
+    }
     cancel_stashed_activity();
 }
 
