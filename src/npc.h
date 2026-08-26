@@ -348,7 +348,8 @@ enum class ally_rule : int {
     forbid_engage = 16384,
     follow_distance_2 = 32768,
     lock_doors = 65536,
-    avoid_locks = 131072
+    avoid_locks = 131072,
+    allow_heal_others = 262144
 };
 
 struct ally_rule_data {
@@ -412,6 +413,13 @@ const std::unordered_map<std::string, ally_rule_data> ally_rule_strs = { {
                 ally_rule::allow_complain,
                 "<ally_rule_allow_complain_true_text>",
                 "<ally_rule_allow_complain_false_text>"
+            }
+        },
+        {
+            "allow_heal_others", {
+                ally_rule::allow_heal_others,
+                "<ally_rule_allow_heal_others_true_text>",
+                "<ally_rule_allow_heal_others_false_text>"
             }
         },
         {
@@ -1238,7 +1246,7 @@ class npc : public Character
         // Do we have an idea of where u are?
         bool saw_player_recently() const;
         /** Returns true if food was consumed, false otherwise. */
-        bool consume_food();
+        bool consume_food( bool allow_vitamin_treatment = true );
         bool consume_food_from_camp();
         int get_thirst() const override;
 

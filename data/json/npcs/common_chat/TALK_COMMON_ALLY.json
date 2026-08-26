@@ -712,6 +712,16 @@
         },
         {
           "concatenate": [
+            { "npc_override": "allow_heal_others", "yes": "  OVERRIDE: ", "no": "  " },
+            {
+              "npc_rule": "allow_heal_others",
+              "yes": "<ally_rule_allow_heal_others_true_text>",
+              "no": "<ally_rule_allow_heal_others_false_text>"
+            }
+          ]
+        },
+        {
+          "concatenate": [
             { "npc_override": "allow_pulp", "yes": "  OVERRIDE: ", "no": "  " },
             {
               "npc_rule": "allow_pulp",
@@ -808,6 +818,15 @@
         "truefalsetext": { "condition": { "npc_rule": "allow_complain" }, "true": "Stay quiet.", "false": "Tell me when you need something." },
         "topic": "TALK_MISC_RULES",
         "effect": { "toggle_npc_rule": "allow_complain" }
+      },
+      {
+        "truefalsetext": {
+          "condition": { "npc_rule": "allow_heal_others" },
+          "true": "Save your medical supplies for yourself.",
+          "false": "Use your medical supplies to heal allies."
+        },
+        "topic": "TALK_MISC_RULES",
+        "effect": { "toggle_npc_rule": "allow_heal_others" }
       },
       {
         "truefalsetext": { "condition": { "npc_rule": "allow_pulp" }, "true": "Leave corpses alone.", "false": "Smash zombie corpses." },

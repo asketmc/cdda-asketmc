@@ -111,6 +111,19 @@ without revealing locations or rare loot pools.
 
 These local survival actions are adapted to the 0.G needs cascade. The modern
 global behavior tree and mission scheduler are not included.
+- Followers start first aid only when safe.  A separate follower rule controls
+  whether they spend their supplies on allies, and interrupted work resumes
+  after treatment.
+- Followers safely treat data-defined nutrient deficiencies with non-addictive
+  food or medicine.  Treatment is throttled, never starts in combat, and stops
+  after the deficiency clears.
+- Very unpleasant or nausea-triggering food is avoided when alternatives
+  exist, but remains available when the follower would otherwise starve.
+- Unarmed followers no longer overvalue empty hands when choosing from carried
+  weapons.  Offered non-guns also avoid bogus infinite-ammo diagnostics;
+  ranged/melee coefficients and silent-weapon rules remain unchanged.
+- Loading old follower rules no longer lets a preceding rule value leak into
+  missing override fields.
 
 ## Visuals, sound, fonts, and interface
 

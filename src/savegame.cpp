@@ -1874,6 +1874,7 @@ void npc::import_and_clean( const JsonObject &data )
     clear_destination();
     stashed_outbounds_activity = defaults.stashed_outbounds_activity;
     stashed_outbounds_backlog = defaults.stashed_outbounds_backlog;
+    stashed_outbounds_backlog_owned = defaults.stashed_outbounds_backlog_owned;
     activity_vehicle_part_index = defaults.activity_vehicle_part_index;
     current_activity_id = defaults.current_activity_id;
 

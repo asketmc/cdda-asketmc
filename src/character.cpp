@@ -12,6 +12,7 @@
 #include <memory>
 #include <numeric>
 #include <ostream>
+#include <sstream>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -1349,6 +1350,7 @@ void Character::cancel_stashed_activity()
 {
     stashed_outbounds_activity = player_activity();
     stashed_outbounds_backlog = player_activity();
+    stashed_outbounds_backlog_owned = false;
 }
 
 player_activity Character::get_stashed_activity() const
@@ -1356,10 +1358,22 @@ player_activity Character::get_stashed_activity() const
     return stashed_outbounds_activity;
 }
 
-void Character::set_stashed_activity( const player_activity &act, const player_activity &act_back )
+player_activity Character::get_stashed_backlog_activity() const
+{
+    return stashed_outbounds_backlog;
+}
+
+bool Character::stashed_backlog_is_owned() const
+{
+    return stashed_outbounds_backlog_owned;
+}
+
+void Character::set_stashed_activity( const player_activity &act, const player_activity &act_back,
+                                      bool owns_backlog )
 {
     stashed_outbounds_activity = act;
     stashed_outbounds_backlog = act_back;
+    stashed_outbounds_backlog_owned = owns_backlog && static_cast<bool>( act_back );
 }
 
 bool Character::has_stashed_activity() const
@@ -1370,7 +1384,21 @@ bool Character::has_stashed_activity() const
 void Character::assign_stashed_activity()
 {
     activity = stashed_outbounds_activity;
-    backlog.push_front( stashed_outbounds_backlog );
+    if( stashed_outbounds_backlog ) {
+        bool legacy_mirror = false;
+        if( !stashed_outbounds_backlog_owned && !backlog.empty() ) {
+            std::ostringstream stashed_json;
+            std::ostringstream backlog_json;
+            JsonOut stashed_out( stashed_json );
+            JsonOut backlog_out( backlog_json );
+            stashed_outbounds_backlog.serialize( stashed_out );
+            backlog.front().serialize( backlog_out );
+            legacy_mirror = stashed_json.str() == backlog_json.str();
+        }
+        if( !legacy_mirror ) {
+            backlog.push_front( stashed_outbounds_backlog );
+        }
+    }
     cancel_stashed_activity();
 }
 
@@ -1385,6 +1413,10 @@ bool Character::check_outbounds_activity( const player_activity &act, bool check
             stashed_outbounds_activity = act;
             if( !backlog.empty() ) {
                 stashed_outbounds_backlog = backlog.front();
+                backlog.pop_front();
+                stashed_outbounds_backlog_owned = true;
+            } else {
+                stashed_outbounds_backlog_owned = false;
             }
             activity = player_activity();
         }
@@ -8250,6 +8282,12 @@ void Character::resume_backlog_activity()
         activity.auto_resume = false;
         activity.allow_distractions();
         backlog.pop_front();
+        if( is_npc() ) {
+            npc *guy = dynamic_cast<npc *>( this );
+            guy->set_attitude( NPCATT_ACTIVITY );
+            guy->set_mission( NPC_MISSION_ACTIVITY );
+            guy->current_activity_id = activity.id();
+        }
     }
 }
 

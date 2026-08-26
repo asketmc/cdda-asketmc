@@ -2425,6 +2425,7 @@ class Character : public Creature, public visitable
 
         player_activity stashed_outbounds_activity;
         player_activity stashed_outbounds_backlog;
+        bool stashed_outbounds_backlog_owned = false;
         player_activity activity;
         // Changes whenever assign_activity replaces or resumes the current activity.
         // Activity EOCs use this to detect same-id replacements in the current turn.
@@ -2597,8 +2598,11 @@ class Character : public Creature, public visitable
         void cancel_activity();
         void cancel_stashed_activity();
         player_activity get_stashed_activity() const;
+        player_activity get_stashed_backlog_activity() const;
+        bool stashed_backlog_is_owned() const;
         void set_stashed_activity( const player_activity &act,
-                                   const player_activity &act_back = player_activity() );
+                                   const player_activity &act_back = player_activity(),
+                                   bool owns_backlog = true );
         bool has_stashed_activity() const;
         bool can_stash( const item &it, bool ignore_pkt_settings = false );
         bool can_stash_partial( const item &it, bool ignore_pkt_settings = false );
@@ -2947,7 +2951,8 @@ class Character : public Creature, public visitable
          * Same as @ref can_eat, but takes consequences into account.
          * Asks about them if @param interactive is true, refuses otherwise.
          */
-        ret_val<edible_rating> will_eat( const item &food, bool interactive = false ) const;
+        ret_val<edible_rating> will_eat( const item &food, bool interactive = false,
+                                        bool ignore_nausea = false ) const;
         /** Determine character's capability of recharging their CBMs.
         * Returns energy in kJ
         */

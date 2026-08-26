@@ -3822,6 +3822,7 @@ npc_follower_rules::npc_follower_rules()
     clear_flag( ally_rule::allow_bash );
     clear_flag( ally_rule::allow_sleep );
     set_flag( ally_rule::allow_complain );
+    set_flag( ally_rule::allow_heal_others );
     set_flag( ally_rule::allow_pulp );
     clear_flag( ally_rule::close_doors );
     clear_flag( ally_rule::follow_close );

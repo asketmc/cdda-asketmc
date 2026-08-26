@@ -86,6 +86,7 @@
 #include "visitable.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
+#include "vitamin.h"
 #include "weather.h"
 
 static const activity_id ACT_CRAFT( "ACT_CRAFT" );
@@ -128,6 +129,7 @@ static const efftype_id effect_hit_by_player( "hit_by_player" );
 static const efftype_id effect_hypovolemia( "hypovolemia" );
 static const efftype_id effect_infected( "infected" );
 static const efftype_id effect_lying_down( "lying_down" );
+static const efftype_id effect_nausea( "nausea" );
 static const efftype_id effect_no_sight( "no_sight" );
 static const efftype_id effect_npc_fire_bad( "npc_fire_bad" );
 static const efftype_id effect_npc_flee_player( "npc_flee_player" );
@@ -219,6 +221,62 @@ const std::vector<bionic_id> weapon_cbms = { {
 };
 
 const int avoidance_vehicles_radius = 5;
+constexpr float healing_danger_threshold = 0.01f;
+
+struct healing_interruption_state {
+    player_activity current;
+    std::list<player_activity> backlog;
+    player_activity stashed;
+    player_activity stashed_backlog;
+    bool stashed_backlog_owned;
+    npc_attitude attitude;
+    npc_mission mission;
+    activity_id current_activity_id;
+};
+
+healing_interruption_state capture_healing_interruption( const npc &who )
+{
+    return { who.activity, who.backlog, who.get_stashed_activity(),
+             who.get_stashed_backlog_activity(), who.stashed_backlog_is_owned(),
+             who.get_attitude(), who.mission,
+             who.current_activity_id };
+}
+
+void restore_healing_interruption( npc &who, const healing_interruption_state &state )
+{
+    if( who.activity.id() != ACT_FIRSTAID ) {
+        return;
+    }
+
+    who.backlog = state.backlog;
+    if( state.stashed ) {
+        who.set_stashed_activity( state.stashed, state.stashed_backlog,
+                                  state.stashed_backlog_owned );
+    }
+    if( state.current ) {
+        player_activity resumable = state.current;
+        resumable.auto_resume = true;
+        who.backlog.push_front( resumable );
+    }
+
+    if( state.current || state.stashed ) {
+        who.set_attitude( state.attitude );
+        who.set_mission( state.mission );
+        who.current_activity_id = state.current_activity_id;
+    }
+}
+
+std::vector<vitamin_id> treatable_vitamin_deficiencies( const npc &who )
+{
+    std::vector<vitamin_id> result;
+    for( const std::pair<const vitamin_id, vitamin> &entry : vitamin::all() ) {
+        if( entry.second.type() == vitamin_type::VITAMIN &&
+            entry.second.severity( who.vitamin_get( entry.first ) ) > 0 ) {
+            result.push_back( entry.first );
+        }
+    }
+    return result;
+}
 
 bool good_for_pickup( const item &it, npc &who )
 {
@@ -814,6 +872,13 @@ void npc::move()
         set_attitude( NPCATT_NULL );
     }
     regen_ai_cache();
+    const bool dangerous_field = !in_vehicle && sees_dangerous_field( pos() );
+    const bool environmental_danger = dangerous_field ||
+                                      ( !in_vehicle && has_effect( effect_npc_fire_bad ) );
+    if( ai_cache.danger >= healing_danger_threshold || environmental_danger ||
+        !ai_cache.dangerous_explosives.empty() ) {
+        deactivate_bionic_by_id( bio_nanobots );
+    }
     // NPCs under operation should just stay still
     if( activity.id() == ACT_OPERATION || activity.id() == ACT_SPELLCASTING ) {
         execute_action( npc_player_activity );
@@ -853,11 +918,11 @@ void npc::move()
      * them from inadvertently getting themselves run over and/or cause vehicle related errors.
      * NPCs flee from uncontained fires within 3 tiles
      */
-    if( !in_vehicle && ( sees_dangerous_field( pos() ) || has_effect( effect_npc_fire_bad ) ) ) {
-        if( sees_dangerous_field( pos() ) ) {
+    if( environmental_danger ) {
+        if( dangerous_field ) {
             path.clear();
         }
-        const tripoint escape_dir = good_escape_direction( sees_dangerous_field( pos() ) );
+        const tripoint escape_dir = good_escape_direction( dangerous_field );
         if( escape_dir != pos() ) {
             move_to( escape_dir );
             return;
@@ -951,7 +1016,7 @@ void npc::move()
     }
 
     if( action == npc_undecided && attitude == NPCATT_ACTIVITY ) {
-        if( has_stashed_activity() ) {
+        if( has_stashed_activity() && !has_player_activity() ) {
             if( !check_outbounds_activity( get_stashed_activity(), true ) ) {
                 assign_stashed_activity();
             } else {
@@ -1832,6 +1897,7 @@ healing_options npc::patient_assessment( const Character &c )
 npc_action npc::address_needs( float danger )
 {
     Character &player_character = get_player_character();
+    const bool safe_to_heal = danger < healing_danger_threshold;
     // rng because NPCs are not meant to be hypervigilant hawks that notice everything
     // and swing into action with alarming alacrity.
     // no sometimes they are just looking the other way, sometimes they hestitate.
@@ -1839,7 +1905,7 @@ npc_action npc::address_needs( float danger )
     if( one_in( 3 ) ) {
         healing_options try_to_fix_me = patient_assessment( *this );
         if( try_to_fix_me.any_true() ) {
-            if( !use_bionic_by_id( bio_nanobots ) ) {
+            if( safe_to_heal && !use_bionic_by_id( bio_nanobots ) ) {
                 ai_cache.can_heal = has_healing_options( try_to_fix_me );
                 if( ai_cache.can_heal.any_true() ) {
                     return npc_heal;
@@ -1848,7 +1914,9 @@ npc_action npc::address_needs( float danger )
         } else {
             deactivate_bionic_by_id( bio_nanobots );
         }
-        if( get_skill_level( skill_firstaid ) > 0 ) {
+        const bool may_heal_others = !is_player_ally() ||
+                                     rules.has_flag( ally_rule::allow_heal_others );
+        if( safe_to_heal && get_skill_level( skill_firstaid ) > 0 && may_heal_others ) {
             if( is_player_ally() ) {
                 healing_options try_to_fix_other = patient_assessment( player_character );
                 if( try_to_fix_other.any_true() ) {
@@ -1898,13 +1966,13 @@ npc_action npc::address_needs( float danger )
     const bool local_survival = is_player_ally();
     const bool cold = local_survival && needs_warmth();
 
-    // Extreme thirst or hunger, bypass safety check.
+    // Extreme thirst or hunger can be more immediately lethal than the current threat.
     if( get_thirst() > 80 ||
         get_stored_kcal() + stomach.get_calories() < get_healthy_kcal() * 0.75 ) {
         if( consume_food_from_camp() ) {
             return npc_noop;
         }
-        if( consume_food() ) {
+        if( consume_food( false ) ) {
             return npc_noop;
         }
         if( local_survival && ( consume_local_food( false ) || drink_local_clean_water( false ) ) ) {
@@ -1940,12 +2008,15 @@ npc_action npc::address_needs( float danger )
         }
     }
 
-    if( one_in( 3 ) && ( get_thirst() > NPC_THIRST_CONSUME ||
-                         get_hunger() > NPC_HUNGER_CONSUME ) ) {
-        if( consume_food_from_camp() ) {
+    const bool ordinary_food_need = get_thirst() > NPC_THIRST_CONSUME ||
+                                    get_hunger() > NPC_HUNGER_CONSUME;
+    const bool vitamin_deficiency = safe_to_heal &&
+                                    !treatable_vitamin_deficiencies( *this ).empty();
+    if( one_in( 3 ) && ( ordinary_food_need || vitamin_deficiency ) ) {
+        if( ordinary_food_need && consume_food_from_camp() ) {
             return npc_noop;
         }
-        if( consume_food() ) {
+        if( consume_food( vitamin_deficiency ) ) {
             return npc_noop;
         }
         if( consume_local_food( true ) || drink_local_clean_water( true ) ) {
@@ -3365,7 +3436,9 @@ bool npc::wield_better_weapon()
 
     compare_weapon( weap );
     // To prevent changing to barely better stuff
-    best_value *= std::max<float>( 1.0f, ai_cache.danger_assessment / 10.0f );
+    if( weapon ) {
+        best_value *= std::max<float>( 1.0f, ai_cache.danger_assessment / 10.0f );
+    }
 
     // Fists aren't checked below
     compare_weapon( null_item_reference() );
@@ -3615,7 +3688,9 @@ void npc::heal_player( Character &patient )
         return;
     }
     if( !is_hallucination() ) {
+        const healing_interruption_state interrupted = capture_healing_interruption( *this );
         int charges_used = used.type->invoke( *this, used, patient.pos(), "heal" ).value_or( 0 );
+        restore_healing_interruption( *this, interrupted );
         consume_charges( used, charges_used );
     } else {
         pretend_heal( patient, used );
@@ -3677,7 +3752,9 @@ void npc::heal_self()
     add_msg_if_player_sees( *this, _( "%1$s starts applying a %2$s." ), disp_name(), used.tname() );
     warn_about( "heal_self", 1_turns );
 
+    const healing_interruption_state interrupted = capture_healing_interruption( *this );
     int charges_used = used.type->invoke( *this, used, pos(), "heal" ).value_or( 0 );
+    restore_healing_interruption( *this, interrupted );
     if( used.is_medication() && charges_used > 0 ) {
         consume_charges( used, charges_used );
     }
@@ -3708,7 +3785,65 @@ void npc::use_painkiller()
 // Be eaten before it rots (favor soon-to-rot perishables)
 //
 // TODO: Cache the results of this, *especially* if there's nothing we want to eat.
-static float rate_food( const item &it, int want_nutr, int want_quench )
+static float needed_vitamin_rda( const npc &who, const item &it,
+                                 const std::vector<vitamin_id> &deficiencies )
+{
+    if( deficiencies.empty() ) {
+        return 0.0f;
+    }
+
+    const nutrients nutrients = who.compute_effective_nutrients( it );
+    std::vector<const consume_drug_iuse *> drugs;
+    for( const auto &method : it.type->use_methods ) {
+        if( const consume_drug_iuse *drug = dynamic_cast<const consume_drug_iuse *>(
+                    method.second.get_actor_ptr() ) ) {
+            drugs.push_back( drug );
+        }
+    }
+
+    float result = 0.0f;
+    for( const vitamin_id &vit_id : deficiencies ) {
+        const vitamin &vitamin = vit_id.obj();
+        int supplied = 0;
+        const auto food_vitamin = nutrients.vitamins.find( vit_id );
+        if( food_vitamin != nutrients.vitamins.end() ) {
+            supplied += std::max( 0, food_vitamin->second );
+        }
+        for( const consume_drug_iuse *drug : drugs ) {
+            const auto drug_vitamin = drug->vitamins.find( vit_id );
+            if( drug_vitamin != drug->vitamins.end() ) {
+                const int average_rda = ( drug_vitamin->second.first +
+                                          drug_vitamin->second.second ) / 2;
+                supplied += std::max( 0, static_cast<int>( vitamin.RDA_to_default( average_rda ) ) );
+            }
+        }
+        const float daily_rda = vitamin.RDA_to_default( 100 );
+        if( daily_rda > 0.0f ) {
+            result += supplied / daily_rda;
+        }
+    }
+    return result;
+}
+
+static bool safe_vitamin_use_methods( const item &it )
+{
+    const auto &food = it.get_comestible();
+    if( food && ( food->addict > 0 || !food->add.is_null() ) ) {
+        return false;
+    }
+    for( const auto &method : it.type->use_methods ) {
+        const consume_drug_iuse *drug = dynamic_cast<const consume_drug_iuse *>(
+                                            method.second.get_actor_ptr() );
+        if( drug == nullptr || !drug->effects.empty() || !drug->stat_adjustments.empty() ||
+            !drug->damage_over_time.empty() || !drug->fields_produced.empty() ) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static float rate_food( const npc &who, const item &it, int want_nutr, int want_quench,
+                        const std::vector<vitamin_id> &deficiencies )
 {
     const auto &food = it.get_comestible();
     if( !food ) {
@@ -3724,12 +3859,14 @@ static float rate_food( const item &it, int want_nutr, int want_quench )
     int nutr = food->get_default_nutr();
     int quench = food->quench;
 
-    if( nutr <= 0 && quench <= 0 ) {
+    const float useful_vitamin_rda = needed_vitamin_rda( who, it, deficiencies );
+    if( nutr <= 0 && quench <= 0 && useful_vitamin_rda <= 0.0f ) {
         // Not food - may be salt, drugs etc.
         return 0.0f;
     }
 
-    if( !it.type->use_methods.empty() ) {
+    if( ( useful_vitamin_rda > 0.0f && !safe_vitamin_use_methods( it ) ) ||
+        ( useful_vitamin_rda <= 0.0f && !it.type->use_methods.empty() ) ) {
         // TODO: Get a good method of telling apart:
         // raw meat (parasites - don't eat unless mutant)
         // zed meat (poison - don't eat unless mutant)
@@ -3757,7 +3894,10 @@ static float rate_food( const item &it, int want_nutr, int want_quench )
 
     // For non-rotten food, we have a starting weight in the range 1-10
     // The closer it is to expiring, the more we should aim to eat it.
-    float weight = std::max( 1.0, 10.0 * relative_rot );
+    const float rot_weight = std::max( 1.0, 10.0 * relative_rot );
+    // One daily dose can add at most one full base-food weight without hiding rot urgency.
+    const float vitamin_bonus = 10.0f * std::min( 1.0f, useful_vitamin_rda );
+    float weight = rot_weight + vitamin_bonus;
 
     // TODO: I feel like we should exclude *really* un-fun foods (flour, hot sauce, etc)
     //       rather than discount them. Eating cooked liver is fine, eating raw flour... :/
@@ -3765,8 +3905,12 @@ static float rate_food( const item &it, int want_nutr, int want_quench )
     if( it.get_comestible_fun() < 0 ) {
         // This helps to avoid eating stuff like flour
         weight /= ( -it.get_comestible_fun() ) + 1;
+        if( it.get_comestible_fun() <= -5 ) {
+            // Very unpleasant food can trigger vomiting.  Keep it as a
+            // last-resort candidate instead of making starvation preferable.
+            weight /= 20.0f;
+        }
     }
-
     // NPCs will avoid unhealthy foods.
     if( food->healthy < 0 ) {
         weight /= ( -food->healthy ) + 1;
@@ -3872,16 +4016,20 @@ bool npc::consume_food_from_camp()
     return false;
 }
 
-bool npc::consume_food()
+bool npc::consume_food( bool allow_vitamin_treatment )
 {
     float best_weight = 0.0f;
     item *best_food = nullptr;
+    bool force_nausea_food = false;
     bool consumed = false;
     int want_hunger = std::max( 0, get_hunger() );
     int want_quench = std::max( 0, get_thirst() );
 
-    const auto inv_food = items_with( []( const item & itm ) {
-        return itm.is_food();
+    const std::vector<vitamin_id> deficiencies = allow_vitamin_treatment ?
+            treatable_vitamin_deficiencies( *this ) : std::vector<vitamin_id>();
+    const bool vitamin_deficiency = !deficiencies.empty();
+    const auto inv_food = items_with( [vitamin_deficiency]( const item & itm ) {
+        return itm.is_food() || ( vitamin_deficiency && itm.is_medication() );
     } );
 
     if( inv_food.empty() ) {
@@ -3891,19 +4039,30 @@ bool npc::consume_food()
             set_thirst( 0 );
         }
     } else {
+        const bool critical_hunger = get_stored_kcal() + stomach.get_calories() +
+                                     guts.get_calories() <
+                                     get_healthy_kcal() / 2;
         for( item * const &food_item : inv_food ) {
-            float cur_weight = rate_food( *food_item, want_hunger, want_quench );
+            float cur_weight = rate_food( *this, *food_item, want_hunger, want_quench,
+                                          deficiencies );
             // Note: will_eat is expensive, avoid calling it if possible
-            if( cur_weight > best_weight && will_eat( *food_item ).success() ) {
+            const ret_val<edible_rating> preference = will_eat( *food_item );
+            const bool willing = cur_weight > 0.0f && preference.success();
+            const bool nausea_fallback = cur_weight > 0.0f && critical_hunger &&
+                                         has_effect( effect_nausea ) && food_item->is_food() &&
+                                         !preference.success() && preference.value() == NAUSEA &&
+                                         will_eat( *food_item, false, true ).success();
+            if( cur_weight > best_weight && ( willing || nausea_fallback ) ) {
                 best_weight = cur_weight;
                 best_food = food_item;
+                force_nausea_food = !willing && nausea_fallback;
             }
         }
 
         // consume doesn't return a meaningful answer, we need to compare moves
         if( best_food != nullptr ) {
             const time_duration &consume_time = get_consume_time( *best_food );
-            consumed = consume( item_location( *this, best_food ) ) != trinary::NONE;
+            consumed = consume( item_location( *this, best_food ), force_nausea_food ) != trinary::NONE;
             if( consumed ) {
                 // TODO: Message that "X begins eating Y?" Right now it appears to the player
                 //       that "Urist eats a carp roast" and then stands still doing nothing
@@ -4066,11 +4225,12 @@ std::vector<npc::local_item_candidate> npc::find_local_food()
 {
     const int want_hunger = std::max( 0, get_hunger() );
     const int want_quench = std::max( 0, get_thirst() );
+    const std::vector<vitamin_id> no_vitamin_treatment;
     return find_local_items( [&]( item & candidate ) {
         if( !candidate.is_food() || !will_eat( candidate ).success() ) {
             return 0.0f;
         }
-        return rate_food( candidate, want_hunger, want_quench );
+        return rate_food( *this, candidate, want_hunger, want_quench, no_vitamin_treatment );
     } );
 }
 
