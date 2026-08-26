@@ -570,6 +570,7 @@ void overmap_npc_move()
             }
         }
         if( elem->is_camp_duty_ready() ) {
+            // A travelling worker can enter any camp expansion while still carrying a path.
             elem->return_to_assigned_camp();
             continue;
         }

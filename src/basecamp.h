@@ -253,7 +253,7 @@ class basecamp
         std::unordered_set<recipe_id> recipe_deck_all( const inventory *supplies = nullptr ) const;
         std::vector<npc_ptr> available_crafting_workers() const;
         bool has_storage_for_craft( const recipe &making, map &target_map,
-                                    const tripoint_abs_ms &storage_origin );
+                                    const tripoint_abs_ms &storage_origin ) const;
         int recipe_batch_max( const recipe &making ) const;
         void form_crafting_inventory();
         void form_crafting_inventory( map &target_map );
@@ -291,6 +291,9 @@ class basecamp
         inline void set_liquid_dumping_spots( const std::vector<tripoint_abs_ms> &spots ) {
             liquid_dumping_spots = spots;
         }
+        cata::optional<tripoint_abs_ms> liquid_storage_for(
+            const item &liquid, map &target_map,
+            const tripoint_abs_ms &storage_origin ) const;
         bool form_storage_zones( map &here, const tripoint_abs_ms &abspos );
         void place_results( const item &result );
 
@@ -416,6 +419,7 @@ class basecamp
         void validate_assignees();
         void add_assignee( character_id id );
         void remove_assignee( character_id id );
+        /// All retained assignments, including followers temporarily off duty or away.
         std::vector<npc_ptr> get_npcs_assigned();
         void hide_mission( ui_mission_id id );
         void reveal_mission( ui_mission_id id );

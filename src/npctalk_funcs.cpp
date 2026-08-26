@@ -471,8 +471,9 @@ void talk_function::stop_guard( npc &p )
 
 void talk_function::return_to_camp( npc &p )
 {
+    const bool was_on_duty = p.camp_duty;
     p.return_to_assigned_camp();
-    if( p.assigned_camp ) {
+    if( !was_on_duty && p.camp_duty ) {
         add_msg( _( "%s returns to camp duties." ), p.get_name() );
     }
 }

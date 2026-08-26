@@ -1820,31 +1820,45 @@ void npc_follower_rules::deserialize( const JsonObject &data )
 
     // deserialize the flags so they can be changed between save games
     for( const auto &rule : ally_rule_strs ) {
+        const bool healing_rule = rule.second.rule == ally_rule::allow_heal_others;
+        const std::string legacy_name = healing_rule ? "heal_others" : rule.first;
         // Healing allies was the legacy behavior, so old saves which predate
         // the explicit rule keep it enabled.
-        bool tmpflag = rule.second.rule == ally_rule::heal_others;
+        bool tmpflag = healing_rule;
         // legacy to handle rules that were saved before overrides
-        data.read( rule.first, tmpflag );
+        data.read( legacy_name, tmpflag );
+        if( healing_rule ) {
+            data.read( rule.first, tmpflag );
+        }
         if( tmpflag ) {
             set_flag( rule.second.rule );
         } else {
             clear_flag( rule.second.rule );
         }
-        data.read( "rule_" + rule.first, tmpflag );
+        data.read( "rule_" + legacy_name, tmpflag );
+        if( healing_rule ) {
+            data.read( "rule_" + rule.first, tmpflag );
+        }
         if( tmpflag ) {
             set_flag( rule.second.rule );
         } else {
             clear_flag( rule.second.rule );
         }
         tmpflag = false;
-        data.read( "override_enable_" + rule.first, tmpflag );
+        data.read( "override_enable_" + legacy_name, tmpflag );
+        if( healing_rule ) {
+            data.read( "override_enable_" + rule.first, tmpflag );
+        }
         if( tmpflag ) {
             enable_override( rule.second.rule );
         } else {
             disable_override( rule.second.rule );
         }
         tmpflag = false;
-        data.read( "override_" + rule.first, tmpflag );
+        data.read( "override_" + legacy_name, tmpflag );
+        if( healing_rule ) {
+            data.read( "override_" + rule.first, tmpflag );
+        }
         if( tmpflag ) {
             set_override( rule.second.rule );
         } else {

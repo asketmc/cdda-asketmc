@@ -402,8 +402,35 @@ std::vector<npc_ptr> basecamp::available_crafting_workers() const
     return result;
 }
 
+cata::optional<tripoint_abs_ms> basecamp::liquid_storage_for(
+    const item &liquid, map &target_map, const tripoint_abs_ms &storage_origin ) const
+{
+    zone_manager &mgr = zone_manager::get_manager();
+    if( target_map.check_vehicle_zones( target_map.get_abs_sub().z() ) ) {
+        mgr.cache_vzones( &target_map );
+    }
+    const std::unordered_set<tripoint_abs_ms> storage_tiles =
+        mgr.get_near( zone_type_CAMP_STORAGE, storage_origin, 60 );
+    for( const tripoint_abs_ms &tile :
+         get_sorted_tiles_by_distance( storage_origin, storage_tiles ) ) {
+        const tripoint local_tile = target_map.getlocal( tile );
+        if( !target_map.inbounds( local_tile ) ||
+            !target_map.has_flag_ter_or_furn( ter_furn_flag::TFLAG_LIQUIDCONT, local_tile ) ) {
+            continue;
+        }
+        const map_stack contents = target_map.i_at( local_tile );
+        if( contents.empty() || std::all_of( contents.begin(), contents.end(),
+        [&liquid]( const item & stored ) {
+            return stored.made_of( phase_id::LIQUID ) && stored.typeId() == liquid.typeId();
+        } ) ) {
+            return tile;
+        }
+    }
+    return cata::nullopt;
+}
+
 bool basecamp::has_storage_for_craft( const recipe &making, map &target_map,
-                                      const tripoint_abs_ms &storage_origin )
+                                      const tripoint_abs_ms &storage_origin ) const
 {
     const std::vector<item> results = making.create_results( 1 );
     const std::vector<item> byproducts = making.create_byproducts( 1 );
@@ -417,11 +444,14 @@ bool basecamp::has_storage_for_craft( const recipe &making, map &target_map,
         return true;
     }
 
-    form_storage_zones( target_map, storage_origin );
-    return std::any_of( liquid_dumping_spots.begin(), liquid_dumping_spots.end(),
-    [&target_map]( const tripoint_abs_ms & spot ) {
-        const tripoint local_spot = target_map.getlocal( spot );
-        return target_map.inbounds( local_spot ) && target_map.i_at( local_spot ).empty();
+    return std::all_of( results.begin(), results.end(),
+    [&]( const item & result ) {
+        return !result.made_of( phase_id::LIQUID ) ||
+               liquid_storage_for( result, target_map, storage_origin );
+    } ) && std::all_of( byproducts.begin(), byproducts.end(),
+    [&]( const item & result ) {
+        return !result.made_of( phase_id::LIQUID ) ||
+               liquid_storage_for( result, target_map, storage_origin );
     } );
 }
 

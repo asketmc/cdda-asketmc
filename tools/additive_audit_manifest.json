@@ -262,7 +262,7 @@
     {
       "type": "talk_topic",
       "id": "TALK_MISC_RULES",
-      "target_fingerprint": "b5a9b3e5fb3a0350b780552252ab6755d7d6a6c68c736cdb3b01028f70836630",
+      "target_fingerprint": "c07933e39bab2e8239f088eddb951ca3d2efe3039e0112ab5a3e4780c0973380",
       "reason": "Follower lock, unlock, and safe ally-healing rules extend the existing miscellaneous rules dialogue"
     },
     {

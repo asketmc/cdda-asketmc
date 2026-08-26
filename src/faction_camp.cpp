@@ -2202,7 +2202,7 @@ void basecamp::job_assignment_ui()
         // create a list of npcs stationed at this camp
         stationed_npcs.clear();
         for( const auto &elem : get_npcs_assigned() ) {
-            if( elem ) {
+            if( elem && elem->camp_duty && elem->is_camp_duty_ready() ) {
                 stationed_npcs.push_back( elem.get() );
             }
         }
@@ -3096,7 +3096,11 @@ void basecamp::start_crafting_with_ui( const mission_id &miss_id )
 {
     std::vector<npc_ptr> available_workers = available_crafting_workers();
     if( available_workers.empty() ) {
-        popup( _( "No assigned camp worker is currently available to craft." ) );
+        if( get_npcs_assigned().empty() ) {
+            popup( _( "No follower is assigned to this camp." ) );
+        } else {
+            popup( _( "Assigned camp workers are off duty, away, or otherwise unavailable to craft." ) );
+        }
         return;
     }
 
@@ -3138,16 +3142,14 @@ void basecamp::start_crafting_with_ui( const mission_id &miss_id )
     if( by_radio ) {
         tinymap target_map;
         target_map.load( project_to<coords::sm>( omt_pos ), false );
-        const tripoint_abs_ms storage_origin =
-            target_map.getglobal( target_map.getlocal( bb_pos ) );
+        const tripoint_abs_ms storage_origin( bb_pos );
         has_storage = has_storage_for_craft( *making, target_map, storage_origin );
     } else {
         map &here = get_map();
-        has_storage = has_storage_for_craft( *making, here,
-                                             get_player_character().get_location() );
+        has_storage = has_storage_for_craft( *making, here, tripoint_abs_ms( bb_pos ) );
     }
     if( !has_storage ) {
-        popup( _( "The camp has no empty liquid container in its storage zone for this craft." ) );
+        popup( _( "The camp has no compatible liquid fixture in its storage zone for this craft." ) );
         return;
     }
 
@@ -5541,18 +5543,15 @@ void basecamp::place_results( const item &result )
 
         if( result.made_of( phase_id::LIQUID ) ) {
             bool found_liquid_container = false;
-            for( const tripoint_abs_ms &potential_spot : get_liquid_dumping_spots() ) {
-                const tripoint local_spot = target_bay.getlocal( potential_spot );
-                if( target_bay.i_at( local_spot ).empty() ) {
-                    new_spot = local_spot;
-                    found_liquid_container = true;
-                    break;
-                }
+            if( const cata::optional<tripoint_abs_ms> potential_spot =
+                    liquid_storage_for( result, target_bay, storage_origin ) ) {
+                new_spot = target_bay.getlocal( *potential_spot );
+                found_liquid_container = true;
             }
             if( !found_liquid_container ) {
                 popup( _( "No eligible locations found to place resulting liquids, placing them at random.\n\n"
-                          "Eligible locations must be terrain or furniture (not an item) that can contain "
-                          "liquid, be inside a camp storage zone, and have no items on its tile." ) );
+                          "Eligible locations must be liquid-containing terrain or furniture inside a camp "
+                          "storage zone, and be empty or contain only the same liquid." ) );
             }
         }
 
@@ -5563,13 +5562,12 @@ void basecamp::place_results( const item &result )
     if( by_radio ) {
         tinymap target_bay;
         target_bay.load( project_to<coords::sm>( omt_pos ), false );
-        const tripoint_abs_ms storage_origin =
-            target_bay.getglobal( target_bay.getlocal( bb_pos ) );
+        const tripoint_abs_ms storage_origin( bb_pos );
         place_on_map( target_bay, storage_origin );
         target_bay.save();
     } else {
         map &here = get_map();
-        place_on_map( here, get_player_character().get_location() );
+        place_on_map( here, tripoint_abs_ms( bb_pos ) );
     }
 }
 

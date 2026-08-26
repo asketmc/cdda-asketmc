@@ -11,6 +11,7 @@
 #include "clzones.h"
 #include "coordinates.h"
 #include "faction.h"
+#include "field_type.h"
 #include "game.h"
 #include "inventory.h"
 #include "item.h"
@@ -24,10 +25,12 @@
 #include "overmapbuffer.h"
 #include "player_helpers.h"
 #include "recipe.h"
+#include "talker.h"
 #include "type_id.h"
 
 static const activity_id ACT_FIRSTAID( "ACT_FIRSTAID" );
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
+static const activity_id ACT_MULTIPLE_MOP( "ACT_MULTIPLE_MOP" );
 static const activity_id ACT_WAIT_NPC( "ACT_WAIT_NPC" );
 
 static const faction_id faction_your_followers( "your_followers" );
@@ -36,9 +39,12 @@ static const furn_str_id furn_f_bathtub( "f_bathtub" );
 
 static const itype_id itype_bandages( "bandages" );
 static const itype_id itype_manual_electronics( "manual_electronics" );
+static const itype_id itype_mop( "mop" );
 static const itype_id itype_rock( "rock" );
+static const itype_id itype_test_bitter_almond( "test_bitter_almond" );
 static const itype_id itype_test_battery_disposable( "test_battery_disposable" );
 static const itype_id itype_test_ebook_reader( "test_ebook_reader" );
+static const itype_id itype_water_clean( "water_clean" );
 
 static const recipe_id recipe_test_soldering_iron( "test_soldering_iron" );
 static const recipe_id recipe_water_clean( "water_clean" );
@@ -49,6 +55,9 @@ static const skill_id skill_firstaid( "firstaid" );
 static const ter_str_id ter_t_floor( "t_floor" );
 
 static const zone_type_id zone_type_CAMP_STORAGE( "CAMP_STORAGE" );
+static const zone_type_id zone_type_LOOT_FOOD( "LOOT_FOOD" );
+static const zone_type_id zone_type_LOOT_UNSORTED( "LOOT_UNSORTED" );
+static const zone_type_id zone_type_MOPPING( "MOPPING" );
 
 namespace
 {
@@ -107,6 +116,14 @@ class test_camp_scope
         tripoint_abs_omt camp_pos_;
 };
 
+class test_zone_scope
+{
+    public:
+        ~test_zone_scope() {
+            zone_manager::get_manager().clear();
+        }
+};
+
 std::string without_camp_duty_member( const npc &worker )
 {
     std::ostringstream serialized;
@@ -116,9 +133,15 @@ std::string without_camp_duty_member( const npc &worker )
     std::string result = serialized.str();
     const size_t start = result.find( "\"camp_duty\":" );
     REQUIRE( start != std::string::npos );
-    const size_t end = result.find( ',', start );
-    REQUIRE( end != std::string::npos );
-    result.erase( start, end - start + 1 );
+    const size_t value_end = result.find_first_of( ",}", start );
+    REQUIRE( value_end != std::string::npos );
+    if( result[value_end] == ',' ) {
+        result.erase( start, value_end - start + 1 );
+    } else {
+        const size_t previous_member = result.rfind( ',', start );
+        REQUIRE( previous_member != std::string::npos );
+        result.erase( previous_member, value_end - previous_member );
+    }
     return result;
 }
 
@@ -126,9 +149,7 @@ bool start_urgent_healing( npc &worker )
 {
     for( int attempt = 0; attempt < 100 && worker.activity.id() != ACT_FIRSTAID; ++attempt ) {
         const npc_action action = worker.address_needs( 0.0f, true );
-        if( static_cast<int>( action ) != 0 ) {
-            worker.execute_action( action );
-        }
+        worker.execute_action( action );
         worker.moves = 100;
     }
     return worker.activity.id() == ACT_FIRSTAID;
@@ -167,7 +188,7 @@ TEST_CASE( "Critical injury interrupts and resumes camp work",
     worker.set_skill_level( skill_firstaid, 4 );
     worker.set_attitude( NPCATT_ACTIVITY );
     worker.apply_damage( nullptr, bodypart_id( "arm_r" ),
-                         worker.get_part_hp_max( bodypart_id( "arm_r" ) ) / 2 + 1 );
+                         worker.get_part_hp_max( bodypart_id( "arm_r" ) ) * 2 / 3 + 1 );
     worker.i_add( item( itype_bandages ) );
     worker.assign_activity( ACT_WAIT_NPC, 5000 );
     REQUIRE( worker.activity.id() == ACT_WAIT_NPC );
@@ -192,12 +213,14 @@ TEST_CASE( "Camp assignment survives temporary follow and guard orders",
     REQUIRE( worker.assigned_camp );
     REQUIRE( *worker.assigned_camp == camp_pos );
     REQUIRE( worker.camp_duty );
+    CHECK_FALSE( get_talker_for( worker )->has_assigned_camp() );
 
     SECTION( "follow order keeps the assignment" ) {
         talk_function::stop_guard( worker );
         REQUIRE( worker.assigned_camp );
         CHECK( *worker.assigned_camp == camp_pos );
         CHECK_FALSE( worker.camp_duty );
+        CHECK( get_talker_for( worker )->has_assigned_camp() );
 
         talk_function::return_to_camp( worker );
         REQUIRE( worker.assigned_camp );
@@ -205,6 +228,7 @@ TEST_CASE( "Camp assignment survives temporary follow and guard orders",
         CHECK( worker.camp_duty );
         CHECK( worker.mission == NPC_MISSION_GUARD_ALLY );
         CHECK( worker.goal == camp_pos );
+        CHECK_FALSE( get_talker_for( worker )->has_assigned_camp() );
     }
 
     SECTION( "guard order keeps the assignment" ) {
@@ -327,6 +351,19 @@ TEST_CASE( "Urgent needs preserve stashed camp work",
     CHECK_FALSE( worker.has_stashed_activity() );
 }
 
+TEST_CASE( "Resuming stashed camp work does not queue it twice",
+           "[npc][camp][priority][activity]" )
+{
+    npc &worker = setup_camp_worker();
+    worker.set_attitude( NPCATT_ACTIVITY );
+    worker.set_stashed_activity( player_activity( ACT_WAIT_NPC ) );
+
+    worker.move();
+
+    CHECK( worker.activity.id() == ACT_WAIT_NPC );
+    CHECK_FALSE( worker.has_stashed_activity() );
+}
+
 TEST_CASE( "Camp worker free time remains inside camp",
            "[npc][camp][lifecycle][downtime]" )
 {
@@ -337,6 +374,12 @@ TEST_CASE( "Camp worker free time remains inside camp",
     REQUIRE( om != nullptr );
     test_camp_scope scope( *om, camp_pos, get_map().getglobal( worker.pos() ).raw() );
     scope.camp().add_assignee( worker.getID() );
+    const tripoint_abs_omt decoy_pos = camp_pos + point( -2, -2 );
+    basecamp decoy( "nearby decoy camp", decoy_pos );
+    decoy.set_owner( faction_your_followers );
+    decoy.set_bb_pos( project_to<coords::ms>( decoy_pos ).raw() );
+    decoy.add_expansion( "faction_base_camp_0", decoy_pos );
+    overmap_buffer.add_camp( decoy );
 
     for( const tripoint &p : here.points_in_radius( worker.pos(), 10 ) ) {
         here.ter_set( p, ter_t_floor );
@@ -462,11 +505,14 @@ TEST_CASE( "Liquid camp craft requires an empty storage fixture",
            "[npc][camp][crafting][liquid]" )
 {
     npc &worker = setup_camp_worker();
+    test_zone_scope zones;
     map &here = get_map();
     const tripoint target = worker.pos() + tripoint_east;
     const tripoint_abs_ms absolute_target = here.getglobal( target );
     basecamp camp( "liquid test camp", worker.global_omt_location() );
     camp.set_bb_pos( here.getglobal( worker.pos() ).raw() );
+    const tripoint_abs_ms cached_spot = absolute_target + tripoint_north;
+    camp.set_liquid_dumping_spots( { cached_spot } );
     here.furn_set( target, furn_f_bathtub );
     zone_manager::get_manager().add( "Camp storage", zone_type_CAMP_STORAGE,
                                      faction_your_followers, false, true,
@@ -474,11 +520,19 @@ TEST_CASE( "Liquid camp craft requires an empty storage fixture",
 
     CHECK( camp.has_storage_for_craft( recipe_water_clean.obj(), here,
                                        here.getglobal( worker.pos() ) ) );
+    CHECK( camp.get_liquid_dumping_spots() == std::vector<tripoint_abs_ms>{ cached_spot } );
 
     here.add_item_or_charges( target, item( itype_rock ) );
     CHECK_FALSE( camp.has_storage_for_craft( recipe_water_clean.obj(), here,
                  here.getglobal( worker.pos() ) ) );
     CHECK( camp.has_storage_for_craft( recipe_test_soldering_iron.obj(), here,
+                                       here.getglobal( worker.pos() ) ) );
+
+    here.i_clear( target );
+    item existing_water( itype_water_clean );
+    existing_water.charges = 1;
+    here.add_item_or_charges( target, existing_water );
+    CHECK( camp.has_storage_for_craft( recipe_water_clean.obj(), here,
                                        here.getglobal( worker.pos() ) ) );
 }
 
@@ -486,6 +540,7 @@ TEST_CASE( "Remote camp liquid storage uses the camp map",
            "[npc][camp][crafting][liquid][remote]" )
 {
     npc &worker = setup_camp_worker();
+    test_zone_scope zones;
     const tripoint_abs_ms remote_target = worker.get_location() + tripoint( 1000, 1000, 0 );
     tinymap remote_map;
     remote_map.load( project_to<coords::sm>( remote_target ), false );
@@ -496,6 +551,7 @@ TEST_CASE( "Remote camp liquid storage uses the camp map",
                                      faction_your_followers, false, true,
                                      remote_target.raw(), remote_target.raw() );
     basecamp camp( "remote liquid camp", project_to<coords::omt>( remote_target ) );
+    camp.set_bb_pos( remote_target.raw() );
 
     CHECK( camp.has_storage_for_craft( recipe_water_clean.obj(), remote_map, remote_target ) );
 
@@ -507,9 +563,46 @@ TEST_CASE( "Legacy camp sorter reports assigned work",
            "[npc][camp][sorting][activity]" )
 {
     npc &worker = setup_camp_worker();
+    test_zone_scope zones;
+    map &here = get_map();
+    const tripoint source = worker.pos() + tripoint_east;
+    const tripoint destination = worker.pos() + tripoint_west;
+    zone_manager::get_manager().add( "Unsorted", zone_type_LOOT_UNSORTED,
+                                     faction_your_followers, false, true,
+                                     here.getglobal( source ).raw(), here.getglobal( source ).raw() );
+    zone_manager::get_manager().add( "Food", zone_type_LOOT_FOOD,
+                                     faction_your_followers, false, true,
+                                     here.getglobal( destination ).raw(), here.getglobal( destination ).raw() );
+    here.add_item_or_charges( source, item( itype_test_bitter_almond ) );
     worker.job.clear_all_priorities();
     REQUIRE( worker.job.set_task_priority( ACT_MOVE_LOOT, 10 ) );
 
     CHECK( worker.find_job_to_perform() );
     CHECK( worker.activity.id() == ACT_MOVE_LOOT );
+}
+
+TEST_CASE( "Empty sorter does not shadow other camp jobs",
+           "[npc][camp][sorting][activity]" )
+{
+    npc &worker = setup_camp_worker();
+    test_zone_scope zones;
+    map &here = get_map();
+    const tripoint empty_source = worker.pos() + tripoint_east;
+    const tripoint mop_target = worker.pos() + tripoint_west;
+    zone_manager::get_manager().add( "Empty unsorted", zone_type_LOOT_UNSORTED,
+                                     faction_your_followers, false, true,
+                                     here.getglobal( empty_source ).raw(),
+                                     here.getglobal( empty_source ).raw() );
+    zone_manager::get_manager().add( "Mopping", zone_type_MOPPING,
+                                     faction_your_followers, false, true,
+                                     here.getglobal( mop_target ).raw(),
+                                     here.getglobal( mop_target ).raw() );
+    here.add_field( mop_target, field_type_id( "fd_blood" ), 1 );
+    worker.i_add( item( itype_mop ) );
+    worker.job.clear_all_priorities();
+    REQUIRE( worker.job.set_task_priority( ACT_MOVE_LOOT, 10 ) );
+    REQUIRE( worker.job.set_task_priority( ACT_MULTIPLE_MOP, 5 ) );
+
+    CHECK( worker.find_job_to_perform() );
+    CHECK( worker.activity.id() == ACT_MULTIPLE_MOP );
 }
