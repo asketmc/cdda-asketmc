@@ -6194,12 +6194,14 @@ void firstaid_activity_actor::finish( player_activity &act, Character &who )
             break;
         }
     }
-    // Clear the backlog of any activities that will not auto resume.
-    for( auto iter = who.backlog.begin(); iter != who.backlog.end(); ) {
-        if( !iter->auto_resume ) {
-            iter = who.backlog.erase( iter );
-        } else {
-            ++iter;
+    // NPC medical interruptions preserve the pre-existing work queue.
+    if( !who.is_npc() ) {
+        for( auto iter = who.backlog.begin(); iter != who.backlog.end(); ) {
+            if( !iter->auto_resume ) {
+                iter = who.backlog.erase( iter );
+            } else {
+                ++iter;
+            }
         }
     }
 }

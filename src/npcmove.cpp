@@ -223,6 +223,64 @@ const std::vector<bionic_id> weapon_cbms = { {
 const int avoidance_vehicles_radius = 5;
 constexpr float healing_danger_threshold = 0.01f;
 
+struct healing_interruption_state {
+    player_activity current;
+    std::list<player_activity> backlog;
+    player_activity stashed;
+    player_activity stashed_backlog;
+    npc_attitude attitude;
+    npc_mission mission;
+    activity_id current_activity_id;
+};
+
+healing_interruption_state capture_healing_interruption( const npc &who )
+{
+    return { who.activity, who.backlog, who.get_stashed_activity(),
+             who.get_stashed_backlog_activity(), who.get_attitude(), who.mission,
+             who.current_activity_id };
+}
+
+void remove_resumable_backlog( std::list<player_activity> &backlog,
+                               const player_activity &activity, const Character &who )
+{
+    if( !activity ) {
+        return;
+    }
+    const auto duplicate = std::find_if( backlog.begin(), backlog.end(), [&]( player_activity queued ) {
+        player_activity candidate = activity;
+        queued.auto_resume = false;
+        candidate.auto_resume = false;
+        return queued.can_resume_with( candidate, who ) || candidate.can_resume_with( queued, who );
+    } );
+    if( duplicate != backlog.end() ) {
+        backlog.erase( duplicate );
+    }
+}
+
+void restore_healing_interruption( npc &who, const healing_interruption_state &state )
+{
+    if( who.activity.id() != ACT_FIRSTAID ) {
+        return;
+    }
+
+    who.backlog = state.backlog;
+    if( state.stashed ) {
+        remove_resumable_backlog( who.backlog, state.stashed_backlog, who );
+        who.set_stashed_activity( state.stashed, state.stashed_backlog );
+    }
+    if( state.current ) {
+        player_activity resumable = state.current;
+        resumable.auto_resume = true;
+        who.backlog.push_front( resumable );
+    }
+
+    if( state.current || state.stashed ) {
+        who.set_attitude( state.attitude );
+        who.set_mission( state.mission );
+        who.current_activity_id = state.current_activity_id;
+    }
+}
+
 std::vector<vitamin_id> treatable_vitamin_deficiencies( const npc &who )
 {
     std::vector<vitamin_id> result;
@@ -829,6 +887,13 @@ void npc::move()
         set_attitude( NPCATT_NULL );
     }
     regen_ai_cache();
+    const bool dangerous_field = !in_vehicle && sees_dangerous_field( pos() );
+    const bool environmental_danger = dangerous_field ||
+                                      ( !in_vehicle && has_effect( effect_npc_fire_bad ) );
+    if( ai_cache.danger >= healing_danger_threshold || environmental_danger ||
+        !ai_cache.dangerous_explosives.empty() ) {
+        deactivate_bionic_by_id( bio_nanobots );
+    }
     // NPCs under operation should just stay still
     if( activity.id() == ACT_OPERATION || activity.id() == ACT_SPELLCASTING ) {
         execute_action( npc_player_activity );
@@ -868,11 +933,11 @@ void npc::move()
      * them from inadvertently getting themselves run over and/or cause vehicle related errors.
      * NPCs flee from uncontained fires within 3 tiles
      */
-    if( !in_vehicle && ( sees_dangerous_field( pos() ) || has_effect( effect_npc_fire_bad ) ) ) {
-        if( sees_dangerous_field( pos() ) ) {
+    if( environmental_danger ) {
+        if( dangerous_field ) {
             path.clear();
         }
-        const tripoint escape_dir = good_escape_direction( sees_dangerous_field( pos() ) );
+        const tripoint escape_dir = good_escape_direction( dangerous_field );
         if( escape_dir != pos() ) {
             move_to( escape_dir );
             return;
@@ -891,10 +956,6 @@ void npc::move()
     }
 
     map &here = get_map();
-    // Immediate target danger governs healing; broader danger_assessment governs weapon retention.
-    if( ai_cache.danger >= healing_danger_threshold ) {
-        deactivate_bionic_by_id( bio_nanobots );
-    }
     if( !ai_cache.dangerous_explosives.empty() ) {
         action = npc_escape_explosion;
     } else if( ( target == &player_character && attitude == NPCATT_FLEE_TEMP ) ||
@@ -3642,20 +3703,9 @@ void npc::heal_player( Character &patient )
         return;
     }
     if( !is_hallucination() ) {
-        const activity_id interrupted_activity = activity.id();
-        const player_activity interrupted_stashed_activity = get_stashed_activity();
-        const player_activity interrupted_stashed_backlog = get_stashed_backlog_activity();
+        const healing_interruption_state interrupted = capture_healing_interruption( *this );
         int charges_used = used.type->invoke( *this, used, patient.pos(), "heal" ).value_or( 0 );
-        if( !interrupted_activity.is_null() && activity.id() == ACT_FIRSTAID && !backlog.empty() &&
-            backlog.front().id() == interrupted_activity ) {
-            backlog.front().auto_resume = true;
-        }
-        if( interrupted_stashed_activity && !has_stashed_activity() ) {
-            set_stashed_activity( interrupted_stashed_activity, interrupted_stashed_backlog );
-            set_attitude( NPCATT_ACTIVITY );
-            set_mission( NPC_MISSION_ACTIVITY );
-            current_activity_id = interrupted_stashed_activity.id();
-        }
+        restore_healing_interruption( *this, interrupted );
         consume_charges( used, charges_used );
     } else {
         pretend_heal( patient, used );
@@ -3717,20 +3767,9 @@ void npc::heal_self()
     add_msg_if_player_sees( *this, _( "%1$s starts applying a %2$s." ), disp_name(), used.tname() );
     warn_about( "heal_self", 1_turns );
 
-    const activity_id interrupted_activity = activity.id();
-    const player_activity interrupted_stashed_activity = get_stashed_activity();
-    const player_activity interrupted_stashed_backlog = get_stashed_backlog_activity();
+    const healing_interruption_state interrupted = capture_healing_interruption( *this );
     int charges_used = used.type->invoke( *this, used, pos(), "heal" ).value_or( 0 );
-    if( !interrupted_activity.is_null() && activity.id() == ACT_FIRSTAID && !backlog.empty() &&
-        backlog.front().id() == interrupted_activity ) {
-        backlog.front().auto_resume = true;
-    }
-    if( interrupted_stashed_activity && !has_stashed_activity() ) {
-        set_stashed_activity( interrupted_stashed_activity, interrupted_stashed_backlog );
-        set_attitude( NPCATT_ACTIVITY );
-        set_mission( NPC_MISSION_ACTIVITY );
-        current_activity_id = interrupted_stashed_activity.id();
-    }
+    restore_healing_interruption( *this, interrupted );
     if( used.is_medication() && charges_used > 0 ) {
         consume_charges( used, charges_used );
     }
