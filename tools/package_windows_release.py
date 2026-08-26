@@ -75,6 +75,10 @@ def verify(
             raise ValueError("archive entries are not sorted")
         if len(names) != len(set(names)):
             raise ValueError("archive contains duplicate entries")
+        for name in names:
+            path = pathlib.PurePosixPath(name)
+            if path.is_absolute() or ".." in path.parts or "\\" in name:
+                raise ValueError(f"archive contains an unsafe entry name: {name}")
 
         required = {
             "cataclysm-tiles.exe",
@@ -113,7 +117,8 @@ def verify(
                     "archive is missing release documents: " + ", ".join(missing_documents)
                 )
             try:
-                metadata = json.loads(archive.read("RELEASE_METADATA.json").decode("utf-8"))
+                metadata_bytes = archive.read("RELEASE_METADATA.json")
+                metadata = json.loads(metadata_bytes.decode("utf-8"))
             except (UnicodeDecodeError, json.JSONDecodeError) as error:
                 raise ValueError("archive release metadata is invalid JSON") from error
             if not isinstance(metadata, dict):
@@ -131,6 +136,17 @@ def verify(
                 actual_hash = hashlib.sha256(archive.read(name)).hexdigest()
                 if actual_hash != expected_hash:
                     raise ValueError(f"archive release document hash mismatch: {name}")
+            receipts = {
+                "release notes sha256": documents["RELEASE_NOTES.md"],
+                "release metadata sha256": hashlib.sha256(metadata_bytes).hexdigest(),
+                "cumulative changelog sha256": documents["CHANGELOG.md"],
+                "cumulative overview sha256": documents["PATCHNOTES_ADDITIVE_0G.md"],
+            }
+            manifest_lines = manifest_text.splitlines()
+            for label, digest in receipts.items():
+                matches = [line for line in manifest_lines if line.startswith(f"{label}:")]
+                if matches != [f"{label}: {digest}"]:
+                    raise ValueError(f"archive build manifest receipt mismatch: {label}")
 
         timestamps = {entry.date_time for entry in archive.infolist()}
         if len(timestamps) != 1:

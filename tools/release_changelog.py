@@ -55,6 +55,10 @@ ENTRY_ID_RE = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
 MERGE_PR_RE = re.compile(r"Merge pull request #([1-9]\d*) from \S+\Z")
 SQUASH_PR_RE = re.compile(r".+ \(#([1-9]\d*)\)\Z")
 DEPENDABOT_RE = re.compile(r"Bump (.+) from (\S+) to (\S+) \(#([1-9]\d*)\)\Z")
+DEPENDABOT_PR_TITLE_RE = re.compile(r"Bump (.+) from (\S+) to (\S+)\Z")
+DEPENDABOT_EMAIL_RE = re.compile(
+    r"(?:49699333\+)?dependabot\[bot\]@users\.noreply\.github\.com\Z"
+)
 
 
 class ChangelogError(ValueError):
@@ -491,7 +495,7 @@ def render_release(release: dict[str, Any], fragments: dict[int, dict[str, Any]]
         )
     lines.extend(
         [
-            "For the cumulative fork overview, see [PATCHNOTES_ADDITIVE_0G.md](../../PATCHNOTES_ADDITIVE_0G.md).",
+            f"For the cumulative fork overview, see [PATCHNOTES_ADDITIVE_0G.md]({REPOSITORY_URL}/blob/main/PATCHNOTES_ADDITIVE_0G.md).",
             "",
         ]
     )
@@ -516,10 +520,17 @@ def render_release(release: dict[str, Any], fragments: dict[int, dict[str, Any]]
             for entry, pr in category_entries:
                 lines.extend(_render_entry(entry, pr))
             lines.append("")
-    skipped = [change["pr"] for change in release["changes"] if "fragment_sha256" in change and "skip" in fragments[change["pr"]]]
+    skipped = [
+        change["pr"]
+        for change in release["changes"]
+        if "fragment_sha256" in change and "skip" in fragments[change["pr"]]
+    ]
     if skipped:
-        links = ", ".join(f"[PR #{pr}]({REPOSITORY_URL}/pull/{pr})" for pr in skipped)
-        lines.extend(["## Intentionally omitted", "", f"- {links}: maintainer-only changes with explicit skip reasons.", ""])
+        lines.extend(["## Intentionally omitted", ""])
+        for pr in skipped:
+            reason = markdown_escape(fragments[pr]["skip"]["reason"])
+            lines.append(f"- [PR #{pr}]({REPOSITORY_URL}/pull/{pr}): {reason}")
+        lines.append("")
     if release["known_limits"]:
         lines.extend(["## Known limits", ""])
         lines.extend(f"- {markdown_escape(item)}" for item in release["known_limits"])
@@ -629,17 +640,23 @@ def first_parent_integrations(
         return []
     lines = git(
         root,
-        ["log", "--first-parent", "--reverse", "--format=%H%x09%P%x09%s", f"{start}..{end}"],
+        [
+            "log",
+            "--first-parent",
+            "--reverse",
+            "--format=%H%x09%P%x09%an%x09%ae%x09%s",
+            f"{start}..{end}",
+        ],
     ).splitlines()
     if not lines:
         raise ChangelogError(f"{start_exclusive} is not on the first-parent chain of {end_inclusive}")
     previous = start
     integrations: list[dict[str, Any]] = []
     for line in lines:
-        parts = line.split("\t", 2)
-        if len(parts) != 3:
+        parts = line.split("\t", 4)
+        if len(parts) != 5:
             raise ChangelogError("unexpected git log record")
-        commit, parent_text, subject = parts
+        commit, parent_text, author_name, author_email, subject = parts
         parents = parent_text.split()
         if not parents or parents[0] != previous:
             raise ChangelogError(
@@ -647,7 +664,7 @@ def first_parent_integrations(
             )
         merge_match = MERGE_PR_RE.fullmatch(subject)
         squash_match = SQUASH_PR_RE.fullmatch(subject)
-        if merge_match and len(parents) >= 2:
+        if merge_match and len(parents) == 2:
             pr = int(merge_match.group(1))
             style = "merge"
         elif squash_match and len(parents) == 1:
@@ -657,8 +674,20 @@ def first_parent_integrations(
             raise ChangelogError(
                 f"{commit}: first-parent commit is not a recognized GitHub PR integration: {subject!r}"
             )
+        if any(item["pr"] == pr for item in integrations):
+            raise ChangelogError(
+                f"{commit}: PR #{pr} appears more than once; rebase merges are unsupported"
+            )
         integrations.append(
-            {"commit": commit, "parents": parents, "subject": subject, "pr": pr, "style": style}
+            {
+                "commit": commit,
+                "parents": parents,
+                "subject": subject,
+                "author_name": author_name,
+                "author_email": author_email,
+                "pr": pr,
+                "style": style,
+            }
         )
         previous = commit
     if previous != end:
@@ -686,6 +715,7 @@ def validate_tag(root: pathlib.Path, tag: str, expected_commit: str | None = Non
         raise ChangelogError(
             f"{tag}: manifest PR order {expected_prs} does not cover exact first-parent range {actual_prs}"
         )
+    verify_automatic_integrations(release["changes"], integrations, tag)
     verify_release_fragment_links(tags, releases, fragments)
 
 
@@ -730,11 +760,16 @@ def _check_release_history_diff(
                 raise ChangelogError(
                     f"bootstrap release history may only add files, found {status} {path}"
                 )
+        if records:
+            _verify_generated_checkout(root, head)
         return
     if not records:
         return
 
     release_records = [record for record in records if record[1].startswith(f"{RELEASE_DIR.as_posix()}/")]
+    if not release_records:
+        _verify_generated_rewrites(root, head, records)
+        return
     manifest_additions = [
         path
         for status, path in release_records
@@ -752,16 +787,24 @@ def _check_release_history_diff(
     tag = pathlib.PurePosixPath(manifest_path).stem
     if not TAG_RE.fullmatch(tag):
         raise ChangelogError(f"invalid added release manifest name: {manifest_path}")
-    expected_other = {
+    required_other = {
         ("A", f"{RELEASE_DOC_DIR.as_posix()}/{tag}.md"),
         ("M", "CHANGELOG.md"),
     }
     other_records = set(records) - set(release_records)
-    if other_records != expected_other:
+    generated_paths = _verify_generated_checkout(root, head)
+    allowed_historical_docs = {
+        ("M", path)
+        for path in generated_paths
+        if path.startswith(f"{RELEASE_DOC_DIR.as_posix()}/")
+    }
+    if not required_other.issubset(other_records) or not other_records.issubset(
+        required_other | allowed_historical_docs
+    ):
         raise ChangelogError(
-            f"release PR must add only its generated release document and update CHANGELOG.md; found {sorted(other_records)}"
+            "release PR must add its generated release document, update CHANGELOG.md, "
+            f"and may only regenerate indexed historical documents; found {sorted(other_records)}"
         )
-
     release = validate_release(
         _git_json(root, head, manifest_path), f"{head}:{manifest_path}"
     )
@@ -774,19 +817,63 @@ def _check_release_history_diff(
     if not isinstance(index["releases"], list) or not index["releases"] or index["releases"][0] != tag:
         raise ChangelogError(f"{tag}: new release must be the first index entry")
     expected_prs = [item["pr"] for item in release["changes"]]
-    actual_prs = [
-        item["pr"]
-        for item in first_parent_integrations(root, release["previous_release"], base)
-    ]
+    integrations = first_parent_integrations(root, release["previous_release"], base)
+    actual_prs = [item["pr"] for item in integrations]
     actual_prs.append(pr)
     if expected_prs != actual_prs:
         raise ChangelogError(
             f"{tag}: release PR coverage {expected_prs} must equal current main range plus PR #{pr}: {actual_prs}"
         )
+    verify_automatic_integrations(
+        release["changes"][:-1],
+        integrations,
+        tag,
+    )
+    if "automatic" in release["changes"][-1]:
+        raise ChangelogError(
+            f"{tag}: release-preparation PR #{pr} must use its reviewed fragment"
+        )
+
+
+def _generated_paths_from_checkout(root: pathlib.Path) -> set[str]:
+    tags, releases, fragments = lint_repository(root, check_generated=True)
+    return {
+        path.relative_to(root).as_posix()
+        for path in expected_generated_files(root, tags, releases, fragments)
+    }
+
+
+def _verify_generated_checkout(root: pathlib.Path, head: str) -> set[str]:
+    if resolve_commit(root, "HEAD") != resolve_commit(root, head):
+        raise ChangelogError("generated-file verification requires HEAD to match --head")
+    return _generated_paths_from_checkout(root)
+
+
+def _verify_generated_rewrites(
+    root: pathlib.Path,
+    head: str,
+    records: list[tuple[str, str]],
+) -> None:
+    allowed = _verify_generated_checkout(root, head)
+    invalid = [
+        (status, path)
+        for status, path in records
+        if status != "M" or path not in allowed
+    ]
+    if invalid:
+        raise ChangelogError(
+            "renderer-only changes may only rewrite indexed generated files; "
+            f"found {invalid}"
+        )
 
 
 def check_pr(
-    root: pathlib.Path, base: str, head: str, pr: int, author: str
+    root: pathlib.Path,
+    base: str,
+    head: str,
+    pr: int,
+    author: str,
+    title: str | None = None,
 ) -> None:
     require_int(pr, "--pr")
     base_commit = resolve_commit(root, base)
@@ -808,6 +895,10 @@ def check_pr(
         if expected not in added:
             raise ChangelogError(f"bootstrap PR must add its own fragment: {expected}")
     elif dependabot and not added:
+        if title is None or not _is_canonical_dependabot_title(title, pr):
+            raise ChangelogError(
+                f"Dependabot PR #{pr} without a fragment must use its canonical bump title"
+            )
         return
     elif added != [expected]:
         raise ChangelogError(
@@ -819,6 +910,17 @@ def check_pr(
             raise ChangelogError(f"invalid fragment filename: {path}")
         fragment_pr = int(match.group(1))
         validate_fragment(_git_json(root, head_commit, path), f"{head_commit}:{path}", fragment_pr)
+
+
+def check_main_update(root: pathlib.Path, base: str, head: str) -> None:
+    integrations = first_parent_integrations(root, base, head)
+    if len(integrations) != 1:
+        raise ChangelogError(
+            "main updates must contain exactly one recognized PR integration"
+        )
+    integration = integrations[0]
+    author = "dependabot[bot]" if _is_dependabot_integration(integration) else "main-integration"
+    check_pr(root, base, head, integration["pr"], author, integration["subject"])
 
 
 def _automatic_dependabot_entry(subject: str, pr: int) -> dict[str, Any] | None:
@@ -834,6 +936,42 @@ def _automatic_dependabot_entry(subject: str, pr: int) -> dict[str, Any] | None:
         "summary": f"Update {dependency} from {old} to {new}.",
         "compatibility": "not-applicable",
     }
+
+
+def _is_canonical_dependabot_title(title: str, pr: int) -> bool:
+    if _automatic_dependabot_entry(title, pr) is not None:
+        return True
+    return DEPENDABOT_PR_TITLE_RE.fullmatch(title) is not None
+
+
+def _is_dependabot_integration(integration: dict[str, Any]) -> bool:
+    return (
+        integration.get("style") == "squash"
+        and integration.get("author_name") == "dependabot[bot]"
+        and isinstance(integration.get("author_email"), str)
+        and DEPENDABOT_EMAIL_RE.fullmatch(integration["author_email"]) is not None
+        and _automatic_dependabot_entry(integration["subject"], integration["pr"])
+        is not None
+    )
+
+
+def verify_automatic_integrations(
+    changes: list[dict[str, Any]],
+    integrations: list[dict[str, Any]],
+    source: str,
+) -> None:
+    if len(changes) != len(integrations):
+        raise ChangelogError(f"{source}: integration/change count mismatch")
+    for change, integration in zip(changes, integrations):
+        if change["pr"] != integration["pr"]:
+            raise ChangelogError(f"{source}: integration PR order mismatch")
+        if "automatic" not in change:
+            continue
+        expected = _automatic_dependabot_entry(integration["subject"], integration["pr"])
+        if not _is_dependabot_integration(integration) or change["automatic"] != expected:
+            raise ChangelogError(
+                f"{source}: automatic PR #{change['pr']} entry is not the canonical Dependabot derivation"
+            )
 
 
 def prepare_release(
@@ -855,21 +993,23 @@ def prepare_release(
     if release_pr not in fragments:
         raise ChangelogError(f"release preparation PR #{release_pr} needs its own fragment first")
     integrations = first_parent_integrations(root, previous, target)
-    pr_subjects = [(item["pr"], item["subject"]) for item in integrations]
-    if release_pr in {pr for pr, _ in pr_subjects}:
+    if release_pr in {item["pr"] for item in integrations}:
         raise ChangelogError("release preparation PR is already present in target history")
-    pr_subjects.append((release_pr, f"Release preparation (#{release_pr})"))
     changes = []
-    for pr, subject in pr_subjects:
+    for integration in integrations:
+        pr = integration["pr"]
         if pr in fragments:
             changes.append({"pr": pr, "fragment_sha256": object_hash(fragments[pr])})
             continue
-        automatic = _automatic_dependabot_entry(subject, pr)
-        if automatic is None:
+        automatic = _automatic_dependabot_entry(integration["subject"], pr)
+        if automatic is None or not _is_dependabot_integration(integration):
             raise ChangelogError(
                 f"PR #{pr} has no fragment and is not a deterministic Dependabot bump"
             )
         changes.append({"pr": pr, "automatic": automatic})
+    changes.append(
+        {"pr": release_pr, "fragment_sha256": object_hash(fragments[release_pr])}
+    )
     release = {
         "schema": 1,
         "tag": tag,
@@ -954,9 +1094,17 @@ def build_asset_manifest(
         raise ChangelogError(f"unknown release: {tag}")
     if not SHA_RE.fullmatch(commit):
         raise ChangelogError("commit must be a full lowercase SHA")
+    release = releases[tag]
+    source_manifest_hash = sha256_file(root / RELEASE_DIR / f"{tag}.json")
     embedded = validate_runtime_metadata(load_json(metadata), str(metadata))
     if embedded["tag"] != tag or embedded["commit"] != commit:
         raise ChangelogError("release metadata tag/commit mismatch")
+    if (
+        embedded["title"] != release["title"]
+        or embedded["previous_release"] != release["previous_release"]
+        or embedded["source_manifest_sha256"] != source_manifest_hash
+    ):
+        raise ChangelogError("release metadata does not match the reviewed source manifest")
     assets = []
     for path in sorted((archive, build_manifest_path, notes), key=lambda item: item.name):
         assets.append(
@@ -965,10 +1113,10 @@ def build_asset_manifest(
     manifest = {
         "schema": 1,
         "tag": tag,
-        "title": releases[tag]["title"],
+        "title": release["title"],
         "commit": commit,
-        "previous_release": releases[tag]["previous_release"],
-        "source_manifest_sha256": sha256_file(root / RELEASE_DIR / f"{tag}.json"),
+        "previous_release": release["previous_release"],
+        "source_manifest_sha256": source_manifest_hash,
         "embedded_metadata_sha256": sha256_file(metadata),
         "assets": assets,
     }
@@ -1073,16 +1221,29 @@ def verify_assets(
     expected_tag: str,
     expected_commit: str,
 ) -> None:
+    directory = directory.resolve(strict=True)
+    expected_manifest_path = directory / "RELEASE_MANIFEST.json"
+    if manifest_path.resolve(strict=True) != expected_manifest_path:
+        raise ChangelogError(
+            "--manifest must name RELEASE_MANIFEST.json inside --directory"
+        )
     manifest = validate_asset_manifest(load_json(manifest_path), str(manifest_path))
     if manifest["tag"] != expected_tag or manifest["commit"] != expected_commit:
         raise ChangelogError("release asset manifest tag/commit mismatch")
     tags, releases, fragments = lint_repository(root, check_generated=True)
     if expected_tag not in releases:
         raise ChangelogError(f"unknown release: {expected_tag}")
+    release = releases[expected_tag]
     source_path = root / RELEASE_DIR / f"{expected_tag}.json"
-    if sha256_file(source_path) != manifest["source_manifest_sha256"]:
+    source_manifest_hash = sha256_file(source_path)
+    if source_manifest_hash != manifest["source_manifest_sha256"]:
         raise ChangelogError("source release manifest hash mismatch")
-    expected_notes = render_release(releases[expected_tag], fragments).encode("utf-8")
+    if (
+        manifest["title"] != release["title"]
+        or manifest["previous_release"] != release["previous_release"]
+    ):
+        raise ChangelogError("release asset manifest does not match reviewed release identity")
+    expected_notes = render_release(release, fragments).encode("utf-8")
     expected_asset_names = set()
     for asset in manifest["assets"]:
         expected_asset_names.add(asset["name"])
@@ -1126,9 +1287,27 @@ def verify_assets(
         )
         if metadata["tag"] != expected_tag or metadata["commit"] != expected_commit:
             raise ChangelogError("embedded release metadata tag/commit mismatch")
+        if (
+            metadata["title"] != release["title"]
+            or metadata["previous_release"] != release["previous_release"]
+            or metadata["source_manifest_sha256"] != source_manifest_hash
+        ):
+            raise ChangelogError("embedded release metadata does not match reviewed release identity")
         for name in ("CHANGELOG.md", "PATCHNOTES_ADDITIVE_0G.md", "RELEASE_NOTES.md"):
             if sha256_bytes(archive.read(name)) != metadata["documents"][name]:
                 raise ChangelogError(f"embedded document hash mismatch: {name}")
+        build_manifest_text = archive.read("BUILD_MANIFEST.txt").decode("utf-8", errors="strict")
+        expected_receipts = {
+            "release notes sha256": metadata["documents"]["RELEASE_NOTES.md"],
+            "release metadata sha256": manifest["embedded_metadata_sha256"],
+            "cumulative changelog sha256": metadata["documents"]["CHANGELOG.md"],
+            "cumulative overview sha256": metadata["documents"]["PATCHNOTES_ADDITIVE_0G.md"],
+        }
+        build_lines = build_manifest_text.splitlines()
+        for label, digest in expected_receipts.items():
+            matches = [line for line in build_lines if line.startswith(f"{label}:")]
+            if matches != [f"{label}: {digest}"]:
+                raise ChangelogError(f"build manifest receipt mismatch: {label}")
     if tags[0] != expected_tag and releases[expected_tag]["baseline"] is False:
         # Historical release verification is allowed, but a newly tagged release must
         # always be represented in the chain. No lexicographic tag guessing occurs.
@@ -1154,6 +1333,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     check.add_argument("--head", required=True)
     check.add_argument("--pr", type=int, required=True)
     check.add_argument("--author", required=True)
+    check.add_argument("--title")
+
+    check_main = subparsers.add_parser("check-main")
+    check_main.add_argument("--base", required=True)
+    check_main.add_argument("--head", required=True)
 
     validate = subparsers.add_parser("validate-tag")
     validate.add_argument("--tag", required=True)
@@ -1209,7 +1393,9 @@ def main(argv: list[str]) -> int:
                 raise ChangelogError(f"unknown release: {args.tag}")
             atomic_write(args.output, render_release(releases[args.tag], fragments).encode("utf-8"))
         elif args.command == "check-pr":
-            check_pr(root, args.base, args.head, args.pr, args.author)
+            check_pr(root, args.base, args.head, args.pr, args.author, args.title)
+        elif args.command == "check-main":
+            check_main_update(root, args.base, args.head)
         elif args.command == "validate-tag":
             validate_tag(root, args.tag, args.expected_commit)
         elif args.command == "release-field":

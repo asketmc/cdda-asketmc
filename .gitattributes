@@ -18,6 +18,7 @@
 
 # Release changelog bytes and their hashes are deterministic on every host.
 CHANGELOG.md       text eol=lf
+PATCHNOTES_ADDITIVE_0G.md text eol=lf
 changelog/**       text eol=lf
 doc/releases/**    text eol=lf
 

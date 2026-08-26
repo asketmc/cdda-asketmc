@@ -97,6 +97,7 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertLess(copy_notes, package)
         self.assertIn('--release-tag "${GITHUB_REF_NAME}"', build)
         self.assertIn("release_changelog.py build-asset-manifest", build)
+        self.assertIn("| LC_ALL=C sort -k2 > SHA256SUMS.txt", build)
 
     def test_make_staging_contract_is_used_without_make_zip(self) -> None:
         self.assertRegex(self.makefile, r"(?m)^BINDIST_DIR = \$\(BUILD_PREFIX\)bindist$")
@@ -151,9 +152,29 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn("PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}", self.quality)
         self.assertIn("PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}", self.quality)
         self.assertIn("PR_NUMBER: ${{ github.event.pull_request.number }}", self.quality)
+        self.assertIn("PR_TITLE: ${{ github.event.pull_request.title }}", self.quality)
+        self.assertIn("PUSH_BEFORE_SHA: ${{ github.event.before }}", self.quality)
+        self.assertIn("PUSH_HEAD_SHA: ${{ github.sha }}", self.quality)
+        self.assertIn(
+            "REBASE_MERGES_ALLOWED: ${{ github.event.repository.allow_rebase_merge }}",
+            self.quality,
+        )
         self.assertIn('--base "${PR_BASE_SHA}"', self.quality)
         self.assertIn('--head "${PR_HEAD_SHA}"', self.quality)
         self.assertIn('--pr "${PR_NUMBER}"', self.quality)
+        self.assertIn('--title "${PR_TITLE}"', self.quality)
+        self.assertIn("release_changelog.py check-main", self.quality)
+        self.assertIn('--base "${PUSH_BEFORE_SHA}"', self.quality)
+        self.assertIn('--head "${PUSH_HEAD_SHA}"', self.quality)
+        self.assertIn('[[ "${REBASE_MERGES_ALLOWED}" != "false" ]]', self.quality)
+
+    def test_new_and_existing_releases_share_exact_remote_readback(self) -> None:
+        build = self.workflow[self.workflow.index("  publish-release:") :]
+        create = build.index('gh release create "${GITHUB_REF_NAME}"')
+        readback = build.index('mkdir existing')
+        self.assertLess(create, readback)
+        self.assertEqual(build.count("mkdir existing"), 1)
+        self.assertEqual(build.count("cmp RELEASE_NOTES.md existing/RELEASE_NOTES.md"), 1)
 
     def test_every_job_declares_least_privilege_permissions(self) -> None:
         jobs = re.split(r"(?m)^  (?=[a-z][a-z0-9-]*:$)", self.workflow.split("\njobs:\n", 1)[1])

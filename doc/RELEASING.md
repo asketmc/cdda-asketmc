@@ -25,6 +25,8 @@ CI requires the fragment filename and embedded PR number to match. Existing frag
 
 Dependabot-generated pull requests may merge without a fragment. The release preparation command accepts only their canonical `Bump <dependency> from <old> to <new> (#<PR>)` squash title and derives a maintainer entry deterministically. Other missing fragments fail closed.
 
+`main` accepts GitHub merge commits and squash merges only. Rebase merging is disabled because it loses the one-integration-commit-per-PR boundary required by the release chain. Branch protection requires a pull request and the up-to-date `Portable contracts` check, applies to administrators, and forbids force-pushes and deletion. The push gate independently audits that exactly one recognized PR integration reached `main` and repeats the fragment/history checks.
+
 ### Optional drafting assistance
 
 A local drafting tool may propose fragment wording from a pull-request diff or summary. The maintainer must review the facts, audience, compatibility, and known limits before committing the JSON. CI and published output contain only the reviewed repository content, with no drafting-tool metadata or generated-by marker.
@@ -79,4 +81,4 @@ Publication exposes five immutable assets:
 - `BUILD_MANIFEST.txt` with build inputs and embedded-document hashes;
 - `SHA256SUMS.txt`, which authenticates the other four assets.
 
-The exact staged bundle is verified again on Windows, extracted, and run with `--check-mods dda`. A rerun may only succeed when the existing title, body, asset-name set, checksums, and every asset byte match. It never clobbers or silently edits an existing release.
+The exact staged bundle is verified again on Windows, extracted, and run with `--check-mods dda`. After both first publication and a rerun, CI reads the release back and requires its title, body, five-name asset set, checksums, and every asset byte to match. It never clobbers or silently edits an existing release.

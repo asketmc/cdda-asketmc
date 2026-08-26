@@ -222,7 +222,7 @@ jobs:
             (
               cd "${output_dir}"
               sha256sum BUILD_MANIFEST.txt RELEASE_MANIFEST.json RELEASE_NOTES.md "${asset}" \
-                | sort -k2 > SHA256SUMS.txt
+                | LC_ALL=C sort -k2 > SHA256SUMS.txt
             )
           else
             ( cd "${output_dir}" && sha256sum "${asset}" > SHA256SUMS.txt )
@@ -343,32 +343,7 @@ jobs:
           asset="${assets[0]}"
           sha256sum --check SHA256SUMS.txt
           release_title=$(python3 -c 'import json; print(json.load(open("RELEASE_MANIFEST.json", encoding="utf-8"))["title"])')
-          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            mkdir existing
-            asset_name=$(basename "${asset}")
-            test "$(gh release view "${GITHUB_REF_NAME}" --json name --jq '.name')" = "${release_title}"
-            test "$(gh release view "${GITHUB_REF_NAME}" --json isDraft --jq '.isDraft')" = "false"
-            gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" \
-              --jq '.body' > existing/RELEASE_BODY.md
-            cmp RELEASE_NOTES.md existing/RELEASE_BODY.md
-            mapfile -t remote_assets < <(gh release view "${GITHUB_REF_NAME}" --json assets --jq '.assets[].name' | sort)
-            mapfile -t expected_assets < <(printf '%s\n' "${asset_name}" BUILD_MANIFEST.txt RELEASE_MANIFEST.json RELEASE_NOTES.md SHA256SUMS.txt | sort)
-            test "${#remote_assets[@]}" -eq 5
-            test "${remote_assets[*]}" = "${expected_assets[*]}"
-            gh release download "${GITHUB_REF_NAME}" \
-              --pattern "${asset_name}" \
-              --pattern BUILD_MANIFEST.txt \
-              --pattern RELEASE_MANIFEST.json \
-              --pattern RELEASE_NOTES.md \
-              --pattern SHA256SUMS.txt \
-              --dir existing
-            cmp SHA256SUMS.txt existing/SHA256SUMS.txt
-            cmp BUILD_MANIFEST.txt existing/BUILD_MANIFEST.txt
-            cmp RELEASE_MANIFEST.json existing/RELEASE_MANIFEST.json
-            cmp RELEASE_NOTES.md existing/RELEASE_NOTES.md
-            cmp "${asset}" "existing/${asset_name}"
-            ( cd existing && sha256sum --check SHA256SUMS.txt )
-          else
+          if ! gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
             gh release create "${GITHUB_REF_NAME}" \
               "${asset}" BUILD_MANIFEST.txt RELEASE_MANIFEST.json RELEASE_NOTES.md SHA256SUMS.txt \
               --verify-tag \
@@ -376,6 +351,30 @@ jobs:
               --title "${release_title}" \
               --notes-file RELEASE_NOTES.md
           fi
+          mkdir existing
+          asset_name=$(basename "${asset}")
+          test "$(gh release view "${GITHUB_REF_NAME}" --json name --jq '.name')" = "${release_title}"
+          test "$(gh release view "${GITHUB_REF_NAME}" --json isDraft --jq '.isDraft')" = "false"
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" \
+            --jq '.body' > existing/RELEASE_BODY.md
+          cmp RELEASE_NOTES.md existing/RELEASE_BODY.md
+          mapfile -t remote_assets < <(gh release view "${GITHUB_REF_NAME}" --json assets --jq '.assets[].name' | sort)
+          mapfile -t expected_assets < <(printf '%s\n' "${asset_name}" BUILD_MANIFEST.txt RELEASE_MANIFEST.json RELEASE_NOTES.md SHA256SUMS.txt | sort)
+          test "${#remote_assets[@]}" -eq 5
+          test "${remote_assets[*]}" = "${expected_assets[*]}"
+          gh release download "${GITHUB_REF_NAME}" \
+            --pattern "${asset_name}" \
+            --pattern BUILD_MANIFEST.txt \
+            --pattern RELEASE_MANIFEST.json \
+            --pattern RELEASE_NOTES.md \
+            --pattern SHA256SUMS.txt \
+            --dir existing
+          cmp SHA256SUMS.txt existing/SHA256SUMS.txt
+          cmp BUILD_MANIFEST.txt existing/BUILD_MANIFEST.txt
+          cmp RELEASE_MANIFEST.json existing/RELEASE_MANIFEST.json
+          cmp RELEASE_NOTES.md existing/RELEASE_NOTES.md
+          cmp "${asset}" "existing/${asset_name}"
+          ( cd existing && sha256sum --check SHA256SUMS.txt )
 
       - name: Attest build provenance for the published archive
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2

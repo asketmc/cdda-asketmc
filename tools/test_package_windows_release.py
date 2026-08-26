@@ -89,13 +89,35 @@ class WindowsReleasePackagingTest(unittest.TestCase):
                     for name, data in documents.items()
                 },
             }
-            (source / "RELEASE_METADATA.json").write_text(
+            metadata_path = source / "RELEASE_METADATA.json"
+            metadata_path.write_text(
                 json.dumps(metadata), encoding="utf-8"
+            )
+            receipt_lines = [
+                f"commit sha: {commit}",
+                f"release notes sha256: {metadata['documents']['RELEASE_NOTES.md']}",
+                f"release metadata sha256: {hashlib.sha256(metadata_path.read_bytes()).hexdigest()}",
+                f"cumulative changelog sha256: {metadata['documents']['CHANGELOG.md']}",
+                "cumulative overview sha256: "
+                f"{metadata['documents']['PATCHNOTES_ADDITIVE_0G.md']}",
+            ]
+            (source / "BUILD_MANIFEST.txt").write_text(
+                "\n".join(receipt_lines) + "\n", encoding="utf-8"
             )
             archive_path = root / "release.zip"
             package_windows_release.package(source, archive_path, 1_700_000_000)
             package_windows_release.verify(archive_path, commit, version, tag)
 
+            valid_build_manifest = (source / "BUILD_MANIFEST.txt").read_bytes()
+            (source / "BUILD_MANIFEST.txt").write_text(
+                f"commit sha: {commit}\nrelease notes sha256: {'0' * 64}\n",
+                encoding="utf-8",
+            )
+            package_windows_release.package(source, archive_path, 1_700_000_000)
+            with self.assertRaisesRegex(ValueError, "build manifest receipt mismatch"):
+                package_windows_release.verify(archive_path, commit, version, tag)
+
+            (source / "BUILD_MANIFEST.txt").write_bytes(valid_build_manifest)
             (source / "RELEASE_NOTES.md").write_bytes(b"tampered\n")
             package_windows_release.package(source, archive_path, 1_700_000_000)
             with self.assertRaisesRegex(ValueError, "document hash mismatch"):
@@ -140,6 +162,14 @@ class WindowsReleasePackagingTest(unittest.TestCase):
                     archive.writestr(name, f"{commit}\n0.G-test\n")
             with self.assertRaisesRegex(ValueError, "data/core/game_balance.json"):
                 package_windows_release.verify(archive_path, commit, "0.G-test")
+
+    def test_verifier_rejects_unsafe_archive_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            archive_path = pathlib.Path(temp_dir) / "bad.zip"
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                archive.writestr("../outside.txt", "unsafe")
+            with self.assertRaisesRegex(ValueError, "unsafe entry name"):
+                package_windows_release.verify(archive_path, "e" * 40, "0.G-test")
 
 
 if __name__ == "__main__":

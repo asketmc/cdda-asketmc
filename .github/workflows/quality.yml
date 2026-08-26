@@ -63,18 +63,31 @@ jobs:
             tools.gfx_tools.test_visual_ui_donor_contracts
       - name: Validate reviewed changelog input and generated release history
         env:
+          REBASE_MERGES_ALLOWED: ${{ github.event.repository.allow_rebase_merge }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          PUSH_HEAD_SHA: ${{ github.sha }}
         run: |
+          if [[ "${REBASE_MERGES_ALLOWED}" != "false" ]]; then
+            echo "Repository policy must disable rebase merges." >&2
+            exit 1
+          fi
           python3 tools/release_changelog.py lint --check-generated
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
             python3 tools/release_changelog.py check-pr \
               --base "${PR_BASE_SHA}" \
               --head "${PR_HEAD_SHA}" \
               --pr "${PR_NUMBER}" \
-              --author "${PR_AUTHOR}"
+              --author "${PR_AUTHOR}" \
+              --title "${PR_TITLE}"
+          elif [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            python3 tools/release_changelog.py check-main \
+              --base "${PUSH_BEFORE_SHA}" \
+              --head "${PUSH_HEAD_SHA}"
           fi
       - name: Additive audit self-test
         run: python3 tools/additive_audit.py --self-test
