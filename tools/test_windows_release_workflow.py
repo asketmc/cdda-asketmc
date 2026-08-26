@@ -12,6 +12,9 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         cls.workflow = (ROOT / ".github" / "workflows" / "windows-release.yml").read_text(
             encoding="utf-8"
         )
+        cls.quality = (ROOT / ".github" / "workflows" / "quality.yml").read_text(
+            encoding="utf-8"
+        )
         cls.makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
 
     def test_all_actions_are_pinned_to_full_commit(self) -> None:
@@ -24,6 +27,21 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn('tags:\n      - "v0.G-additive-*"', self.workflow)
         self.assertIn('git merge-base --is-ancestor "${GITHUB_SHA}" origin/main', self.workflow)
         self.assertIn("env.RELEASE_BUILD == 'true'", self.workflow)
+        self.assertIn("release_changelog.py validate-tag", self.workflow)
+        self.assertIn("--expected-commit \"${GITHUB_SHA}\"", self.workflow)
+
+    def test_release_boundary_fails_before_toolchain_acquisition(self) -> None:
+        boundary = self.workflow.index(
+            "- name: Verify reviewed release boundary before toolchain acquisition"
+        )
+        documents = self.workflow.index("- name: Prepare reviewed release documents")
+        host_tools = self.workflow.index("- name: Install host tools")
+        restore_toolchain = self.workflow.index("- name: Restore MXE archives")
+        self.assertLess(boundary, documents)
+        self.assertLess(documents, host_tools)
+        self.assertLess(host_tools, restore_toolchain)
+        self.assertIn("gh release view \"${previous_release}\"", self.workflow)
+        self.assertNotIn("git tag --sort", self.workflow)
 
     def test_pull_requests_do_not_save_or_upload_build_outputs(self) -> None:
         save_conditions = re.findall(
@@ -62,6 +80,24 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn('build_distribution "${second_prefix}" 0', self.workflow)
         self.assertIn('export SOURCE_DATE_EPOCH="${source_epoch}"', self.workflow)
 
+    def test_reviewed_documents_are_inside_and_outside_the_archive(self) -> None:
+        build = self.workflow[
+            self.workflow.index("- name: Build and package Windows distribution") :
+            self.workflow.index("- name: Save compiler cache for trusted events")
+        ]
+        for name in (
+            "CHANGELOG.md",
+            "PATCHNOTES_ADDITIVE_0G.md",
+            "RELEASE_METADATA.json",
+            "RELEASE_NOTES.md",
+        ):
+            self.assertIn(name, build)
+        copy_notes = build.index('cp release-source/RELEASE_NOTES.md "${dist_dir}/RELEASE_NOTES.md"')
+        package = build.index("python3 tools/package_windows_release.py \\")
+        self.assertLess(copy_notes, package)
+        self.assertIn('--release-tag "${GITHUB_REF_NAME}"', build)
+        self.assertIn("release_changelog.py build-asset-manifest", build)
+
     def test_make_staging_contract_is_used_without_make_zip(self) -> None:
         self.assertRegex(self.makefile, r"(?m)^BINDIST_DIR = \$\(BUILD_PREFIX\)bindist$")
         self.assertIn('dist_dir="${build_prefix}bindist"', self.workflow)
@@ -77,9 +113,47 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertLess(save, install)
 
     def test_existing_release_requires_exact_assets_and_bytes(self) -> None:
-        self.assertIn('test "${#remote_assets[@]}" -eq 3', self.workflow)
+        self.assertIn('test "${#remote_assets[@]}" -eq 5', self.workflow)
         self.assertIn('cmp "${asset}" "existing/${asset_name}"', self.workflow)
+        self.assertIn("cmp RELEASE_MANIFEST.json existing/RELEASE_MANIFEST.json", self.workflow)
+        self.assertIn("cmp RELEASE_NOTES.md existing/RELEASE_NOTES.md", self.workflow)
+        self.assertIn("cmp RELEASE_NOTES.md existing/RELEASE_BODY.md", self.workflow)
         self.assertIn("sha256sum --check SHA256SUMS.txt", self.workflow)
+        self.assertNotIn("--clobber", self.workflow)
+
+    def test_release_body_comes_only_from_reviewed_manifest(self) -> None:
+        self.assertIn("release_changelog.py render-release", self.workflow)
+        self.assertIn("--notes-file RELEASE_NOTES.md", self.workflow)
+        self.assertNotIn("This remains a prerelease", self.workflow)
+        self.assertNotIn("cat > RELEASE_NOTES.md", self.workflow)
+
+    def test_staged_and_published_asset_sets_are_complete(self) -> None:
+        stage = self.workflow[
+            self.workflow.index("- name: Stage tagged release bundle") :
+            self.workflow.index("  validate-windows-release:")
+        ]
+        for name in (
+            "BUILD_MANIFEST.txt",
+            "RELEASE_MANIFEST.json",
+            "RELEASE_NOTES.md",
+            "SHA256SUMS.txt",
+        ):
+            self.assertIn(f"release-output/{name}", stage)
+        self.assertIn(
+            '"${asset}" BUILD_MANIFEST.txt RELEASE_MANIFEST.json RELEASE_NOTES.md SHA256SUMS.txt',
+            self.workflow,
+        )
+
+    def test_quality_gate_uses_exact_pr_identity_and_full_history(self) -> None:
+        self.assertIn("fetch-depth: 0", self.quality)
+        self.assertIn("tools.test_release_changelog", self.quality)
+        self.assertIn("release_changelog.py lint --check-generated", self.quality)
+        self.assertIn("PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}", self.quality)
+        self.assertIn("PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}", self.quality)
+        self.assertIn("PR_NUMBER: ${{ github.event.pull_request.number }}", self.quality)
+        self.assertIn('--base "${PR_BASE_SHA}"', self.quality)
+        self.assertIn('--head "${PR_HEAD_SHA}"', self.quality)
+        self.assertIn('--pr "${PR_NUMBER}"', self.quality)
 
     def test_every_job_declares_least_privilege_permissions(self) -> None:
         jobs = re.split(r"(?m)^  (?=[a-z][a-z0-9-]*:$)", self.workflow.split("\njobs:\n", 1)[1])
@@ -100,7 +174,8 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn("id-token: write", publish)
         self.assertIn("attestations: write", publish)
         self.assertIn(
-            "subject-path: cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip", publish
+            "subject-path: release-output/cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip",
+            publish,
         )
 
     def test_run_blocks_do_not_interpolate_workflow_context(self) -> None:

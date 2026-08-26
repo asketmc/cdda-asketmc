@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "pr": 10,
+  "entries": [
+    {
+      "id": "update-actions-cache-restore",
+      "category": "Infrastructure",
+      "audience": "maintainers",
+      "summary": "Update actions/cache/restore from 4.3.0 to 6.1.0.",
+      "compatibility": "not-applicable"
+    }
+  ]
+}

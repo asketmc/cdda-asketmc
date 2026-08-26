@@ -18,6 +18,16 @@ https://github.com/CleverRaven/Cataclysm-DDA/blob/master/doc/CHANGELOG_GUIDELINE
 If approved and merged, your summary will be added to the project changelog:
 https://github.com/CleverRaven/Cataclysm-DDA/blob/master/data/changelog.txt -->
 
+#### Additive release changelog
+
+<!-- Add changelog/changes/pr-<this PR number>.json. The reviewed JSON is the
+canonical source for this fork's generated release notes and may contain more
+than one entry. Existing fragments are immutable. Dependabot PRs are the only
+automatic exception. See doc/RELEASING.md. -->
+
+- [ ] Added and reviewed `changelog/changes/pr-<number>.json`
+- [ ] Recorded player/save compatibility and known limits where applicable
+
 #### Purpose of change
 
 <!-- With a few sentences, describe your reasons for making this change.  If it relates to an existing issue, you can link it with a # followed by the GitHub issue number, like #1234.  If your pull request *fully* resolves an issue, include the word "Fix" or "Fixes" before the issue number, like: Fixes #xxxx

@@ -34,9 +34,34 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify release tag belongs to main
+      - name: Verify reviewed release boundary before toolchain acquisition
         if: env.RELEASE_BUILD == 'true'
-        run: git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
+          python3 tools/release_changelog.py validate-tag \
+            --tag "${GITHUB_REF_NAME}" \
+            --expected-commit "${GITHUB_SHA}"
+          previous_release=$(python3 tools/release_changelog.py release-field \
+            --tag "${GITHUB_REF_NAME}" --field previous_release)
+          test "$(gh release view "${previous_release}" --repo "${GITHUB_REPOSITORY}" \
+            --json isDraft --jq '.isDraft')" = "false"
+
+      - name: Prepare reviewed release documents
+        if: env.RELEASE_BUILD == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p release-source
+          python3 tools/release_changelog.py render-release \
+            --tag "${GITHUB_REF_NAME}" \
+            --output release-source/RELEASE_NOTES.md
+          python3 tools/release_changelog.py build-metadata \
+            --tag "${GITHUB_REF_NAME}" \
+            --commit "${GITHUB_SHA}" \
+            --notes release-source/RELEASE_NOTES.md \
+            --output release-source/RELEASE_METADATA.json
 
       - name: Install host tools
         run: |
@@ -123,6 +148,14 @@ jobs:
           mxe archive: $(cat build-scripts/mxe-x86_64-gcc11.2-sha256)
           libbacktrace archive: $(cat build-scripts/libbacktrace-x86_64-w64-mingw32-sha256)
           EOF
+          if [[ "${RELEASE_BUILD}" == "true" ]]; then
+            {
+              echo "release notes sha256: $(sha256sum release-source/RELEASE_NOTES.md | cut -d' ' -f1)"
+              echo "release metadata sha256: $(sha256sum release-source/RELEASE_METADATA.json | cut -d' ' -f1)"
+              echo "cumulative changelog sha256: $(sha256sum CHANGELOG.md | cut -d' ' -f1)"
+              echo "cumulative overview sha256: $(sha256sum PATCHNOTES_ADDITIVE_0G.md | cut -d' ' -f1)"
+            } >> BUILD_MANIFEST.txt
+          fi
 
           build_distribution() {
             local build_prefix="$1"
@@ -142,10 +175,19 @@ jobs:
             dist_dir="${build_prefix}bindist"
             test -d "${dist_dir}"
             cp BUILD_MANIFEST.txt "${dist_dir}/BUILD_MANIFEST.txt"
+            if [[ "${RELEASE_BUILD}" == "true" ]]; then
+              cp release-source/RELEASE_NOTES.md "${dist_dir}/RELEASE_NOTES.md"
+              cp release-source/RELEASE_METADATA.json "${dist_dir}/RELEASE_METADATA.json"
+              cp CHANGELOG.md "${dist_dir}/CHANGELOG.md"
+              cp PATCHNOTES_ADDITIVE_0G.md "${dist_dir}/PATCHNOTES_ADDITIVE_0G.md"
+            fi
             python3 tools/package_windows_release.py \
               "${dist_dir}" "${output_dir}/${asset}" "${source_epoch}"
-            python3 tools/package_windows_release.py --verify \
-              "${output_dir}/${asset}" "${GITHUB_SHA}" "${version}"
+            verify_args=(--verify "${output_dir}/${asset}" "${GITHUB_SHA}" "${version}")
+            if [[ "${RELEASE_BUILD}" == "true" ]]; then
+              verify_args+=(--release-tag "${GITHUB_REF_NAME}")
+            fi
+            python3 tools/package_windows_release.py "${verify_args[@]}"
           }
 
           first_prefix="build-one/"
@@ -166,11 +208,25 @@ jobs:
             test "${first_zip}" = "${second_zip}"
           fi
 
-          (
-            cd "${output_dir}"
-            sha256sum "${asset}" > SHA256SUMS.txt
-            cp "${GITHUB_WORKSPACE}/BUILD_MANIFEST.txt" BUILD_MANIFEST.txt
-          )
+          cp BUILD_MANIFEST.txt "${output_dir}/BUILD_MANIFEST.txt"
+          if [[ "${RELEASE_BUILD}" == "true" ]]; then
+            cp release-source/RELEASE_NOTES.md "${output_dir}/RELEASE_NOTES.md"
+            python3 tools/release_changelog.py build-asset-manifest \
+              --tag "${GITHUB_REF_NAME}" \
+              --commit "${GITHUB_SHA}" \
+              --archive "${output_dir}/${asset}" \
+              --notes "${output_dir}/RELEASE_NOTES.md" \
+              --build-manifest "${output_dir}/BUILD_MANIFEST.txt" \
+              --metadata release-source/RELEASE_METADATA.json \
+              --output "${output_dir}/RELEASE_MANIFEST.json"
+            (
+              cd "${output_dir}"
+              sha256sum BUILD_MANIFEST.txt RELEASE_MANIFEST.json RELEASE_NOTES.md "${asset}" \
+                | sort -k2 > SHA256SUMS.txt
+            )
+          else
+            ( cd "${output_dir}" && sha256sum "${asset}" > SHA256SUMS.txt )
+          fi
           ccache --show-stats
 
       - name: Save compiler cache for trusted events
@@ -189,6 +245,8 @@ jobs:
             release-output/cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip
             release-output/SHA256SUMS.txt
             release-output/BUILD_MANIFEST.txt
+            release-output/RELEASE_NOTES.md
+            release-output/RELEASE_MANIFEST.json
           if-no-files-found: error
           retention-days: 1
 
@@ -202,36 +260,50 @@ jobs:
       # Same-run artifact download only; nothing here writes to the repository.
       contents: read
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: windows-release
+          path: release-output
+      - name: Verify checksums, manifests, and embedded release documents
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          EXPECTED_TAG: ${{ github.ref_name }}
+        run: |
+          python tools/release_changelog.py verify-assets \
+            --manifest release-output/RELEASE_MANIFEST.json \
+            --directory release-output \
+            --expected-tag "${EXPECTED_TAG}" \
+            --expected-commit "${EXPECTED_SHA}"
       - name: Verify, extract, and run packaged build
         shell: pwsh
         env:
           EXPECTED_SHA: ${{ github.sha }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $archives = @(Get-ChildItem -File -Filter 'cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip')
-          if ($archives.Count -ne 1) { throw "Expected exactly one release archive, found $($archives.Count)" }
-          $archive = $archives[0]
-          $sumLine = (Get-Content -Raw -LiteralPath 'SHA256SUMS.txt').Trim()
-          $sumParts = $sumLine -split '\s+', 2
-          if ($sumParts.Count -ne 2 -or (Split-Path -Leaf $sumParts[1]) -ne $archive.Name) {
-            throw 'SHA256SUMS.txt does not name the exact release archive'
-          }
-          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $archive.FullName).Hash.ToLowerInvariant()
-          if ($actual -ne $sumParts[0].ToLowerInvariant()) { throw 'Release archive checksum mismatch' }
-          Expand-Archive -LiteralPath $archive.FullName -DestinationPath extracted
-          $exe = Get-Item -LiteralPath 'extracted\cataclysm-tiles.exe'
-          if ($exe.Length -le 0) { throw 'Packaged executable is empty' }
-          $version = Get-Content -Raw -LiteralPath 'extracted\VERSION.txt'
-          if ($version -notmatch [regex]::Escape($env:EXPECTED_SHA)) { throw 'Packaged VERSION.txt lacks the full commit SHA' }
-          $manifest = Get-Content -Raw -LiteralPath 'extracted\BUILD_MANIFEST.txt'
-          if ($manifest -notmatch [regex]::Escape($env:EXPECTED_SHA)) { throw 'Packaged manifest lacks the full commit SHA' }
-          Push-Location extracted
+          Push-Location release-output
           try {
-            $checkMods = Start-Process -FilePath '.\cataclysm-tiles.exe' -ArgumentList @('--check-mods', 'dda') -NoNewWindow -Wait -PassThru
-            if ($checkMods.ExitCode -ne 0) { throw "--check-mods dda failed with exit code $($checkMods.ExitCode)" }
+            $archives = @(Get-ChildItem -File -Filter 'cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip')
+            if ($archives.Count -ne 1) { throw "Expected exactly one release archive, found $($archives.Count)" }
+            $archive = $archives[0]
+            Expand-Archive -LiteralPath $archive.FullName -DestinationPath extracted
+            $exe = Get-Item -LiteralPath 'extracted\cataclysm-tiles.exe'
+            if ($exe.Length -le 0) { throw 'Packaged executable is empty' }
+            $version = Get-Content -Raw -LiteralPath 'extracted\VERSION.txt'
+            if ($version -notmatch [regex]::Escape($env:EXPECTED_SHA)) { throw 'Packaged VERSION.txt lacks the full commit SHA' }
+            $manifest = Get-Content -Raw -LiteralPath 'extracted\BUILD_MANIFEST.txt'
+            if ($manifest -notmatch [regex]::Escape($env:EXPECTED_SHA)) { throw 'Packaged manifest lacks the full commit SHA' }
+            Push-Location extracted
+            try {
+              $checkMods = Start-Process -FilePath '.\cataclysm-tiles.exe' -ArgumentList @('--check-mods', 'dda') -NoNewWindow -Wait -PassThru
+              if ($checkMods.ExitCode -ne 0) { throw "--check-mods dda failed with exit code $($checkMods.ExitCode)" }
+            } finally {
+              Pop-Location
+            }
           } finally {
             Pop-Location
           }
@@ -246,56 +318,66 @@ jobs:
       id-token: write # Sigstore OIDC identity for build provenance.
       attestations: write # Record the provenance attestation for this repository.
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: windows-release
+          path: release-output
       - name: Verify and publish immutable release assets
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+          python3 tools/release_changelog.py verify-assets \
+            --manifest release-output/RELEASE_MANIFEST.json \
+            --directory release-output \
+            --expected-tag "${GITHUB_REF_NAME}" \
+            --expected-commit "${GITHUB_SHA}"
+          cd release-output
           mapfile -t assets < <(find . -maxdepth 1 -name 'cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip' -print)
           test "${#assets[@]}" -eq 1
           asset="${assets[0]}"
-          expected_name=$(awk '{ print $2 }' SHA256SUMS.txt)
-          test "./${expected_name#./}" = "${asset}"
           sha256sum --check SHA256SUMS.txt
-          release_date="${GITHUB_REF_NAME#v0.G-additive-}"
-          cat > RELEASE_NOTES.md <<EOF
-          Windows x64 Tiles+Sound prerelease from public main at ${GITHUB_SHA}.
-
-          Validation completed before publication:
-          - two clean release builds produced identical executable and ZIP hashes
-          - the exact staged ZIP was checksum-verified and extracted on Windows
-          - embedded full-SHA provenance was verified
-          - the packaged executable passed --check-mods dda
-
-          This remains a prerelease until an operator downloads this exact asset and completes a copied-save load smoke on Windows. Assets are immutable for this tag: a rerun must reproduce the existing checksum.
-          EOF
+          release_title=$(python3 -c 'import json; print(json.load(open("RELEASE_MANIFEST.json", encoding="utf-8"))["title"])')
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
             mkdir existing
             asset_name=$(basename "${asset}")
+            test "$(gh release view "${GITHUB_REF_NAME}" --json name --jq '.name')" = "${release_title}"
+            test "$(gh release view "${GITHUB_REF_NAME}" --json isDraft --jq '.isDraft')" = "false"
+            gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" \
+              --jq '.body' > existing/RELEASE_BODY.md
+            cmp RELEASE_NOTES.md existing/RELEASE_BODY.md
             mapfile -t remote_assets < <(gh release view "${GITHUB_REF_NAME}" --json assets --jq '.assets[].name' | sort)
-            mapfile -t expected_assets < <(printf '%s\n' "${asset_name}" BUILD_MANIFEST.txt SHA256SUMS.txt | sort)
-            test "${#remote_assets[@]}" -eq 3
+            mapfile -t expected_assets < <(printf '%s\n' "${asset_name}" BUILD_MANIFEST.txt RELEASE_MANIFEST.json RELEASE_NOTES.md SHA256SUMS.txt | sort)
+            test "${#remote_assets[@]}" -eq 5
             test "${remote_assets[*]}" = "${expected_assets[*]}"
             gh release download "${GITHUB_REF_NAME}" \
-              --pattern "${asset_name}" --pattern BUILD_MANIFEST.txt --pattern SHA256SUMS.txt \
+              --pattern "${asset_name}" \
+              --pattern BUILD_MANIFEST.txt \
+              --pattern RELEASE_MANIFEST.json \
+              --pattern RELEASE_NOTES.md \
+              --pattern SHA256SUMS.txt \
               --dir existing
             cmp SHA256SUMS.txt existing/SHA256SUMS.txt
             cmp BUILD_MANIFEST.txt existing/BUILD_MANIFEST.txt
+            cmp RELEASE_MANIFEST.json existing/RELEASE_MANIFEST.json
+            cmp RELEASE_NOTES.md existing/RELEASE_NOTES.md
             cmp "${asset}" "existing/${asset_name}"
             ( cd existing && sha256sum --check SHA256SUMS.txt )
           else
-            gh release create "${GITHUB_REF_NAME}" "${asset}" SHA256SUMS.txt BUILD_MANIFEST.txt \
+            gh release create "${GITHUB_REF_NAME}" \
+              "${asset}" BUILD_MANIFEST.txt RELEASE_MANIFEST.json RELEASE_NOTES.md SHA256SUMS.txt \
               --verify-tag \
               --prerelease \
-              --title "CDDA 0.G Additive ${release_date}" \
+              --title "${release_title}" \
               --notes-file RELEASE_NOTES.md
           fi
 
       - name: Attest build provenance for the published archive
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip
+          subject-path: release-output/cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip

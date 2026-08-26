@@ -2,6 +2,8 @@
 
 import argparse
 import datetime as dt
+import hashlib
+import json
 import pathlib
 import shutil
 import sys
@@ -61,7 +63,12 @@ def package(source_dir: pathlib.Path, output: pathlib.Path, source_date_epoch: i
         temp_path.unlink(missing_ok=True)
 
 
-def verify(archive_path: pathlib.Path, commit_sha: str, version: str) -> None:
+def verify(
+    archive_path: pathlib.Path,
+    commit_sha: str,
+    version: str,
+    release_tag: str | None = None,
+) -> None:
     with zipfile.ZipFile(archive_path, "r") as archive:
         names = archive.namelist()
         if names != sorted(names):
@@ -93,6 +100,38 @@ def verify(archive_path: pathlib.Path, commit_sha: str, version: str) -> None:
         if archive.getinfo("cataclysm-tiles.exe").file_size <= 0:
             raise ValueError("archive executable is empty")
 
+        if release_tag is not None:
+            release_documents = {
+                "CHANGELOG.md",
+                "PATCHNOTES_ADDITIVE_0G.md",
+                "RELEASE_METADATA.json",
+                "RELEASE_NOTES.md",
+            }
+            missing_documents = sorted(release_documents - set(names))
+            if missing_documents:
+                raise ValueError(
+                    "archive is missing release documents: " + ", ".join(missing_documents)
+                )
+            try:
+                metadata = json.loads(archive.read("RELEASE_METADATA.json").decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as error:
+                raise ValueError("archive release metadata is invalid JSON") from error
+            if not isinstance(metadata, dict):
+                raise ValueError("archive release metadata is not an object")
+            if metadata.get("tag") != release_tag or metadata.get("commit") != commit_sha:
+                raise ValueError("archive release metadata tag or commit mismatch")
+            documents = metadata.get("documents")
+            if not isinstance(documents, dict) or set(documents) != {
+                "CHANGELOG.md",
+                "PATCHNOTES_ADDITIVE_0G.md",
+                "RELEASE_NOTES.md",
+            }:
+                raise ValueError("archive release metadata has the wrong document set")
+            for name, expected_hash in documents.items():
+                actual_hash = hashlib.sha256(archive.read(name)).hexdigest()
+                if actual_hash != expected_hash:
+                    raise ValueError(f"archive release document hash mismatch: {name}")
+
         timestamps = {entry.date_time for entry in archive.infolist()}
         if len(timestamps) != 1:
             raise ValueError("archive entries do not share one normalized timestamp")
@@ -101,6 +140,7 @@ def verify(archive_path: pathlib.Path, commit_sha: str, version: str) -> None:
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--verify", action="store_true")
+    parser.add_argument("--release-tag")
     parser.add_argument("first")
     parser.add_argument("second")
     parser.add_argument("third")
@@ -110,7 +150,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
     if args.verify:
-        verify(pathlib.Path(args.first), args.second, args.third)
+        verify(pathlib.Path(args.first), args.second, args.third, args.release_tag)
+    elif args.release_tag is not None:
+        raise ValueError("--release-tag is only valid with --verify")
     else:
         package(pathlib.Path(args.first), pathlib.Path(args.second), int(args.third))
     return 0

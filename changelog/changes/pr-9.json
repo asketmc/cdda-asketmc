@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "pr": 9,
+  "entries": [
+    {
+      "id": "update-actions-cache-save",
+      "category": "Infrastructure",
+      "audience": "maintainers",
+      "summary": "Update actions/cache/save from 4.3.0 to 6.1.0.",
+      "compatibility": "not-applicable"
+    }
+  ]
+}

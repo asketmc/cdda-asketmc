@@ -1,4 +1,5 @@
 import hashlib
+import json
 import pathlib
 import tempfile
 import unittest
@@ -8,34 +9,38 @@ from tools import package_windows_release
 
 
 class WindowsReleasePackagingTest(unittest.TestCase):
+    @staticmethod
+    def _write_minimum_distribution(source: pathlib.Path, commit: str, version: str) -> None:
+        for directory in (
+            source / "data" / "core",
+            source / "data" / "json" / "items",
+            source / "data" / "mods" / "dda",
+            source / "gfx" / "UltimateCataclysm",
+        ):
+            directory.mkdir(parents=True)
+        (source / "cataclysm-tiles.exe").write_bytes(b"PE-test")
+        (source / "VERSION.txt").write_text(
+            f"version: {version}\ncommit sha: {commit}\n", encoding="utf-8"
+        )
+        (source / "BUILD_MANIFEST.txt").write_text(
+            f"commit sha: {commit}\n", encoding="utf-8"
+        )
+        (source / "README.md").write_text("readme\n", encoding="utf-8")
+        (source / "LICENSE.txt").write_text("license\n", encoding="utf-8")
+        (source / "data" / "core" / "game_balance.json").write_text("{}\n", encoding="utf-8")
+        (source / "data" / "json" / "items" / "ammo.json").write_text("[]\n", encoding="utf-8")
+        (source / "data" / "mods" / "dda" / "modinfo.json").write_text("[]\n", encoding="utf-8")
+        (source / "gfx" / "UltimateCataclysm" / "tileset.txt").write_text(
+            "NAME: UltimateCataclysm\n", encoding="utf-8"
+        )
+
     def test_packaging_is_deterministic_and_verified(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = pathlib.Path(temp_dir)
             source = root / "dist"
-            for directory in (
-                source / "data" / "core",
-                source / "data" / "json" / "items",
-                source / "data" / "mods" / "dda",
-                source / "gfx" / "UltimateCataclysm",
-            ):
-                directory.mkdir(parents=True)
             commit = "a" * 40
             version = "0.G-additive-" + commit[:12]
-            (source / "cataclysm-tiles.exe").write_bytes(b"PE-test")
-            (source / "VERSION.txt").write_text(
-                f"version: {version}\ncommit sha: {commit}\n", encoding="utf-8"
-            )
-            (source / "BUILD_MANIFEST.txt").write_text(
-                f"commit sha: {commit}\n", encoding="utf-8"
-            )
-            (source / "README.md").write_text("readme\n", encoding="utf-8")
-            (source / "LICENSE.txt").write_text("license\n", encoding="utf-8")
-            (source / "data" / "core" / "game_balance.json").write_text("{}\n", encoding="utf-8")
-            (source / "data" / "json" / "items" / "ammo.json").write_text("[]\n", encoding="utf-8")
-            (source / "data" / "mods" / "dda" / "modinfo.json").write_text("[]\n", encoding="utf-8")
-            (source / "gfx" / "UltimateCataclysm" / "tileset.txt").write_text(
-                "NAME: UltimateCataclysm\n", encoding="utf-8"
-            )
+            self._write_minimum_distribution(source, commit, version)
 
             first = root / "first.zip"
             second = root / "second.zip"
@@ -60,6 +65,46 @@ class WindowsReleasePackagingTest(unittest.TestCase):
                     archive.getinfo("cataclysm-tiles.exe").external_attr >> 16,
                     0o100755,
                 )
+
+    def test_release_documents_are_required_and_hash_bound(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = pathlib.Path(temp_dir)
+            source = root / "dist"
+            commit = "d" * 40
+            version = "0.G-additive-" + commit[:12]
+            tag = "v0.G-additive-2026.08.27"
+            self._write_minimum_distribution(source, commit, version)
+            documents = {
+                "CHANGELOG.md": b"history\n",
+                "PATCHNOTES_ADDITIVE_0G.md": b"overview\n",
+                "RELEASE_NOTES.md": b"release\n",
+            }
+            for name, data in documents.items():
+                (source / name).write_bytes(data)
+            metadata = {
+                "tag": tag,
+                "commit": commit,
+                "documents": {
+                    name: hashlib.sha256(data).hexdigest()
+                    for name, data in documents.items()
+                },
+            }
+            (source / "RELEASE_METADATA.json").write_text(
+                json.dumps(metadata), encoding="utf-8"
+            )
+            archive_path = root / "release.zip"
+            package_windows_release.package(source, archive_path, 1_700_000_000)
+            package_windows_release.verify(archive_path, commit, version, tag)
+
+            (source / "RELEASE_NOTES.md").write_bytes(b"tampered\n")
+            package_windows_release.package(source, archive_path, 1_700_000_000)
+            with self.assertRaisesRegex(ValueError, "document hash mismatch"):
+                package_windows_release.verify(archive_path, commit, version, tag)
+
+            (source / "RELEASE_METADATA.json").unlink()
+            package_windows_release.package(source, archive_path, 1_700_000_000)
+            with self.assertRaisesRegex(ValueError, "missing release documents"):
+                package_windows_release.verify(archive_path, commit, version, tag)
 
     def test_verifier_rejects_missing_provenance(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
