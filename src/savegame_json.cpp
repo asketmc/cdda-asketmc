@@ -749,6 +749,8 @@ void Character::load( const JsonObject &data )
     data.read( "destination_activity", destination_activity );
     data.read( "stashed_outbounds_activity", stashed_outbounds_activity );
     data.read( "stashed_outbounds_backlog", stashed_outbounds_backlog );
+    stashed_outbounds_backlog_owned = false;
+    data.read( "stashed_outbounds_backlog_owned", stashed_outbounds_backlog_owned );
 
     // npc activity on vehicles.
     data.read( "activity_vehicle_part_index", activity_vehicle_part_index );
@@ -1371,6 +1373,7 @@ void Character::store( JsonOut &json ) const
     json.member( "activity", activity );
     json.member( "stashed_outbounds_activity", stashed_outbounds_activity );
     json.member( "stashed_outbounds_backlog", stashed_outbounds_backlog );
+    json.member( "stashed_outbounds_backlog_owned", stashed_outbounds_backlog_owned );
     json.member( "backlog", backlog );
     json.member( "activity_vehicle_part_index", activity_vehicle_part_index ); // NPC activity
 

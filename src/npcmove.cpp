@@ -228,6 +228,7 @@ struct healing_interruption_state {
     std::list<player_activity> backlog;
     player_activity stashed;
     player_activity stashed_backlog;
+    bool stashed_backlog_owned;
     npc_attitude attitude;
     npc_mission mission;
     activity_id current_activity_id;
@@ -236,25 +237,9 @@ struct healing_interruption_state {
 healing_interruption_state capture_healing_interruption( const npc &who )
 {
     return { who.activity, who.backlog, who.get_stashed_activity(),
-             who.get_stashed_backlog_activity(), who.get_attitude(), who.mission,
+             who.get_stashed_backlog_activity(), who.stashed_backlog_is_owned(),
+             who.get_attitude(), who.mission,
              who.current_activity_id };
-}
-
-void remove_resumable_backlog( std::list<player_activity> &backlog,
-                               const player_activity &activity, const Character &who )
-{
-    if( !activity ) {
-        return;
-    }
-    const auto duplicate = std::find_if( backlog.begin(), backlog.end(), [&]( player_activity queued ) {
-        player_activity candidate = activity;
-        queued.auto_resume = false;
-        candidate.auto_resume = false;
-        return queued.can_resume_with( candidate, who ) || candidate.can_resume_with( queued, who );
-    } );
-    if( duplicate != backlog.end() ) {
-        backlog.erase( duplicate );
-    }
 }
 
 void restore_healing_interruption( npc &who, const healing_interruption_state &state )
@@ -265,8 +250,8 @@ void restore_healing_interruption( npc &who, const healing_interruption_state &s
 
     who.backlog = state.backlog;
     if( state.stashed ) {
-        remove_resumable_backlog( who.backlog, state.stashed_backlog, who );
-        who.set_stashed_activity( state.stashed, state.stashed_backlog );
+        who.set_stashed_activity( state.stashed, state.stashed_backlog,
+                                  state.stashed_backlog_owned );
     }
     if( state.current ) {
         player_activity resumable = state.current;
