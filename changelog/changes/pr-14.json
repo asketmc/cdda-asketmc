@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "pr": 14,
+  "entries": [
+    {
+      "id": "safe-follower-medicine",
+      "category": "Features",
+      "audience": "players",
+      "summary": "Let followers heal themselves when safe and optionally heal allies without abandoning assigned work.",
+      "compatibility": "save-compatible",
+      "details": [
+        "Follower healing rules migrate safely, combat danger blocks non-urgent treatment, and interrupted active or stashed work resumes exactly once."
+      ]
+    },
+    {
+      "id": "follower-vitamin-and-food-choices",
+      "category": "Features",
+      "audience": "players",
+      "summary": "Let followers treat registered vitamin deficiencies and prefer tolerable food while retaining a critical-starvation fallback.",
+      "compatibility": "save-compatible"
+    },
+    {
+      "id": "follower-weapon-comparison-correctness",
+      "category": "Bugfixes",
+      "audience": "players",
+      "summary": "Prevent invalid weapon scores and obvious empty-hand preference without changing combat coefficients or loudness rules.",
+      "compatibility": "save-compatible"
+    }
+  ]
+}

@@ -15,6 +15,7 @@
 #include "vitamin.h"
 
 static const activity_id ACT_FIRSTAID( "ACT_FIRSTAID" );
+static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 static const activity_id ACT_WAIT_NPC( "ACT_WAIT_NPC" );
 
 static const efftype_id effect_nausea( "nausea" );
@@ -226,6 +227,22 @@ TEST_CASE( "NPC ally healing rule preserves old-save behavior", "[npc][rules][sa
         CHECK( rules.has_override( ally_rule::allow_heal_others ) );
     }
 
+    SECTION( "an override enable field does not invent an override value" ) {
+        npc_follower_rules rules;
+        rules.deserialize( json_loader::from_string(
+                               R"({"engagement":0,"aim":0,"override_enable_allow_heal_others":true})" ).get_object() );
+        CHECK( rules.has_override_enable( ally_rule::allow_heal_others ) );
+        CHECK_FALSE( rules.has_override( ally_rule::allow_heal_others ) );
+    }
+
+    SECTION( "an override value field does not enable itself" ) {
+        npc_follower_rules rules;
+        rules.deserialize( json_loader::from_string(
+                               R"({"engagement":0,"aim":0,"override_allow_heal_others":true})" ).get_object() );
+        CHECK_FALSE( rules.has_override_enable( ally_rule::allow_heal_others ) );
+        CHECK( rules.has_override( ally_rule::allow_heal_others ) );
+    }
+
     SECTION( "missing override fields do not inherit a prior rule value" ) {
         npc_follower_rules rules;
         rules.deserialize( json_loader::from_string(
@@ -250,6 +267,8 @@ TEST_CASE( "NPC healing resumes an interrupted activity", "[npc][needs][medicine
     finish_firstaid_only( guy );
     CHECK( guy.activity.id() == ACT_WAIT_NPC );
     CHECK( guy.current_activity_id == ACT_WAIT_NPC );
+    CHECK( guy.backlog.empty() );
+    CHECK_FALSE( guy.has_stashed_activity() );
     CHECK( guy.get_attitude() == NPCATT_ACTIVITY );
     CHECK( guy.mission == NPC_MISSION_ACTIVITY );
 }
@@ -271,8 +290,47 @@ TEST_CASE( "NPC resumes work after healing an ally", "[npc][needs][medicine][act
     CHECK( patient.has_effect( efftype_id( "bandaged" ), arm ) );
     CHECK( guy.activity.id() == ACT_WAIT_NPC );
     CHECK( guy.current_activity_id == ACT_WAIT_NPC );
+    CHECK( guy.backlog.empty() );
+    CHECK_FALSE( guy.has_stashed_activity() );
     CHECK( guy.get_attitude() == NPCATT_ACTIVITY );
     CHECK( guy.mission == NPC_MISSION_ACTIVITY );
+}
+
+TEST_CASE( "NPC healing preserves stashed work exactly once",
+           "[npc][needs][medicine][activity]" )
+{
+    npc &guy = setup_medicine_npc();
+    const bodypart_id arm( "arm_r" );
+    guy.apply_damage( nullptr, arm, 25 );
+    guy.i_add( item( itype_bandages ) );
+
+    player_activity stashed_work( ACT_WAIT_NPC, 5000 );
+    player_activity stashed_backlog( ACT_MOVE_LOOT );
+    guy.set_stashed_activity( stashed_work, stashed_backlog );
+    guy.set_attitude( NPCATT_ACTIVITY );
+    guy.set_mission( NPC_MISSION_ACTIVITY );
+    guy.current_activity_id = ACT_WAIT_NPC;
+
+    REQUIRE( start_selected_healing( guy, 0.0f ) );
+    REQUIRE( guy.activity.id() == ACT_FIRSTAID );
+    REQUIRE( guy.has_stashed_activity() );
+    CHECK( guy.get_stashed_activity().id() == ACT_WAIT_NPC );
+    CHECK( guy.get_stashed_backlog_activity().id() == ACT_MOVE_LOOT );
+    CHECK( guy.backlog.empty() );
+
+    finish_firstaid_only( guy );
+    REQUIRE( guy.has_stashed_activity() );
+    CHECK( guy.activity.is_null() );
+    CHECK( guy.backlog.empty() );
+    CHECK( guy.get_attitude() == NPCATT_ACTIVITY );
+    CHECK( guy.mission == NPC_MISSION_ACTIVITY );
+    CHECK( guy.current_activity_id == ACT_WAIT_NPC );
+
+    guy.assign_stashed_activity();
+    CHECK_FALSE( guy.has_stashed_activity() );
+    CHECK( guy.activity.id() == ACT_WAIT_NPC );
+    REQUIRE( guy.backlog.size() == 1 );
+    CHECK( guy.backlog.front().id() == ACT_MOVE_LOOT );
 }
 
 TEST_CASE( "NPC uses vitamin medicine only for a deficiency", "[npc][needs][vitamins]" )
@@ -319,6 +377,8 @@ TEST_CASE( "Mild vitamin deficiency never bypasses immediate danger",
            "[npc][needs][vitamins][danger]" )
 {
     npc &guy = setup_medicine_npc();
+    const float danger = GENERATE( 0.01f, 0.1f, 1.0f, 5.0f, 10.0f );
+    CAPTURE( danger );
     guy.vitamin_set( vitamin_vitC, vitamin_c_deficiency_level );
     item_location vitamins = guy.i_add( item( itype_vitamins ) );
     REQUIRE( vitamins );
@@ -326,7 +386,7 @@ TEST_CASE( "Mild vitamin deficiency never bypasses immediate danger",
     const int level = guy.vitamin_get( vitamin_vitC );
 
     for( int attempt = 0; attempt < 20; ++attempt ) {
-        guy.address_needs( 10.0f );
+        guy.address_needs( danger );
     }
     CHECK( vitamins->charges == charges );
     CHECK( guy.vitamin_get( vitamin_vitC ) == level );

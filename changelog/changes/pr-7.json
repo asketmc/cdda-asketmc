@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "pr": 7,
+  "entries": [
+    {
+      "id": "lost-pickup-target-reporting",
+      "category": "Bugfixes",
+      "audience": "players",
+      "summary": "Report pickup targets removed during an activity without opening a debug-error popup.",
+      "compatibility": "save-compatible",
+      "details": [
+        "The activity tells the player how many queued items disappeared, records useful context in debug.log, and continues with surviving targets.",
+        "An item location that was never valid still raises a diagnostic because it indicates a programming error."
+      ]
+    }
+  ]
+}

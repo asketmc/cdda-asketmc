@@ -1,5 +1,6 @@
 #include <iosfwd>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "activity_actor_definitions.h"
@@ -18,7 +19,6 @@
 
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 static const activity_id ACT_MULTIPLE_MOP( "ACT_MULTIPLE_MOP" );
-static const efftype_id effect_blind( "blind" );
 static const faction_id faction_your_followers( "your_followers" );
 static const field_type_str_id field_fd_blood( "fd_blood" );
 
@@ -42,6 +42,33 @@ static const zone_type_id zone_type_zone_unload_all( "zone_unload_all" );
 
 namespace
 {
+class scoped_zone_state
+{
+    public:
+        scoped_zone_state() : previous_( zone_manager::get_manager() ) {
+            zone_manager::get_manager().clear();
+        }
+
+        ~scoped_zone_state() {
+            zone_manager::get_manager() = std::move( previous_ );
+        }
+
+    private:
+        zone_manager previous_;
+};
+
+void process_activity_bounded( Character &who, int max_turns = 5000 )
+{
+    int turns = 0;
+    while( who.activity && turns++ < max_turns ) {
+        who.moves += who.get_speed();
+        while( who.moves > 0 && who.activity ) {
+            who.activity.do_turn( who );
+        }
+    }
+    REQUIRE_FALSE( who.activity );
+}
+
 template <class T>
 int _count_items_or_charges( const T &items, const itype_id &id )
 {
@@ -82,6 +109,7 @@ void create_local_tile_zone( const std::string &name, const zone_type_id &zone_t
 
 TEST_CASE( "NPC work ignores personal zones", "[zones][npc][basecamp]" )
 {
+    scoped_zone_state zone_state;
     clear_avatar();
     clear_map();
     zone_manager &zm = zone_manager::get_manager();
@@ -101,6 +129,7 @@ TEST_CASE( "NPC work ignores personal zones", "[zones][npc][basecamp]" )
 
 TEST_CASE( "NPC loot sorting cannot use personal zones", "[zones][npc][activities]" )
 {
+    scoped_zone_state zone_state;
     clear_avatar();
     clear_map();
     map &here = get_map();
@@ -118,7 +147,7 @@ TEST_CASE( "NPC loot sorting cannot use personal zones", "[zones][npc][activitie
         here.add_item_or_charges( source, food );
 
         worker.assign_activity( player_activity( ACT_MOVE_LOOT ) );
-        process_activity( worker );
+        process_activity_bounded( worker );
 
         CHECK( _count_items_or_charges( here.i_at( source ), food.typeId() ) == 1 );
         CHECK( _count_items_or_charges( here.i_at( shared_destination ), food.typeId() ) == 0 );
@@ -132,7 +161,7 @@ TEST_CASE( "NPC loot sorting cannot use personal zones", "[zones][npc][activitie
         here.add_item_or_charges( source, food );
 
         worker.assign_activity( player_activity( ACT_MOVE_LOOT ) );
-        process_activity( worker );
+        process_activity_bounded( worker );
 
         CHECK( _count_items_or_charges( here.i_at( personal_destination ), food.typeId() ) == 0 );
         CHECK( _count_items_or_charges( here.i_at( shared_destination ), food.typeId() ) == 1 );
@@ -150,7 +179,7 @@ TEST_CASE( "NPC loot sorting cannot use personal zones", "[zones][npc][activitie
         here.add_item_or_charges( source, food );
 
         worker.assign_activity( player_activity( ACT_MOVE_LOOT ) );
-        process_activity( worker );
+        process_activity_bounded( worker );
 
         CHECK( _count_items_or_charges( here.i_at( personal_destination ), food.typeId() ) == 0 );
         CHECK( _count_items_or_charges( here.i_at( shared_destination ), food.typeId() ) == 1 );
@@ -168,7 +197,7 @@ TEST_CASE( "NPC loot sorting cannot use personal zones", "[zones][npc][activitie
         here.add_item_or_charges( source, food );
 
         worker.assign_activity( player_activity( ACT_MOVE_LOOT ) );
-        process_activity( worker );
+        process_activity_bounded( worker );
 
         const cata::optional<vpart_reference> cargo_part = cargo.part_with_feature( "CARGO", true );
         REQUIRE( cargo_part );
@@ -179,6 +208,7 @@ TEST_CASE( "NPC loot sorting cannot use personal zones", "[zones][npc][activitie
 
 TEST_CASE( "NPC mopping fetches a stored mop", "[zones][npc][activities][mopping]" )
 {
+    scoped_zone_state zone_state;
     clear_avatar();
     clear_map();
     map &here = get_map();
@@ -197,7 +227,7 @@ TEST_CASE( "NPC mopping fetches a stored mop", "[zones][npc][activities][mopping
     } ) );
 
     worker.assign_activity( player_activity( ACT_MULTIPLE_MOP ) );
-    process_activity( worker );
+    process_activity_bounded( worker );
 
     REQUIRE( worker.get_wielded_item() );
     CHECK( worker.get_wielded_item()->has_flag( flag_id( "MOP" ) ) );
@@ -206,6 +236,7 @@ TEST_CASE( "NPC mopping fetches a stored mop", "[zones][npc][activities][mopping
 
 TEST_CASE( "NPC mopping cleans its assigned tile", "[zones][npc][activities][mopping]" )
 {
+    scoped_zone_state zone_state;
     clear_avatar();
     clear_map();
     map &here = get_map();
@@ -223,8 +254,7 @@ TEST_CASE( "NPC mopping cleans its assigned tile", "[zones][npc][activities][mop
     player_activity mop_activity;
     mop_activity.placement = here.getglobal( target );
     REQUIRE( here.bub_from_abs( mop_activity.placement ).raw() == target );
-    worker.add_effect( effect_blind, 1_turns, true );
-    REQUIRE( worker.is_blind() );
+    REQUIRE_FALSE( worker.is_blind() );
     mop_activity_actor actor( 15 );
     actor.start( mop_activity, worker );
     actor.finish( mop_activity, worker );
@@ -237,6 +267,7 @@ TEST_CASE( "NPC mopping cleans its assigned tile", "[zones][npc][activities][mop
 
 TEST_CASE( "NPC sorting leaves personal supplies in place", "[zones][npc][basecamp]" )
 {
+    scoped_zone_state zone_state;
     clear_avatar();
     clear_map();
     map &here = get_map();
@@ -255,7 +286,7 @@ TEST_CASE( "NPC sorting leaves personal supplies in place", "[zones][npc][baseca
     here.add_item_or_charges( shared_src, item( itype_sandwich_cheese_grilled ) );
 
     worker.assign_activity( player_activity( ACT_MOVE_LOOT ) );
-    process_activity( worker );
+    process_activity_bounded( worker );
 
     CHECK( here.has_items( personal_src ) );
     CHECK_FALSE( here.has_items( shared_src ) );

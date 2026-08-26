@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "pr": 1,
+  "entries": [
+    {
+      "id": "contained-npc-items-survive-save-load",
+      "category": "Bugfixes",
+      "audience": "players",
+      "summary": "Keep contained items owned by unloaded NPCs resolvable after saving and loading.",
+      "compatibility": "save-compatible",
+      "details": [
+        "Character-rooted contained item locations wait until unloaded NPC owners are registered, while map and vehicle locations retain eager validation."
+      ]
+    }
+  ]
+}

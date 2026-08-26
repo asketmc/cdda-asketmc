@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "pr": 12,
+  "entries": [
+    {
+      "id": "npc-mop-acquisition",
+      "category": "Bugfixes",
+      "audience": "players",
+      "summary": "Let NPC mopping jobs find, fetch, and safely wield stored mops.",
+      "compatibility": "save-compatible"
+    },
+    {
+      "id": "activity-target-save-load",
+      "category": "Bugfixes",
+      "audience": "players",
+      "summary": "Preserve pickup descriptions across save/load and quietly invalidate already-lost NPC butchery targets.",
+      "compatibility": "save-compatible",
+      "details": [
+        "Unexpected item-location failures remain loud diagnostics instead of being broadly suppressed."
+      ]
+    }
+  ]
+}
