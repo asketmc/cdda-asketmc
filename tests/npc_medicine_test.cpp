@@ -382,7 +382,8 @@ TEST_CASE( "NPC healing does not duplicate a naturally stashed backlog",
     REQUIRE( guy.activity.is_null() );
     REQUIRE( guy.has_stashed_activity() );
     REQUIRE( guy.get_stashed_backlog_activity().id() == ACT_MOVE_LOOT );
-    REQUIRE( guy.backlog.size() == 1 );
+    CHECK( guy.stashed_backlog_is_owned() );
+    REQUIRE( guy.backlog.empty() );
 
     REQUIRE( start_selected_healing( guy, 0.0f ) );
     CHECK( guy.backlog.empty() );
@@ -421,6 +422,48 @@ TEST_CASE( "NPC healing transfers a no-resume stashed backlog exactly once",
     finish_firstaid_only( guy );
     REQUIRE( guy.has_stashed_activity() );
     CHECK( guy.backlog.empty() );
+
+    guy.assign_stashed_activity();
+    CHECK( guy.activity.id() == ACT_WAIT_NPC );
+    REQUIRE( guy.backlog.size() == 1 );
+    CHECK( guy.backlog.front().id() == ACT_FIND_MOUNT );
+    CHECK( guy.backlog.front().index == 7 );
+    CHECK( guy.backlog.front().auto_resume );
+}
+
+TEST_CASE( "NPC healing preserves separate compatible queued work",
+           "[npc][needs][medicine][activity]" )
+{
+    npc &guy = setup_medicine_npc();
+    const bodypart_id arm( "arm_r" );
+    guy.apply_damage( nullptr, arm, 25 );
+    guy.i_add( item( itype_bandages ) );
+    guy.assign_activity( ACT_WAIT_NPC, 5000 );
+    guy.backlog.emplace_back( ACT_MOVE_LOOT );
+    guy.backlog.emplace_back( ACT_MOVE_LOOT );
+    guy.activity.placement = tripoint_abs_ms( tripoint( 100000, 100000, 0 ) );
+
+    REQUIRE( guy.check_outbounds_activity( guy.activity ) );
+    REQUIRE( guy.backlog.size() == 1 );
+    REQUIRE( start_selected_healing( guy, 0.0f ) );
+    finish_firstaid_only( guy );
+    REQUIRE( guy.backlog.size() == 1 );
+
+    guy.assign_stashed_activity();
+    CHECK( guy.activity.id() == ACT_WAIT_NPC );
+    CHECK( guy.backlog.size() == 2 );
+}
+
+TEST_CASE( "NPC legacy no-resume stashed backlog is migrated exactly once",
+           "[npc][needs][medicine][activity]" )
+{
+    npc &guy = setup_medicine_npc();
+    player_activity stashed_work( ACT_WAIT_NPC, 5000 );
+    player_activity legacy_mirror( ACT_FIND_MOUNT );
+    legacy_mirror.index = 7;
+    legacy_mirror.auto_resume = true;
+    guy.backlog.push_back( legacy_mirror );
+    guy.set_stashed_activity( stashed_work, legacy_mirror, false );
 
     guy.assign_stashed_activity();
     CHECK( guy.activity.id() == ACT_WAIT_NPC );

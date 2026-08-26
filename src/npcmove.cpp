@@ -322,6 +322,7 @@ struct healing_interruption_state {
     std::list<player_activity> backlog;
     player_activity stashed;
     player_activity stashed_backlog;
+    bool stashed_backlog_owned;
     npc_attitude attitude;
     npc_mission mission;
     activity_id current_activity_id;
@@ -330,25 +331,9 @@ struct healing_interruption_state {
 healing_interruption_state capture_healing_interruption( const npc &who )
 {
     return { who.activity, who.backlog, who.get_stashed_activity(),
-             who.get_stashed_backlog_activity(), who.get_attitude(), who.mission,
+             who.get_stashed_backlog_activity(), who.stashed_backlog_is_owned(),
+             who.get_attitude(), who.mission,
              who.current_activity_id };
-}
-
-void remove_resumable_backlog( std::list<player_activity> &backlog,
-                               const player_activity &activity, const Character &who )
-{
-    if( !activity ) {
-        return;
-    }
-    const auto duplicate = std::find_if( backlog.begin(), backlog.end(), [&]( player_activity queued ) {
-        player_activity candidate = activity;
-        queued.auto_resume = false;
-        candidate.auto_resume = false;
-        return queued.can_resume_with( candidate, who ) || candidate.can_resume_with( queued, who );
-    } );
-    if( duplicate != backlog.end() ) {
-        backlog.erase( duplicate );
-    }
 }
 
 void restore_healing_interruption( npc &who, const healing_interruption_state &state )
@@ -359,8 +344,8 @@ void restore_healing_interruption( npc &who, const healing_interruption_state &s
 
     who.backlog = state.backlog;
     if( state.stashed ) {
-        remove_resumable_backlog( who.backlog, state.stashed_backlog, who );
-        who.set_stashed_activity( state.stashed, state.stashed_backlog );
+        who.set_stashed_activity( state.stashed, state.stashed_backlog,
+                                  state.stashed_backlog_owned );
     }
     if( state.current ) {
         player_activity resumable = state.current;
@@ -1077,6 +1062,7 @@ void npc::move()
     activity_id interrupted_order = activity_id::NULL_ID();
     player_activity interrupted_stashed_order;
     player_activity interrupted_stashed_backlog;
+    bool interrupted_stashed_backlog_owned = false;
     bool restore_interrupted_stashed_order = false;
 
     const item_location weapon = get_wielded_item();
@@ -1196,6 +1182,7 @@ void npc::move()
         if( protect_current_order && has_stashed_activity() ) {
             interrupted_stashed_order = get_stashed_activity();
             interrupted_stashed_backlog = get_stashed_backlog_activity();
+            interrupted_stashed_backlog_owned = stashed_backlog_is_owned();
         }
         action = address_needs( ai_cache.danger, protect_current_order );
         restore_interrupted_stashed_order = interrupted_stashed_order &&
@@ -1342,7 +1329,8 @@ void npc::move()
     }
     if( restore_interrupted_stashed_order &&
         !has_activity_order( *this, interrupted_stashed_order ) ) {
-        set_stashed_activity( interrupted_stashed_order, interrupted_stashed_backlog );
+        set_stashed_activity( interrupted_stashed_order, interrupted_stashed_backlog,
+                              interrupted_stashed_backlog_owned );
         set_attitude( NPCATT_ACTIVITY );
         set_mission( NPC_MISSION_ACTIVITY );
         current_activity_id = interrupted_stashed_order.id();
