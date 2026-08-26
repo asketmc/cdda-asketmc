@@ -147,6 +147,9 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
 
     def test_quality_gate_uses_exact_pr_identity_and_full_history(self) -> None:
         self.assertIn("fetch-depth: 0", self.quality)
+        self.assertIn(
+            "ref: ${{ github.event.pull_request.head.sha || github.sha }}", self.quality
+        )
         self.assertIn("tools.test_release_changelog", self.quality)
         self.assertIn("release_changelog.py lint --check-generated", self.quality)
         self.assertIn("PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}", self.quality)

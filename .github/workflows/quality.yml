@@ -26,6 +26,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Fetch immutable 0.G audit baseline
         run: git fetch --no-tags --depth=1 https://github.com/CleverRaven/Cataclysm-DDA.git d6ec466140839dd70c1a43671eb4a08b007695c2
       - name: Install graphics-test dependencies
