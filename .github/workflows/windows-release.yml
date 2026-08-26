@@ -19,6 +19,9 @@ jobs:
     name: Windows Tiles+Sound (MXE GCC 11)
     runs-on: ubuntu-24.04
     timeout-minutes: 120
+    permissions:
+      # Source checkout only; caches and artifacts use the Actions runtime token.
+      contents: read
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_COMPRESS: "true"
@@ -195,12 +198,17 @@ jobs:
     needs: windows-compile
     runs-on: windows-2025
     timeout-minutes: 30
+    permissions:
+      # Same-run artifact download only; nothing here writes to the repository.
+      contents: read
     steps:
-      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: windows-release
       - name: Verify, extract, and run packaged build
         shell: pwsh
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
         run: |
           $ErrorActionPreference = 'Stop'
           $archives = @(Get-ChildItem -File -Filter 'cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip')
@@ -217,9 +225,9 @@ jobs:
           $exe = Get-Item -LiteralPath 'extracted\cataclysm-tiles.exe'
           if ($exe.Length -le 0) { throw 'Packaged executable is empty' }
           $version = Get-Content -Raw -LiteralPath 'extracted\VERSION.txt'
-          if ($version -notmatch [regex]::Escape('${{ github.sha }}')) { throw 'Packaged VERSION.txt lacks the full commit SHA' }
+          if ($version -notmatch [regex]::Escape($env:EXPECTED_SHA)) { throw 'Packaged VERSION.txt lacks the full commit SHA' }
           $manifest = Get-Content -Raw -LiteralPath 'extracted\BUILD_MANIFEST.txt'
-          if ($manifest -notmatch [regex]::Escape('${{ github.sha }}')) { throw 'Packaged manifest lacks the full commit SHA' }
+          if ($manifest -notmatch [regex]::Escape($env:EXPECTED_SHA)) { throw 'Packaged manifest lacks the full commit SHA' }
           Push-Location extracted
           try {
             $checkMods = Start-Process -FilePath '.\cataclysm-tiles.exe' -ArgumentList @('--check-mods', 'dda') -NoNewWindow -Wait -PassThru
@@ -234,9 +242,11 @@ jobs:
     needs: validate-windows-release
     runs-on: ubuntu-24.04
     permissions:
-      contents: write
+      contents: write # Create the prerelease and upload its immutable assets.
+      id-token: write # Sigstore OIDC identity for build provenance.
+      attestations: write # Record the provenance attestation for this repository.
     steps:
-      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: windows-release
       - name: Verify and publish immutable release assets
@@ -284,3 +294,8 @@ jobs:
               --title "CDDA 0.G Additive ${release_date}" \
               --notes-file RELEASE_NOTES.md
           fi
+
+      - name: Attest build provenance for the published archive
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip

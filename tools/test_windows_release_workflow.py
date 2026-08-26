@@ -81,6 +81,33 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn('cmp "${asset}" "existing/${asset_name}"', self.workflow)
         self.assertIn("sha256sum --check SHA256SUMS.txt", self.workflow)
 
+    def test_every_job_declares_least_privilege_permissions(self) -> None:
+        jobs = re.split(r"(?m)^  (?=[a-z][a-z0-9-]*:$)", self.workflow.split("\njobs:\n", 1)[1])
+        job_blocks = [block for block in jobs if block.strip()]
+        self.assertEqual(len(job_blocks), 3)
+        for block in job_blocks:
+            job_name = block.split(":", 1)[0]
+            self.assertIn("    permissions:\n", block, f"{job_name} has no explicit permissions")
+
+    def test_only_the_publish_job_may_write(self) -> None:
+        self.assertEqual(self.workflow.count("contents: write"), 1)
+        publish = self.workflow[self.workflow.index("  publish-release:") :]
+        self.assertIn("contents: write", publish)
+
+    def test_release_archive_gets_build_provenance(self) -> None:
+        publish = self.workflow[self.workflow.index("  publish-release:") :]
+        self.assertIn("actions/attest-build-provenance@", publish)
+        self.assertIn("id-token: write", publish)
+        self.assertIn("attestations: write", publish)
+        self.assertIn(
+            "subject-path: cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip", publish
+        )
+
+    def test_run_blocks_do_not_interpolate_workflow_context(self) -> None:
+        self.assertNotIn("[regex]::Escape('${{", self.workflow)
+        self.assertIn("EXPECTED_SHA: ${{ github.sha }}", self.workflow)
+        self.assertIn("[regex]::Escape($env:EXPECTED_SHA)", self.workflow)
+
 
 if __name__ == "__main__":
     unittest.main()
