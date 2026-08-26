@@ -1088,7 +1088,7 @@ std::vector<zone_data *> map::get_vehicle_zones( const int zlev, bool update_zon
     std::vector<zone_data *> veh_zones;
     bool rebuild = false;
     for( vehicle *veh : get_cache( zlev ).zone_vehicles ) {
-        if( veh->refresh_zones() ) {
+        if( veh->refresh_zones( *this ) ) {
             rebuild = true;
         }
         for( auto &zone : veh->loot_zones ) {
@@ -1096,9 +1096,29 @@ std::vector<zone_data *> map::get_vehicle_zones( const int zlev, bool update_zon
         }
     }
     if( rebuild && update_zone_cache ) {
-        zone_manager::get_manager().cache_vzones();
+        zone_manager::get_manager().cache_vzones( this );
     }
     return veh_zones;
+}
+
+std::vector<zone_data> map::get_vehicle_zones_snapshot( const int zlev )
+{
+    std::vector<zone_data> result;
+    for( const vehicle *veh : get_cache( zlev ).zone_vehicles ) {
+        for( const auto &entry : veh->loot_zones ) {
+            zone_data zone = entry.second;
+            if( veh->zones_dirty ) {
+                const int part_idx = veh->part_with_feature( entry.first, "CARGO", false );
+                if( part_idx == -1 ) {
+                    continue;
+                }
+                const tripoint zone_pos = getabs( veh->global_part_pos3( part_idx ) );
+                zone.set_position( std::make_pair( zone_pos, zone_pos ), false, false, true );
+            }
+            result.push_back( std::move( zone ) );
+        }
+    }
+    return result;
 }
 
 void map::register_vehicle_zone( vehicle *veh, const int zlev )

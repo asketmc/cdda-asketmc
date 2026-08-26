@@ -436,20 +436,36 @@ cata::optional<tripoint_abs_ms> basecamp::liquid_storage_for(
 bool basecamp::has_storage_for_craft( const recipe &making, map &target_map,
                                       const tripoint_abs_ms &storage_origin ) const
 {
-    const std::vector<item> results = making.create_results( 1 );
-    const std::vector<item> byproducts = making.create_byproducts( 1 );
-    const bool produces_liquid =
-        std::any_of( results.begin(), results.end(), []( const item & it ) {
-        return it.made_of( phase_id::LIQUID );
-    } ) || std::any_of( byproducts.begin(), byproducts.end(), []( const item & it ) {
-        return it.made_of( phase_id::LIQUID );
-    } );
-    if( !produces_liquid ) {
-        return true;
-    }
-
     std::unordered_map<tripoint_abs_ms, itype_id> reservations;
-    const auto reserve_liquid = [&]( const item & result ) {
+    const auto reserve_liquid = [&]( const itype_id & type ) {
+        const item result( type, calendar::turn );
+        const cata::optional<tripoint_abs_ms> storage = liquid_storage_for(
+                    result, target_map, storage_origin, &reservations );
+        if( !storage ) {
+            return false;
+        }
+        reservations.emplace( *storage, result.typeId() );
+        return true;
+    };
+    for( const itype_id &type : making.guaranteed_liquid_outputs() ) {
+        if( !reserve_liquid( type ) ) {
+            return false;
+        }
+    }
+    for( const itype_id &type : making.possible_group_liquid_outputs() ) {
+        if( !reserve_liquid( type ) ) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool basecamp::has_storage_for_items( const std::vector<item> &results,
+                                      const std::vector<item> &byproducts, map &target_map,
+                                      const tripoint_abs_ms &storage_origin ) const
+{
+    std::unordered_map<tripoint_abs_ms, itype_id> reservations;
+    const auto reserve_liquid = [&]( const item &result ) {
         if( !result.made_of( phase_id::LIQUID ) ) {
             return true;
         }

@@ -3195,16 +3195,34 @@ void basecamp::start_crafting_with_ui( const mission_id &miss_id )
         return;
     }
 
+    const std::vector<item> results = making->create_results( batch_size );
+    const std::vector<item> byproducts = making->create_byproducts( batch_size );
+    bool exact_storage = false;
+    if( by_radio ) {
+        tinymap target_map;
+        target_map.load( project_to<coords::sm>( omt_pos ), false );
+        exact_storage = has_storage_for_items( results, byproducts, target_map,
+                                               tripoint_abs_ms( bb_pos ) );
+    } else {
+        map &here = get_map();
+        exact_storage = has_storage_for_items( results, byproducts, here,
+                                               tripoint_abs_ms( bb_pos ) );
+    }
+    if( !exact_storage ) {
+        popup( _( "The camp has no compatible liquid fixture for the crafted output." ) );
+        return;
+    }
+
     mission_id actual_id = miss_id;
     actual_id.parameters = making->ident().str();
     npc_ptr companion = start_mission( actual_id, work_days, true, _( "begins to work…" ),
                                        false, {}, making->required_skills, worker );
     if( companion != nullptr ) {
         components.consume_components();
-        for( const item &result : making->create_results( batch_size ) ) {
+        for( const item &result : results ) {
             companion->companion_mission_inv.add_item( result );
         }
-        for( const item &byproduct : making->create_byproducts( batch_size ) ) {
+        for( const item &byproduct : byproducts ) {
             companion->companion_mission_inv.add_item( byproduct );
         }
     }

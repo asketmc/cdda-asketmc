@@ -8119,8 +8119,12 @@ vehicle_part_with_fakes_range vehicle::get_all_parts_with_fakes( bool with_inact
 
 bool vehicle::refresh_zones()
 {
+    return refresh_zones( get_map() );
+}
+
+bool vehicle::refresh_zones( map &here )
+{
     if( zones_dirty ) {
-        map &here = get_map();
         decltype( loot_zones ) new_zones;
         for( auto const &z : loot_zones ) {
             zone_data zone = z.second;

@@ -1044,9 +1044,9 @@ std::unordered_set<tripoint_abs_ms> zone_manager::get_near_on_map(
     for( const zone_data &zone : zones ) {
         add_zone( zone );
     }
-    for( const zone_data *zone : target_map.get_vehicle_zones(
-             target_map.get_abs_sub().z(), false ) ) {
-        add_zone( *zone );
+    for( const zone_data &zone : target_map.get_vehicle_zones_snapshot(
+             target_map.get_abs_sub().z() ) ) {
+        add_zone( zone );
     }
     return result;
 }

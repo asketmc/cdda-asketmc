@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <set>
 #include <sstream>
 #include <string>
@@ -15,6 +16,7 @@
 #include "game.h"
 #include "inventory.h"
 #include "item.h"
+#include "item_pocket.h"
 #include "json.h"
 #include "json_loader.h"
 #include "map.h"
@@ -25,6 +27,7 @@
 #include "overmapbuffer.h"
 #include "player_helpers.h"
 #include "recipe.h"
+#include "rng.h"
 #include "talker.h"
 #include "type_id.h"
 #include "vehicle.h"
@@ -40,6 +43,7 @@ static const furn_str_id furn_f_bathtub( "f_bathtub" );
 static const furn_str_id furn_f_chair( "f_chair" );
 
 static const itype_id itype_bandages( "bandages" );
+static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_manual_electronics( "manual_electronics" );
 static const itype_id itype_mop( "mop" );
 static const itype_id itype_rock( "rock" );
@@ -49,6 +53,7 @@ static const itype_id itype_test_ebook_reader( "test_ebook_reader" );
 static const itype_id itype_water_clean( "water_clean" );
 
 static const recipe_id recipe_ether( "ether" );
+static const recipe_id recipe_washing_soda( "chem_washing_soda" );
 static const recipe_id recipe_test_soldering_iron( "test_soldering_iron" );
 static const recipe_id recipe_water_clean( "water_clean" );
 
@@ -62,8 +67,10 @@ static const vproto_id vehicle_prototype_shopping_cart( "shopping_cart" );
 
 static const zone_type_id zone_type_CAMP_STORAGE( "CAMP_STORAGE" );
 static const zone_type_id zone_type_LOOT_FOOD( "LOOT_FOOD" );
+static const zone_type_id zone_type_LOOT_IGNORE_FAVORITES( "LOOT_IGNORE_FAVORITES" );
 static const zone_type_id zone_type_LOOT_UNSORTED( "LOOT_UNSORTED" );
 static const zone_type_id zone_type_MOPPING( "MOPPING" );
+static const zone_type_id zone_type_zone_unload_all( "zone_unload_all" );
 
 namespace
 {
@@ -112,7 +119,7 @@ class test_camp_scope
         test_camp_scope &operator=( const test_camp_scope & ) = delete;
 
         basecamp &camp() const {
-            return **overmap_buffer.find_camp( camp_pos_.xy() );
+            return **om_.find_camp( camp_pos_.xy() );
         }
 
     private:
@@ -175,6 +182,19 @@ void finish_activity_bounded( npc &worker, const activity_id &activity, int max_
         worker.activity.do_turn( worker );
     }
     REQUIRE_FALSE( worker.activity.id() == activity );
+}
+
+size_t activity_order_count( const npc &worker, const activity_id &activity )
+{
+    size_t result = worker.activity.id() == activity ? 1 : 0;
+    result += worker.get_destination_activity().id() == activity ? 1 : 0;
+    result += worker.get_stashed_activity().id() == activity ? 1 : 0;
+    result += worker.get_stashed_backlog_activity().id() == activity ? 1 : 0;
+    result += std::count_if( worker.backlog.begin(), worker.backlog.end(),
+    [&]( const player_activity & queued ) {
+        return queued.id() == activity;
+    } );
+    return result;
 }
 
 } // namespace
@@ -353,7 +373,7 @@ TEST_CASE( "Urgent needs preserve stashed camp work",
     worker.set_skill_level( skill_firstaid, 4 );
     worker.set_attitude( NPCATT_ACTIVITY );
     worker.apply_damage( nullptr, bodypart_id( "arm_r" ),
-                         worker.get_part_hp_max( bodypart_id( "arm_r" ) ) / 2 + 1 );
+                         worker.get_part_hp_max( bodypart_id( "arm_r" ) ) * 3 / 4 + 1 );
     worker.i_add( item( itype_bandages ) );
     worker.set_stashed_activity( player_activity( ACT_WAIT_NPC ) );
 
@@ -363,13 +383,16 @@ TEST_CASE( "Urgent needs preserve stashed camp work",
     }
 
     REQUIRE( worker.activity.id() == ACT_FIRSTAID );
+    REQUIRE( activity_order_count( worker, ACT_WAIT_NPC ) == 1 );
     REQUIRE( worker.has_stashed_activity() );
     CHECK( worker.get_stashed_activity().id() == ACT_WAIT_NPC );
 
     finish_activity_bounded( worker, ACT_FIRSTAID );
+    CHECK( activity_order_count( worker, ACT_WAIT_NPC ) == 1 );
     worker.moves = 100;
     worker.move();
     CHECK( worker.activity.id() == ACT_WAIT_NPC );
+    CHECK( activity_order_count( worker, ACT_WAIT_NPC ) == 1 );
     CHECK_FALSE( worker.has_stashed_activity() );
     CHECK( worker.backlog.empty() );
     CHECK( worker.get_attitude() == NPCATT_ACTIVITY );
@@ -661,6 +684,10 @@ TEST_CASE( "Remote liquid preflight does not replace local vehicle-zone cache",
     remote_cart->set_owner( worker );
     mgr.add( "Remote vehicle storage", zone_type_CAMP_STORAGE, faction_your_followers,
              false, true, remote_target.raw(), remote_target.raw(), nullptr, false, true, &remote_map );
+    REQUIRE_FALSE( remote_cart->loot_zones.empty() );
+    const bool remote_zones_dirty = remote_cart->zones_dirty;
+    const tripoint_abs_ms remote_zone_position =
+        remote_cart->loot_zones.begin()->second.get_start_point();
     mgr.cache_vzones( &here );
     REQUIRE( mgr.has( zone_type_CAMP_STORAGE, local_absolute ) );
     REQUIRE_FALSE( mgr.has( zone_type_CAMP_STORAGE, remote_target ) );
@@ -670,6 +697,8 @@ TEST_CASE( "Remote liquid preflight does not replace local vehicle-zone cache",
     CHECK( camp.has_storage_for_craft( recipe_water_clean.obj(), remote_map, remote_target ) );
     CHECK( mgr.has( zone_type_CAMP_STORAGE, local_absolute ) );
     CHECK_FALSE( mgr.has( zone_type_CAMP_STORAGE, remote_target ) );
+    CHECK( remote_cart->zones_dirty == remote_zones_dirty );
+    CHECK( remote_cart->loot_zones.begin()->second.get_start_point() == remote_zone_position );
 }
 
 TEST_CASE( "Camp liquid preflight reserves fixtures for incompatible results",
@@ -696,6 +725,29 @@ TEST_CASE( "Camp liquid preflight reserves fixtures for incompatible results",
                                      here.getglobal( second ).raw(), here.getglobal( second ).raw() );
     CHECK( camp.has_storage_for_craft( recipe_ether.obj(), here,
                                        here.getglobal( worker.pos() ) ) );
+}
+
+TEST_CASE( "Camp liquid preflight does not advance the random engine",
+           "[npc][camp][crafting][liquid]" )
+{
+    npc &worker = setup_camp_worker();
+    test_zone_scope zones;
+    map &here = get_map();
+    basecamp camp( "pure liquid preflight", worker.global_omt_location() );
+    camp.set_bb_pos( here.getglobal( worker.pos() ).raw() );
+    for( const tripoint &target : { worker.pos() + tripoint_east,
+                                   worker.pos() + tripoint_west } ) {
+        here.furn_set( target, furn_f_bathtub );
+        const tripoint_abs_ms absolute = here.getglobal( target );
+        zone_manager::get_manager().add( "Storage", zone_type_CAMP_STORAGE,
+                                         faction_your_followers, false, true,
+                                         absolute.raw(), absolute.raw() );
+    }
+
+    const cata_default_random_engine before = rng_get_engine();
+    CHECK( camp.has_storage_for_craft( recipe_washing_soda.obj(), here,
+                                       here.getglobal( worker.pos() ) ) );
+    CHECK( rng_get_engine() == before );
 }
 
 TEST_CASE( "Empty sorter does not shadow other camp jobs",
@@ -753,4 +805,116 @@ TEST_CASE( "Unavailable sorter destination does not shadow other camp jobs",
 
     CHECK( worker.find_job_to_perform() );
     CHECK( worker.activity.id() == ACT_MULTIPLE_MOP );
+}
+
+TEST_CASE( "Favorite-only sorter source falls through to available work",
+           "[npc][camp][sorting][activity]" )
+{
+    npc &worker = setup_camp_worker();
+    test_zone_scope zones;
+    map &here = get_map();
+    const tripoint source = worker.pos() + tripoint_east;
+    const tripoint destination = worker.pos() + tripoint_west;
+    const tripoint mop_target = worker.pos() + tripoint_north;
+    zone_manager &mgr = zone_manager::get_manager();
+    mgr.add( "Unsorted", zone_type_LOOT_UNSORTED, faction_your_followers, false, true,
+             here.getglobal( source ).raw(), here.getglobal( source ).raw() );
+    mgr.add( "Ignore favorites", zone_type_LOOT_IGNORE_FAVORITES, faction_your_followers,
+             false, true, here.getglobal( source ).raw(), here.getglobal( source ).raw() );
+    mgr.add( "Food", zone_type_LOOT_FOOD, faction_your_followers, false, true,
+             here.getglobal( destination ).raw(), here.getglobal( destination ).raw() );
+    mgr.add( "Mopping", zone_type_MOPPING, faction_your_followers, false, true,
+             here.getglobal( mop_target ).raw(), here.getglobal( mop_target ).raw() );
+    item favorite( itype_test_bitter_almond );
+    favorite.is_favorite = true;
+    here.add_item_or_charges( source, favorite );
+    here.add_field( mop_target, field_type_id( "fd_blood" ), 1 );
+    worker.i_add( item( itype_mop ) );
+    worker.job.clear_all_priorities();
+    REQUIRE( worker.job.set_task_priority( ACT_MOVE_LOOT, 10 ) );
+    REQUIRE( worker.job.set_task_priority( ACT_MULTIPLE_MOP, 5 ) );
+
+    CHECK( worker.find_job_to_perform() );
+    CHECK( worker.activity.id() == ACT_MULTIPLE_MOP );
+}
+
+TEST_CASE( "Unload-only sorter source is feasible work",
+           "[npc][camp][sorting][activity]" )
+{
+    npc &worker = setup_camp_worker();
+    test_zone_scope zones;
+    map &here = get_map();
+    const tripoint source = worker.pos() + tripoint_east;
+    zone_manager &mgr = zone_manager::get_manager();
+    mgr.add( "Unsorted", zone_type_LOOT_UNSORTED, faction_your_followers, false, true,
+             here.getglobal( source ).raw(), here.getglobal( source ).raw() );
+    mgr.add( "Unload", zone_type_zone_unload_all, faction_your_followers, false, true,
+             here.getglobal( source ).raw(), here.getglobal( source ).raw() );
+    item backpack( itype_backpack );
+    REQUIRE( backpack.put_in( item( itype_rock ),
+                              item_pocket::pocket_type::CONTAINER ).success() );
+    here.add_item_or_charges( source, backpack );
+    worker.job.clear_all_priorities();
+    REQUIRE( worker.job.set_task_priority( ACT_MOVE_LOOT, 10 ) );
+
+    CHECK( worker.find_job_to_perform() );
+    CHECK( worker.activity.id() == ACT_MOVE_LOOT );
+}
+
+TEST_CASE( "Unreachable sorter source falls through without starting travel",
+           "[npc][camp][sorting][activity]" )
+{
+    npc &worker = setup_camp_worker();
+    test_zone_scope zones;
+    map &here = get_map();
+    const tripoint source = worker.pos() + tripoint( 5, 0, 0 );
+    const tripoint destination = worker.pos() + tripoint_west;
+    const tripoint mop_target = worker.pos() + tripoint_north;
+    zone_manager &mgr = zone_manager::get_manager();
+    mgr.add( "Unsorted", zone_type_LOOT_UNSORTED, faction_your_followers, false, true,
+             here.getglobal( source ).raw(), here.getglobal( source ).raw() );
+    mgr.add( "Food", zone_type_LOOT_FOOD, faction_your_followers, false, true,
+             here.getglobal( destination ).raw(), here.getglobal( destination ).raw() );
+    mgr.add( "Mopping", zone_type_MOPPING, faction_your_followers, false, true,
+             here.getglobal( mop_target ).raw(), here.getglobal( mop_target ).raw() );
+    here.add_item_or_charges( source, item( itype_test_bitter_almond ) );
+    for( const tripoint &wall : here.points_in_radius( source, 1 ) ) {
+        if( wall != source ) {
+            here.ter_set( wall, ter_t_wall );
+        }
+    }
+    here.add_field( mop_target, field_type_id( "fd_blood" ), 1 );
+    worker.i_add( item( itype_mop ) );
+    worker.job.clear_all_priorities();
+    REQUIRE( worker.job.set_task_priority( ACT_MOVE_LOOT, 10 ) );
+    REQUIRE( worker.job.set_task_priority( ACT_MULTIPLE_MOP, 5 ) );
+
+    CHECK( worker.find_job_to_perform() );
+    CHECK( worker.activity.id() == ACT_MULTIPLE_MOP );
+    CHECK_FALSE( worker.has_destination() );
+}
+
+TEST_CASE( "Sorter reuses its selected route as destination work",
+           "[npc][camp][sorting][activity]" )
+{
+    npc &worker = setup_camp_worker();
+    test_zone_scope zones;
+    map &here = get_map();
+    const tripoint source = worker.pos() + tripoint( 5, 0, 0 );
+    const tripoint destination = worker.pos() + tripoint_west;
+    zone_manager &mgr = zone_manager::get_manager();
+    mgr.add( "Unsorted", zone_type_LOOT_UNSORTED, faction_your_followers, false, true,
+             here.getglobal( source ).raw(), here.getglobal( source ).raw() );
+    mgr.add( "Food", zone_type_LOOT_FOOD, faction_your_followers, false, true,
+             here.getglobal( destination ).raw(), here.getglobal( destination ).raw() );
+    here.add_item_or_charges( source, item( itype_test_bitter_almond ) );
+    worker.job.clear_all_priorities();
+    REQUIRE( worker.job.set_task_priority( ACT_MOVE_LOOT, 10 ) );
+
+    CHECK( worker.find_job_to_perform() );
+    CHECK( worker.activity.is_null() );
+    CHECK( worker.has_destination() );
+    CHECK( worker.get_destination_activity().id() == ACT_MOVE_LOOT );
+    CHECK( worker.get_destination_activity().index == 2 );
+    CHECK( worker.get_destination_activity().placement == here.getglobal( source ) );
 }

@@ -2010,6 +2010,7 @@ class vehicle
 
         // Called by map.cpp to make sure the real position of each zone_data is accurate
         bool refresh_zones();
+        bool refresh_zones( map &here );
 
         bounding_box get_bounding_box( bool use_precalc = true );
         // Retroactively pass time spent outside bubble

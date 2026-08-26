@@ -237,6 +237,8 @@ class recipe
         // Create byproduct instances as if the recipe was just finished
         std::vector<item> create_byproducts( int batch = 1 ) const;
         std::map<itype_id, int> get_byproducts() const;
+        std::vector<itype_id> guaranteed_liquid_outputs() const;
+        std::set<itype_id> possible_group_liquid_outputs() const;
         bool in_byproducts( const itype_id &it ) const;
         bool has_byproducts() const;
 

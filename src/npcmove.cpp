@@ -227,6 +227,17 @@ const int avoidance_vehicles_radius = 5;
 constexpr float healing_danger_threshold = 0.01f;
 constexpr int urgent_pain_threshold = 40;
 constexpr int critical_bleed_intensity = 2;
+constexpr int move_loot_stage_do = 2;
+
+cata::optional<basecamp *> exact_assigned_camp( const npc &worker )
+{
+    if( !worker.assigned_camp ) {
+        return cata::nullopt;
+    }
+    const overmap_with_local_coords location =
+        overmap_buffer.get_existing_om_global( *worker.assigned_camp );
+    return location ? location.om->find_camp( worker.assigned_camp->xy() ) : cata::nullopt;
+}
 
 bool same_activity_order( const player_activity &left, const player_activity &right,
                           const Character &who )
@@ -263,30 +274,32 @@ bool has_activity_order( const npc &worker, const player_activity &order )
     } );
 }
 
-bool sort_source_reachable( npc &worker, const tripoint_bub_ms &source )
+struct sortable_loot_plan {
+    tripoint_abs_ms source;
+    std::vector<tripoint_bub_ms> route;
+};
+
+cata::optional<std::vector<tripoint_bub_ms>> sort_source_route(
+    npc &worker, const tripoint_bub_ms &source )
 {
     map &here = get_map();
     if( square_dist( worker.pos_bub(), source ) <= 1 ) {
-        return true;
+        return std::vector<tripoint_bub_ms>();
     }
+    std::vector<tripoint_bub_ms> route;
     if( here.passable( source ) ) {
-        return !here.route( worker.pos_bub(), source, worker.get_pathfinding_settings(),
-                            worker.get_path_avoid() ).empty();
-    }
-    std::unordered_set<tripoint_bub_ms> adjacent;
-    for( const tripoint_bub_ms &point : here.points_in_radius( source, 1 ) ) {
-        if( point != worker.pos_bub() && here.passable( point ) ) {
-            adjacent.insert( point );
+        route = here.route( worker.pos_bub(), source, worker.get_pathfinding_settings(),
+                            worker.get_path_avoid() );
+        if( !route.empty() ) {
+            route.pop_back();
         }
+    } else {
+        route = route_adjacent( worker, source );
     }
-    for( const tripoint_bub_ms &point :
-         get_sorted_tiles_by_distance( worker.pos_bub(), adjacent ) ) {
-        if( !here.route( worker.pos_bub(), point, worker.get_pathfinding_settings(),
-                         worker.get_path_avoid() ).empty() ) {
-            return true;
-        }
+    if( route.empty() ) {
+        return cata::nullopt;
     }
-    return false;
+    return route;
 }
 
 bool sort_destination_available( const item &candidate, const tripoint_abs_ms &destination )
@@ -374,7 +387,7 @@ std::vector<vitamin_id> treatable_vitamin_deficiencies( const npc &who )
     return result;
 }
 
-bool has_sortable_loot( npc &worker )
+cata::optional<sortable_loot_plan> find_sortable_loot( npc &worker )
 {
     map &here = get_map();
     zone_manager &mgr = zone_manager::get_manager();
@@ -386,20 +399,20 @@ bool has_sortable_loot( npc &worker )
     const std::unordered_set<tripoint_abs_ms> sources =
         mgr.get_near( zone_type_LOOT_UNSORTED, origin, ACTIVITY_SEARCH_DISTANCE, nullptr, fac );
 
-    for( const tripoint_abs_ms &source : sources ) {
+    for( const tripoint_abs_ms &source :
+         get_sorted_tiles_by_distance( origin, sources ) ) {
         if( !mgr.has_nonpersonal( zone_type_LOOT_UNSORTED, source, fac ) ) {
             continue;
         }
         const tripoint_bub_ms local_source = here.bub_from_abs( source );
         if( !here.inbounds( local_source ) || mgr.has( zone_type_LOOT_IGNORE, source, fac ) ||
             here.get_field( local_source, fd_fire ) != nullptr ||
-            !here.can_put_items_ter_furn( local_source ) ||
-            !sort_source_reachable( worker, local_source ) ) {
+            !here.can_put_items_ter_furn( local_source ) ) {
             continue;
         }
 
-        const auto has_destination = [&]( item & candidate ) {
-            if( !candidate.made_of_from_type( phase_id::SOLID ) ) {
+        const auto has_work = [&]( item & candidate ) {
+            if( !move_loot_item_is_eligible( worker, candidate, source ) ) {
                 return false;
             }
             const zone_type_id destination = mgr.get_near_zone_type_for_item(
@@ -414,27 +427,42 @@ bool has_sortable_loot( npc &worker )
             }
             const std::unordered_set<tripoint_abs_ms> destinations = mgr.get_near(
                         destination, origin, ACTIVITY_SEARCH_DISTANCE, &candidate, fac, true );
-            return std::any_of( destinations.begin(), destinations.end(),
+            const bool available_destination = std::any_of( destinations.begin(), destinations.end(),
             [&]( const tripoint_abs_ms & point ) {
                 return sort_destination_available( candidate, point );
             } );
+            return available_destination ||
+                   move_loot_item_has_unload_work( worker, candidate, source );
         };
 
+        bool has_work_at_source = false;
         if( const cata::optional<vpart_reference> cargo =
                 here.veh_at( local_source ).part_with_feature( "CARGO", false ) ) {
             for( item &candidate : cargo->vehicle().get_items( cargo->part_index() ) ) {
-                if( has_destination( candidate ) ) {
-                    return true;
+                if( has_work( candidate ) ) {
+                    has_work_at_source = true;
+                    break;
                 }
             }
         }
-        for( item &candidate : here.i_at( local_source ) ) {
-            if( has_destination( candidate ) ) {
-                return true;
+        if( !has_work_at_source ) {
+            for( item &candidate : here.i_at( local_source ) ) {
+                if( has_work( candidate ) ) {
+                    has_work_at_source = true;
+                    break;
+                }
             }
         }
+        if( !has_work_at_source ) {
+            continue;
+        }
+        const cata::optional<std::vector<tripoint_bub_ms>> route =
+            sort_source_route( worker, local_source );
+        if( route ) {
+            return sortable_loot_plan{ source, *route };
+        }
     }
-    return false;
+    return cata::nullopt;
 }
 
 bool good_for_pickup( const item &it, npc &who )
@@ -2950,8 +2978,17 @@ bool npc::find_job_to_perform()
         }
         player_activity scan_act = player_activity( elem );
         if( elem == ACT_MOVE_LOOT ) {
-            if( has_sortable_loot( *this ) ) {
-                assign_activity( elem );
+            const cata::optional<sortable_loot_plan> plan = find_sortable_loot( *this );
+            if( plan ) {
+                player_activity sorting( ACT_MOVE_LOOT );
+                sorting.index = move_loot_stage_do;
+                sorting.values.push_back( 0 );
+                sorting.placement = plan->source;
+                assign_activity( sorting );
+                if( !plan->route.empty() ) {
+                    set_destination( plan->route, activity );
+                    activity.set_to_null();
+                }
                 return true;
             }
             continue;
@@ -2968,8 +3005,7 @@ void npc::worker_downtime()
 {
     map &here = get_map();
     creature_tracker &creatures = get_creature_tracker();
-    const cata::optional<basecamp *> camp = assigned_camp ?
-            overmap_buffer.find_camp( assigned_camp->xy() ) : cata::nullopt;
+    const cata::optional<basecamp *> camp = exact_assigned_camp( *this );
     if( !camp ) {
         assigned_camp = cata::nullopt;
         camp_duty = false;
@@ -3064,7 +3100,7 @@ bool npc::is_camp_duty_ready() const
     if( !assigned_camp || !camp_duty ) {
         return false;
     }
-    const cata::optional<basecamp *> camp = overmap_buffer.find_camp( assigned_camp->xy() );
+    const cata::optional<basecamp *> camp = exact_assigned_camp( *this );
     return camp && ( *camp )->point_within_camp( global_omt_location() );
 }
 
@@ -3073,7 +3109,7 @@ void npc::return_to_assigned_camp()
     if( !assigned_camp ) {
         return;
     }
-    const cata::optional<basecamp *> camp = overmap_buffer.find_camp( assigned_camp->xy() );
+    const cata::optional<basecamp *> camp = exact_assigned_camp( *this );
     if( !camp ) {
         assigned_camp = cata::nullopt;
         camp_duty = false;
