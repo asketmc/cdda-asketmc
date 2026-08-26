@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <utility>
 #include <vector>
 
 #include "calendar.h"
@@ -46,13 +47,31 @@ namespace
 class local_survival_test_fixture
 {
     public:
-        local_survival_test_fixture() : previous( get_weather().forced_temperature ) {
+        local_survival_test_fixture() : previous_temperature( get_weather().forced_temperature ),
+            previous_zones( zone_manager::get_manager() ) {
+            zone_manager::get_manager().clear();
             get_weather().forced_temperature = units::from_celsius( 20 );
         }
-        ~local_survival_test_fixture() { get_weather().forced_temperature = previous; }
+        ~local_survival_test_fixture() {
+            zone_manager::get_manager() = std::move( previous_zones );
+            get_weather().forced_temperature = previous_temperature;
+        }
     private:
-        cata::optional<units::temperature> previous;
+        cata::optional<units::temperature> previous_temperature;
+        zone_manager previous_zones;
 };
+
+void process_activity_bounded( Character &who, int max_turns = 5000 )
+{
+    int turns = 0;
+    while( who.activity && turns++ < max_turns ) {
+        who.moves += who.get_speed();
+        while( who.moves > 0 && who.activity ) {
+            who.activity.do_turn( who );
+        }
+    }
+    REQUIRE_FALSE( who.activity );
+}
 
 npc &setup_survival_npc()
 {
@@ -418,7 +437,7 @@ TEST_CASE_METHOD( local_survival_test_fixture, "NPC emergency forage restriction
         guy.set_stored_kcal( 5000 );
         REQUIRE( guy.forage_local_food() );
         REQUIRE( guy.activity.id() == activity_id( "ACT_FORAGE" ) );
-        process_activity( guy );
+        process_activity_bounded( guy );
         CHECK( here.ter( target ) != ter_t_underbrush );
     }
     SECTION( "farm plot is excluded" ) {
