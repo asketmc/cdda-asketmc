@@ -206,6 +206,11 @@ Unowned ground items are eligible, while personal and no-NPC-pickup zones remain
 hard exclusions. Vehicle cargo additionally requires matching ownership; a
 cargo lock blocks only its own mount while the vehicle is locked.
 
+Local scavenging uses the existing **Allow pickup** follower rule as its opt-in.
+Unowned ground items are eligible, while personal and no-NPC-pickup zones remain
+hard exclusions. Vehicle cargo additionally requires matching ownership; a
+cargo lock blocks only its own mount while the vehicle is locked.
+
 Active NPC temperature effects are refreshed every turn; the heavier needs
 update remains throttled. Save-load catch-up advances temperature, wetness, and
 frostbite by up to two days of elapsed turns under the current conditions. The
