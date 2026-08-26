@@ -168,7 +168,9 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn('--base "${PUSH_BEFORE_SHA}"', self.quality)
         self.assertIn('--head "${PUSH_HEAD_SHA}"', self.quality)
         self.assertIn(
-            'gh api "repos/${GH_REPO}" --jq \'.allow_rebase_merge\'', self.quality
+            ".allow_squash_merge == true and .allow_merge_commit == false and "
+            '.allow_rebase_merge == false then "squash-only" else "invalid" end',
+            self.quality,
         )
 
     def test_new_and_existing_releases_share_exact_remote_readback(self) -> None:

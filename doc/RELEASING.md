@@ -25,7 +25,7 @@ CI requires the fragment filename and embedded PR number to match. Existing frag
 
 Dependabot-generated pull requests may merge without a fragment. The release preparation command accepts only their canonical `Bump <dependency> from <old> to <new> (#<PR>)` squash title and derives a maintainer entry deterministically. Other missing fragments fail closed.
 
-`main` accepts GitHub merge commits and squash merges only. Rebase merging is disabled because it loses the one-integration-commit-per-PR boundary required by the release chain. Branch protection requires a pull request and the up-to-date `Portable contracts` check, applies to administrators, and forbids force-pushes and deletion. The push gate independently audits that exactly one recognized PR integration reached `main` and repeats the fragment/history checks.
+Historical GitHub merge commits remain readable, but future changes enter `main` by squash merge only. Merge-commit and rebase merging are disabled because they can lose the one-integration-commit-per-PR boundary required by the release chain, especially for fragment-free Dependabot updates. Branch protection requires linear history, a pull request, and the up-to-date `Portable contracts` check, applies to administrators, and forbids force-pushes and deletion. The push gate independently audits that exactly one recognized PR integration reached `main` and repeats the fragment/history checks.
 
 ### Optional drafting assistance
 

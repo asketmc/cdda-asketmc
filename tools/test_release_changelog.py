@@ -448,6 +448,24 @@ class GitCoverageTest(unittest.TestCase):
                         "author_email": "49699333+dependabot[bot]@users.noreply.github.com",
                     }
                 ],
+                {},
+                "release",
+            )
+        with self.assertRaisesRegex(
+            release_changelog.ChangelogError, "cannot replace its reviewed fragment"
+        ):
+            release_changelog.verify_automatic_integrations(
+                [{"pr": 2, "automatic": entry}],
+                [
+                    {
+                        "pr": 2,
+                        "subject": "Bump action/x from 1 to 2 (#2)",
+                        "style": "squash",
+                        "author_name": "dependabot[bot]",
+                        "author_email": "49699333+dependabot[bot]@users.noreply.github.com",
+                    }
+                ],
+                {2: valid_fragment(2)},
                 "release",
             )
 

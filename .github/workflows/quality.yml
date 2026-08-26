@@ -74,8 +74,10 @@ jobs:
           PUSH_BEFORE_SHA: ${{ github.event.before }}
           PUSH_HEAD_SHA: ${{ github.sha }}
         run: |
-          if [[ "$(gh api "repos/${GH_REPO}" --jq '.allow_rebase_merge')" != "false" ]]; then
-            echo "Repository policy must disable rebase merges." >&2
+          merge_policy=$(gh api "repos/${GH_REPO}" \
+            --jq 'if .allow_squash_merge == true and .allow_merge_commit == false and .allow_rebase_merge == false then "squash-only" else "invalid" end')
+          if [[ "${merge_policy}" != "squash-only" ]]; then
+            echo "Repository policy must allow squash merges only." >&2
             exit 1
           fi
           python3 tools/release_changelog.py lint --check-generated

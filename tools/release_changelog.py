@@ -715,7 +715,7 @@ def validate_tag(root: pathlib.Path, tag: str, expected_commit: str | None = Non
         raise ChangelogError(
             f"{tag}: manifest PR order {expected_prs} does not cover exact first-parent range {actual_prs}"
         )
-    verify_automatic_integrations(release["changes"], integrations, tag)
+    verify_automatic_integrations(release["changes"], integrations, fragments, tag)
     verify_release_fragment_links(tags, releases, fragments)
 
 
@@ -827,6 +827,7 @@ def _check_release_history_diff(
     verify_automatic_integrations(
         release["changes"][:-1],
         integrations,
+        load_fragments(root),
         tag,
     )
     if "automatic" in release["changes"][-1]:
@@ -958,6 +959,7 @@ def _is_dependabot_integration(integration: dict[str, Any]) -> bool:
 def verify_automatic_integrations(
     changes: list[dict[str, Any]],
     integrations: list[dict[str, Any]],
+    fragments: dict[int, dict[str, Any]],
     source: str,
 ) -> None:
     if len(changes) != len(integrations):
@@ -967,6 +969,10 @@ def verify_automatic_integrations(
             raise ChangelogError(f"{source}: integration PR order mismatch")
         if "automatic" not in change:
             continue
+        if change["pr"] in fragments:
+            raise ChangelogError(
+                f"{source}: automatic PR #{change['pr']} entry cannot replace its reviewed fragment"
+            )
         expected = _automatic_dependabot_entry(integration["subject"], integration["pr"])
         if not _is_dependabot_integration(integration) or change["automatic"] != expected:
             raise ChangelogError(
