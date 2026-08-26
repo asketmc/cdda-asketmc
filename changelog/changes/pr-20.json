@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "pr": 20,
+  "entries": [
+    {
+      "id": "strict-per-release-notes",
+      "category": "Interface",
+      "audience": "players",
+      "summary": "Publish a strict per-release feature list alongside the cumulative fork overview.",
+      "compatibility": "not-applicable",
+      "details": [
+        "The Windows archive includes release notes, complete release history, save-compatibility guidance, and known limits."
+      ]
+    },
+    {
+      "id": "reviewed-changelog-fragments",
+      "category": "Infrastructure",
+      "audience": "maintainers",
+      "summary": "Generate release history from reviewed, immutable pull-request fragments and explicit published-release boundaries.",
+      "compatibility": "not-applicable",
+      "details": [
+        "CI verifies exact first-parent PR coverage, rejects historical rewrites, and derives only canonical Dependabot bumps automatically."
+      ]
+    },
+    {
+      "id": "checksum-bound-release-metadata",
+      "category": "Build",
+      "audience": "maintainers",
+      "summary": "Bind release notes, embedded metadata, build provenance, and the Windows archive into one immutable checksum set.",
+      "compatibility": "not-applicable",
+      "details": [
+        "Tagged reruns require the existing release title, body, asset names, checksums, and every uploaded byte to match."
+      ]
+    }
+  ]
+}
