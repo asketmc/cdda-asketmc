@@ -114,13 +114,16 @@ global behavior tree and mission scheduler are not included.
 - Followers start first aid only when safe.  A separate follower rule controls
   whether they spend their supplies on allies, and interrupted work resumes
   after treatment.
-- Followers with scurvy or anemia can use food or medicine containing the
-  missing vitamin.  They avoid repeatedly taking supplements after the
-  deficiency clears.
+- Followers safely treat data-defined nutrient deficiencies with non-addictive
+  food or medicine.  Treatment is throttled, never starts in combat, and stops
+  after the deficiency clears.
 - Very unpleasant or nausea-triggering food is avoided when alternatives
   exist, but remains available when the follower would otherwise starve.
-- Weapon comparison now handles empty hands and non-guns deterministically;
+- Unarmed followers no longer overvalue empty hands when choosing from carried
+  weapons.  Offered non-guns also avoid bogus infinite-ammo diagnostics;
   ranged/melee coefficients and silent-weapon rules remain unchanged.
+- Loading old follower rules no longer lets a preceding rule value leak into
+  missing override fields.
 
 ## Visuals, sound, fonts, and interface
 

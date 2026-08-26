@@ -198,8 +198,8 @@ manifest are actually imported.
 | Global NPC priorities and camp-resident state machine | #86172, #86173 | Deferred to a separate legacy-scheduler adaptation; modern framework not imported |
 | Activity-actor sorting rewrites | #83980, #84311 | Not applicable to the legacy direct sorting implementation |
 | Safe self/ally first aid | TLG #1603 (`5fd614b81aeb7de418b4ed239e5b7e8f93828cba`) | Adapted with a save-compatible follower rule and activity restoration |
-| Vitamin and food selection | TLG #2982 (`87448bac93398575e854128d00840b73d3f7c7ac`) | Adapted with deficiency bounds and starvation fallback |
-| Weapon comparison correctness | TLG #2746 (`336d552d6df48f73ddfd1f63f7572cd3ad15238b`) | Null and initialization fixes only; balance changes excluded |
+| Vitamin and food selection | TLG #2982 (`87448bac93398575e854128d00840b73d3f7c7ac`) | Adapted for data-defined deficiencies, safe non-addictive treatment, rot-aware ranking, and starvation fallback |
+| Weapon comparison correctness | TLG #2746 (`336d552d6df48f73ddfd1f63f7572cd3ad15238b`) | Empty-hand selection fix and defensive offered-weapon ammo accounting only; balance changes excluded |
 
 Local scavenging uses the existing **Allow pickup** follower rule as its opt-in.
 Unowned ground items are eligible, while personal and no-NPC-pickup zones remain

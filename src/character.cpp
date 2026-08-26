@@ -8251,7 +8251,10 @@ void Character::resume_backlog_activity()
         activity.allow_distractions();
         backlog.pop_front();
         if( is_npc() ) {
-            dynamic_cast<npc *>( this )->current_activity_id = activity.id();
+            npc *guy = dynamic_cast<npc *>( this );
+            guy->set_attitude( NPCATT_ACTIVITY );
+            guy->set_mission( NPC_MISSION_ACTIVITY );
+            guy->current_activity_id = activity.id();
         }
     }
 }

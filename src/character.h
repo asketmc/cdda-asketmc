@@ -2948,7 +2948,7 @@ class Character : public Creature, public visitable
          * Asks about them if @param interactive is true, refuses otherwise.
          */
         ret_val<edible_rating> will_eat( const item &food, bool interactive = false,
-                                        const cata::optional<edible_rating> &ignored = {} ) const;
+                                        bool ignore_nausea = false ) const;
         /** Determine character's capability of recharging their CBMs.
         * Returns energy in kJ
         */

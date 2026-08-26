@@ -58,7 +58,7 @@ const std::array<boolean_rule_entry, 19> boolean_rules = { {
             "Will tell you when something is needed.", "Will stay quiet about unmet needs."
         },
         {
-            ally_rule::heal_others, "Heal allies",
+            ally_rule::allow_heal_others, "Heal allies",
             "May use medical supplies on allies.", "Will save medical supplies for self-use."
         },
         {
