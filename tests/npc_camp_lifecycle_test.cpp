@@ -50,6 +50,7 @@ static const itype_id itype_rock( "rock" );
 static const itype_id itype_test_bitter_almond( "test_bitter_almond" );
 static const itype_id itype_test_battery_disposable( "test_battery_disposable" );
 static const itype_id itype_test_ebook_reader( "test_ebook_reader" );
+static const itype_id itype_test_food_container( "test_watertight_open_sealed_container_250ml" );
 static const itype_id itype_water_clean( "water_clean" );
 
 static const recipe_id recipe_ether( "ether" );
@@ -375,7 +376,9 @@ TEST_CASE( "Urgent needs preserve stashed camp work",
     worker.apply_damage( nullptr, bodypart_id( "arm_r" ),
                          worker.get_part_hp_max( bodypart_id( "arm_r" ) ) * 3 / 4 + 1 );
     worker.i_add( item( itype_bandages ) );
-    worker.set_stashed_activity( player_activity( ACT_WAIT_NPC ) );
+    player_activity camp_work( ACT_WAIT_NPC, 50000 );
+    camp_work.str_values.emplace_back( "camp work" );
+    worker.set_stashed_activity( camp_work );
 
     for( int attempt = 0; attempt < 100 && worker.activity.id() != ACT_FIRSTAID; ++attempt ) {
         worker.moves = 100;
@@ -855,10 +858,10 @@ TEST_CASE( "Full sorter destination does not enable optional unloading",
              here.getglobal( blocked_destination ).raw() );
     mgr.add( "Mopping", zone_type_MOPPING, faction_your_followers, false, true,
              here.getglobal( mop_target ).raw(), here.getglobal( mop_target ).raw() );
-    item backpack( itype_backpack );
-    REQUIRE( backpack.put_in( item( itype_test_bitter_almond ),
-                              item_pocket::pocket_type::CONTAINER ).success() );
-    here.add_item_or_charges( source, backpack );
+    item food_container( itype_test_food_container );
+    REQUIRE( food_container.put_in( item( itype_test_bitter_almond ),
+                                    item_pocket::pocket_type::CONTAINER ).success() );
+    here.add_item_or_charges( source, food_container );
     here.ter_set( blocked_destination, ter_t_wall );
     here.add_field( mop_target, field_type_id( "fd_blood" ), 1 );
     worker.i_add( item( itype_mop ) );
