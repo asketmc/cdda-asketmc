@@ -58,10 +58,19 @@ def valid_fragment(pr: int = 1) -> dict:
     return {"schema": 1, "pr": pr, "entries": [valid_entry()]}
 
 
+def write_bootstrap_identity(root: pathlib.Path, pr: int) -> None:
+    path = root / "changelog" / "bootstrap.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(
+        release_changelog.canonical_json_bytes({"schema": 1, "pr": pr})
+    )
+
+
 def write_baseline_history(
     root: pathlib.Path, tag: str = "v0.G-additive-2026.08.25"
 ) -> tuple[dict, dict[int, dict]]:
     fragment = valid_fragment(1)
+    write_bootstrap_identity(root, 1)
     fragment_path = root / "changelog" / "changes" / "pr-1.json"
     fragment_path.parent.mkdir(parents=True, exist_ok=True)
     fragment_path.write_bytes(release_changelog.canonical_json_bytes(fragment))
@@ -145,6 +154,9 @@ class StrictJsonAndSchemaTest(unittest.TestCase):
 
 
 class RepositoryReleaseHistoryTest(unittest.TestCase):
+    def test_repository_bootstrap_identity_is_immutable_pr_20(self) -> None:
+        self.assertEqual(release_changelog.load_bootstrap(ROOT), 20)
+
     def test_hashed_release_documents_are_checked_out_with_lf(self) -> None:
         attributes = run_git(
             ROOT,
@@ -346,9 +358,31 @@ class GitCoverageTest(unittest.TestCase):
         with self.assertRaisesRegex(release_changelog.ChangelogError, "not a recognized"):
             release_changelog.first_parent_integrations(self.root, start, "HEAD")
 
+    def test_bootstrap_identity_does_not_depend_on_commit_subject(self) -> None:
+        start = commit_file(self.root, "root.txt", "root\n", "Root")
+        write_bootstrap_identity(self.root, 1)
+        fragment_path = self.root / "changelog" / "changes" / "pr-1.json"
+        fragment_path.parent.mkdir(parents=True)
+        fragment_path.write_bytes(
+            release_changelog.canonical_json_bytes(valid_fragment(1))
+        )
+        run_git(self.root, "add", ".")
+        run_git(self.root, "commit", "-m", "Editable bootstrap subject")
+
+        integrations = release_changelog.first_parent_integrations(
+            self.root, start, "HEAD"
+        )
+        self.assertEqual(
+            [(item["pr"], item["style"]) for item in integrations],
+            [(1, "bootstrap")],
+        )
+        release_changelog.check_pr(self.root, start, "HEAD", 1)
+        release_changelog.check_main_update(self.root, start, "HEAD")
+
     def test_pr_gate_accepts_one_new_fragment_and_rejects_old_fragment_edits(self) -> None:
         fragment_path = self.root / "changelog" / "changes" / "pr-1.json"
         fragment_path.parent.mkdir(parents=True)
+        write_bootstrap_identity(self.root, 1)
         fragment_path.write_bytes(release_changelog.canonical_json_bytes(valid_fragment(1)))
         run_git(self.root, "add", ".")
         run_git(self.root, "commit", "-m", "Bootstrap (#1)")
@@ -360,14 +394,14 @@ class GitCoverageTest(unittest.TestCase):
         run_git(self.root, "add", ".")
         run_git(self.root, "commit", "-m", "Add fragment (#2)")
         head = run_git(self.root, "rev-parse", "HEAD")
-        release_changelog.check_pr(self.root, base, head, 2, "owner")
+        release_changelog.check_pr(self.root, base, head, 2)
         release_changelog.check_main_update(self.root, base, head)
 
         fragment_path.write_bytes(release_changelog.canonical_json_bytes(valid_fragment(1) | {"skip": {"reason": "bad"}}))
         run_git(self.root, "add", ".")
         run_git(self.root, "commit", "-m", "Edit history (#3)")
         with self.assertRaisesRegex(release_changelog.ChangelogError, "immutable"):
-            release_changelog.check_pr(self.root, head, "HEAD", 3, "owner")
+            release_changelog.check_pr(self.root, head, "HEAD", 3)
         with self.assertRaisesRegex(release_changelog.ChangelogError, "immutable"):
             release_changelog.check_main_update(self.root, head, "HEAD")
 
@@ -386,8 +420,16 @@ class GitCoverageTest(unittest.TestCase):
         )
         release_changelog.render_all(self.root)
         run_git(self.root, "add", ".")
-        run_git(self.root, "commit", "-m", "Refresh renderer output (#2)")
-        release_changelog.check_pr(self.root, base, "HEAD", 2, "owner")
+        run_git(self.root, "commit", "-m", "Editable squash subject")
+        release_changelog.check_pr(self.root, base, "HEAD", 2)
+        integrations = release_changelog.first_parent_integrations(
+            self.root, base, "HEAD"
+        )
+        self.assertEqual(
+            [(item["pr"], item["style"]) for item in integrations],
+            [(2, "fragment")],
+        )
+        release_changelog.check_main_update(self.root, base, "HEAD")
 
         valid_head = run_git(self.root, "rev-parse", "HEAD")
         (self.root / "changelog" / "changes" / "pr-3.json").write_bytes(
@@ -397,11 +439,12 @@ class GitCoverageTest(unittest.TestCase):
         run_git(self.root, "add", ".")
         run_git(self.root, "commit", "-m", "Tamper with generated history (#3)")
         with self.assertRaisesRegex(release_changelog.ChangelogError, "stale"):
-            release_changelog.check_pr(self.root, valid_head, "HEAD", 3, "owner")
+            release_changelog.check_pr(self.root, valid_head, "HEAD", 3)
 
-    def test_dependabot_may_defer_fragment_to_release_preparation(self) -> None:
+    def test_dependabot_also_requires_one_reviewed_fragment(self) -> None:
         fragment_path = self.root / "changelog" / "changes" / "pr-1.json"
         fragment_path.parent.mkdir(parents=True)
+        write_bootstrap_identity(self.root, 1)
         fragment_path.write_bytes(release_changelog.canonical_json_bytes(valid_fragment(1)))
         run_git(self.root, "add", ".")
         run_git(self.root, "commit", "-m", "Bootstrap (#1)")
@@ -413,60 +456,19 @@ class GitCoverageTest(unittest.TestCase):
             "Bump action/x from 1 to 2 (#2)",
             "dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
         )
-        release_changelog.check_pr(
-            self.root,
-            base,
-            "HEAD",
-            2,
-            "dependabot[bot]",
-            "Bump action/x from 1 to 2",
-        )
-        with self.assertRaisesRegex(release_changelog.ChangelogError, "canonical bump title"):
-            release_changelog.check_pr(
-                self.root, base, "HEAD", 2, "dependabot[bot]", "Unrelated change"
-            )
-        release_changelog.check_main_update(self.root, base, "HEAD")
-        entry = release_changelog._automatic_dependabot_entry(
-            "Bump action/x from 1 to 2 (#2)", 2
-        )
-        self.assertIsNotNone(entry)
-        self.assertEqual(entry["summary"], "Update action/x from 1 to 2.")
-        self.assertIsNone(
-            release_changelog._automatic_dependabot_entry("Arbitrary title (#2)", 2)
-        )
-        forged = dict(entry)
-        forged["summary"] = "Hide an unrelated change."
-        with self.assertRaisesRegex(release_changelog.ChangelogError, "canonical Dependabot"):
-            release_changelog.verify_automatic_integrations(
-                [{"pr": 2, "automatic": forged}],
-                [
-                    {
-                        "pr": 2,
-                        "subject": "Bump action/x from 1 to 2 (#2)",
-                        "style": "squash",
-                        "author_name": "dependabot[bot]",
-                        "author_email": "49699333+dependabot[bot]@users.noreply.github.com",
-                    }
-                ],
-                {},
-                "release",
-            )
-        with self.assertRaisesRegex(
-            release_changelog.ChangelogError, "cannot replace its reviewed fragment"
-        ):
-            release_changelog.verify_automatic_integrations(
-                [{"pr": 2, "automatic": entry}],
-                [
-                    {
-                        "pr": 2,
-                        "subject": "Bump action/x from 1 to 2 (#2)",
-                        "style": "squash",
-                        "author_name": "dependabot[bot]",
-                        "author_email": "49699333+dependabot[bot]@users.noreply.github.com",
-                    }
-                ],
-                {2: valid_fragment(2)},
-                "release",
+        with self.assertRaisesRegex(release_changelog.ChangelogError, "exactly one fragment"):
+            release_changelog.check_pr(self.root, base, "HEAD", 2)
+        with self.assertRaisesRegex(release_changelog.ChangelogError, "exactly one fragment"):
+            release_changelog.check_main_update(self.root, base, "HEAD")
+
+        with self.assertRaisesRegex(release_changelog.ChangelogError, "unknown keys"):
+            release_changelog.validate_release_change(
+                {
+                    "pr": 2,
+                    "fragment_sha256": "0" * 64,
+                    "automatic": valid_entry("forged"),
+                },
+                "release change",
             )
 
     def test_release_pr_may_add_one_complete_delta_but_cannot_edit_history(self) -> None:
@@ -477,19 +479,15 @@ class GitCoverageTest(unittest.TestCase):
         run_git(self.root, "add", ".")
         run_git(self.root, "commit", "-m", "Previous release (#1)")
         run_git(self.root, "tag", previous_tag)
-        commit_file(
-            self.root,
-            "feature.txt",
-            "feature\n",
-            "Bump action/x from 1 to 2 (#2)",
-            "dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+        integration_fragment = valid_fragment(2)
+        (self.root / "changelog" / "changes" / "pr-2.json").write_bytes(
+            release_changelog.canonical_json_bytes(integration_fragment)
         )
+        (self.root / "feature.txt").write_text("feature\n", encoding="utf-8")
+        run_git(self.root, "add", ".")
+        run_git(self.root, "commit", "-m", "Editable squash subject")
         base = run_git(self.root, "rev-parse", "HEAD")
 
-        automatic_2 = release_changelog._automatic_dependabot_entry(
-            "Bump action/x from 1 to 2 (#2)", 2
-        )
-        self.assertIsNotNone(automatic_2)
         release_fragment = valid_fragment(3)
         (self.root / "changelog" / "changes" / "pr-3.json").write_bytes(
             release_changelog.canonical_json_bytes(release_fragment)
@@ -502,7 +500,12 @@ class GitCoverageTest(unittest.TestCase):
             "previous_release": previous_tag,
             "baseline": False,
             "changes": [
-                {"pr": 2, "automatic": automatic_2},
+                {
+                    "pr": 2,
+                    "fragment_sha256": release_changelog.object_hash(
+                        integration_fragment
+                    ),
+                },
                 {
                     "pr": 3,
                     "fragment_sha256": release_changelog.object_hash(release_fragment),

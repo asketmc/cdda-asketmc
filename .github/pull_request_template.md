@@ -22,8 +22,8 @@ https://github.com/CleverRaven/Cataclysm-DDA/blob/master/data/changelog.txt -->
 
 <!-- Add changelog/changes/pr-<this PR number>.json. The reviewed JSON is the
 canonical source for this fork's generated release notes and may contain more
-than one entry. Existing fragments are immutable. Dependabot PRs are the only
-automatic exception. See doc/RELEASING.md. -->
+than one entry. Existing fragments are immutable. Automated dependency PRs also
+need a reviewed fragment before merge. See doc/RELEASING.md. -->
 
 - [ ] Added and reviewed `changelog/changes/pr-<number>.json`
 - [ ] Recorded player/save compatibility and known limits where applicable

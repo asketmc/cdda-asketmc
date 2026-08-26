@@ -9,7 +9,7 @@ The generated history is deterministic. CI does not contact an external text gen
 
 ## Pull-request fragments
 
-Every ordinary pull request adds `changelog/changes/pr-<number>.json`. A fragment may contain multiple player or maintainer entries, so a pull request with several independently useful changes does not need to hide them behind one vague title.
+Every pull request adds `changelog/changes/pr-<number>.json`, including automated dependency updates. A fragment may contain multiple player or maintainer entries, so a pull request with several independently useful changes does not need to hide them behind one vague title.
 
 Required entry fields are:
 
@@ -21,11 +21,9 @@ Required entry fields are:
 
 Optional `details` and `known_limits` arrays provide the stricter information that should survive after the pull request is closed. A fragment may instead contain an explicit `skip.reason` when the change genuinely should not appear in release notes.
 
-CI requires the fragment filename and embedded PR number to match. Existing fragments are immutable. The initial bootstrap is the only pull request allowed to add historical fragments.
+CI requires the fragment filename and embedded PR number to match. Existing fragments are immutable. The initial bootstrap is the only pull request allowed to add historical fragments, and `changelog/bootstrap.json` immutably binds that exceptional commit to PR #20.
 
-Dependabot-generated pull requests may merge without a fragment. The release preparation command accepts only their canonical `Bump <dependency> from <old> to <new> (#<PR>)` squash title and derives a maintainer entry deterministically. Other missing fragments fail closed.
-
-Historical GitHub merge commits remain readable, but future changes enter `main` by squash merge only. Merge-commit and rebase merging are disabled because they can lose the one-integration-commit-per-PR boundary required by the release chain, especially for fragment-free Dependabot updates. Branch protection requires linear history, a pull request, and the up-to-date `Portable contracts` check, applies to administrators, and forbids force-pushes and deletion. The push gate independently audits that exactly one recognized PR integration reached `main` and repeats the fragment/history checks.
+Historical GitHub merge and squash subjects remain readable, but future changes enter `main` by squash merge only. The release chain derives a future squash commit's PR identity from the single immutable fragment added by that commit, so editing GitHub's squash subject cannot break the chain. Merge-commit and rebase merging are disabled. Branch protection requires linear history, a pull request, and the up-to-date `Portable contracts` check, applies to administrators, and forbids force-pushes and deletion. The push gate independently audits that exactly one reviewed integration reached `main` and repeats the fragment/history checks.
 
 ### Optional drafting assistance
 
@@ -69,7 +67,7 @@ Before downloading the compiler toolchain, a tagged run verifies:
 - the tag resolves to the workflow commit and belongs to `main`;
 - its source manifest is indexed and all generated Markdown is current;
 - the explicitly named previous release exists on GitHub and is not a draft;
-- every first-parent integration in the range has exactly one reviewed or deterministic Dependabot entry.
+- every first-parent integration in the range has exactly one reviewed fragment.
 
 The Windows build then copies `RELEASE_NOTES.md`, `CHANGELOG.md`, `PATCHNOTES_ADDITIVE_0G.md`, and `RELEASE_METADATA.json` into the distribution. Two clean release builds must produce identical executable and ZIP hashes.
 

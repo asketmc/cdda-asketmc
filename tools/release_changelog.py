@@ -21,6 +21,7 @@ from typing import Any, Iterable
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CHANGE_DIR = pathlib.Path("changelog/changes")
+BOOTSTRAP_PATH = pathlib.Path("changelog/bootstrap.json")
 RELEASE_DIR = pathlib.Path("changelog/releases")
 RELEASE_DOC_DIR = pathlib.Path("doc/releases")
 INDEX_PATH = RELEASE_DIR / "index.json"
@@ -54,11 +55,6 @@ HASH_RE = re.compile(r"[0-9a-f]{64}\Z")
 ENTRY_ID_RE = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
 MERGE_PR_RE = re.compile(r"Merge pull request #([1-9]\d*) from \S+\Z")
 SQUASH_PR_RE = re.compile(r".+ \(#([1-9]\d*)\)\Z")
-DEPENDABOT_RE = re.compile(r"Bump (.+) from (\S+) to (\S+) \(#([1-9]\d*)\)\Z")
-DEPENDABOT_PR_TITLE_RE = re.compile(r"Bump (.+) from (\S+) to (\S+)\Z")
-DEPENDABOT_EMAIL_RE = re.compile(
-    r"(?:49699333\+)?dependabot\[bot\]@users\.noreply\.github\.com\Z"
-)
 
 
 class ChangelogError(ValueError):
@@ -272,22 +268,25 @@ def load_fragments(root: pathlib.Path) -> dict[int, dict[str, Any]]:
     return result
 
 
+def validate_bootstrap(value: Any, source: str) -> int:
+    bootstrap = require_object(value, source)
+    require_keys(bootstrap, {"schema", "pr"}, set(), source)
+    if bootstrap["schema"] != 1 or type(bootstrap["schema"]) is not int:
+        raise ChangelogError(f"{source}.schema: expected integer 1")
+    return require_int(bootstrap["pr"], f"{source}.pr")
+
+
+def load_bootstrap(root: pathlib.Path) -> int:
+    return validate_bootstrap(load_json(root / BOOTSTRAP_PATH), BOOTSTRAP_PATH.as_posix())
+
+
 def validate_release_change(value: Any, source: str) -> dict[str, Any]:
     change = require_object(value, source)
-    require_keys(change, {"pr"}, {"fragment_sha256", "automatic"}, source)
+    require_keys(change, {"pr", "fragment_sha256"}, set(), source)
     require_int(change["pr"], f"{source}.pr")
-    has_fragment = "fragment_sha256" in change
-    has_automatic = "automatic" in change
-    if has_fragment == has_automatic:
-        raise ChangelogError(
-            f"{source}: exactly one of fragment_sha256 or automatic is required"
-        )
-    if has_fragment:
-        digest = require_text(change["fragment_sha256"], f"{source}.fragment_sha256", 64)
-        if not HASH_RE.fullmatch(digest):
-            raise ChangelogError(f"{source}.fragment_sha256: expected a lowercase SHA-256")
-    else:
-        validate_entry(change["automatic"], f"{source}.automatic")
+    digest = require_text(change["fragment_sha256"], f"{source}.fragment_sha256", 64)
+    if not HASH_RE.fullmatch(digest):
+        raise ChangelogError(f"{source}.fragment_sha256: expected a lowercase SHA-256")
     return change
 
 
@@ -453,9 +452,6 @@ def entries_for_release(
     ]
     for change in release["changes"]:
         pr = change["pr"]
-        if "automatic" in change:
-            entries.append((change["automatic"], pr))
-            continue
         fragment = fragments[pr]
         for entry in fragment.get("entries", []):
             entries.append((entry, pr))
@@ -582,6 +578,9 @@ def expected_generated_files(
 
 def lint_repository(root: pathlib.Path, check_generated: bool = False) -> tuple[list[str], dict[str, dict[str, Any]], dict[int, dict[str, Any]]]:
     fragments = load_fragments(root)
+    bootstrap_pr = load_bootstrap(root)
+    if bootstrap_pr not in fragments:
+        raise ChangelogError(f"bootstrap PR #{bootstrap_pr} has no reviewed fragment")
     tags, releases = load_releases(root)
     verify_release_fragment_links(tags, releases, fragments)
     if check_generated:
@@ -644,7 +643,7 @@ def first_parent_integrations(
             "log",
             "--first-parent",
             "--reverse",
-            "--format=%H%x09%P%x09%an%x09%ae%x09%s",
+            "--format=%H%x09%P%x09%s",
             f"{start}..{end}",
         ],
     ).splitlines()
@@ -653,10 +652,10 @@ def first_parent_integrations(
     previous = start
     integrations: list[dict[str, Any]] = []
     for line in lines:
-        parts = line.split("\t", 4)
-        if len(parts) != 5:
+        parts = line.split("\t", 2)
+        if len(parts) != 3:
             raise ChangelogError("unexpected git log record")
-        commit, parent_text, author_name, author_email, subject = parts
+        commit, parent_text, subject = parts
         parents = parent_text.split()
         if not parents or parents[0] != previous:
             raise ChangelogError(
@@ -664,7 +663,10 @@ def first_parent_integrations(
             )
         merge_match = MERGE_PR_RE.fullmatch(subject)
         squash_match = SQUASH_PR_RE.fullmatch(subject)
-        if merge_match and len(parents) == 2:
+        immutable_pr = _integration_identity_pr(root, parents[0], commit)
+        if immutable_pr is not None and len(parents) == 1:
+            pr, style = immutable_pr
+        elif merge_match and len(parents) == 2:
             pr = int(merge_match.group(1))
             style = "merge"
         elif squash_match and len(parents) == 1:
@@ -683,8 +685,6 @@ def first_parent_integrations(
                 "commit": commit,
                 "parents": parents,
                 "subject": subject,
-                "author_name": author_name,
-                "author_email": author_email,
                 "pr": pr,
                 "style": style,
             }
@@ -715,8 +715,59 @@ def validate_tag(root: pathlib.Path, tag: str, expected_commit: str | None = Non
         raise ChangelogError(
             f"{tag}: manifest PR order {expected_prs} does not cover exact first-parent range {actual_prs}"
         )
-    verify_automatic_integrations(release["changes"], integrations, fragments, tag)
     verify_release_fragment_links(tags, releases, fragments)
+
+
+def _single_added_fragment_pr(
+    root: pathlib.Path, parent: str, commit: str
+) -> int | None:
+    output = git(
+        root,
+        [
+            "diff",
+            "--name-status",
+            "--no-renames",
+            parent,
+            commit,
+            "--",
+            CHANGE_DIR.as_posix(),
+        ],
+    )
+    records = [line.split("\t") for line in output.splitlines() if line]
+    if len(records) != 1 or len(records[0]) != 2 or records[0][0] != "A":
+        return None
+    path = pathlib.PurePosixPath(records[0][1])
+    match = FRAGMENT_RE.fullmatch(path.name)
+    if path.parent.as_posix() != CHANGE_DIR.as_posix() or match is None:
+        return None
+    pr = int(match.group(1))
+    validate_fragment(_git_json(root, commit, path.as_posix()), f"{commit}:{path}", pr)
+    return pr
+
+
+def _integration_identity_pr(
+    root: pathlib.Path, parent: str, commit: str
+) -> tuple[int, str] | None:
+    bootstrap_diff = git(
+        root,
+        ["diff", "--name-status", "--no-renames", parent, commit, "--", BOOTSTRAP_PATH.as_posix()],
+    ).splitlines()
+    if bootstrap_diff:
+        expected = f"A\t{BOOTSTRAP_PATH.as_posix()}"
+        if bootstrap_diff != [expected] or _git_path_exists(root, parent, BOOTSTRAP_PATH.as_posix()):
+            raise ChangelogError("changelog bootstrap identity is immutable")
+        pr = validate_bootstrap(
+            _git_json(root, commit, BOOTSTRAP_PATH.as_posix()),
+            f"{commit}:{BOOTSTRAP_PATH.as_posix()}",
+        )
+        fragment_path = f"{CHANGE_DIR.as_posix()}/pr-{pr}.json"
+        if not _git_path_exists(root, commit, fragment_path):
+            raise ChangelogError(f"bootstrap PR #{pr} has no reviewed fragment")
+        return pr, "bootstrap"
+    fragment_pr = _single_added_fragment_pr(root, parent, commit)
+    if fragment_pr is None:
+        return None
+    return fragment_pr, "fragment"
 
 
 def _git_path_exists(root: pathlib.Path, revision: str, path: str) -> bool:
@@ -824,16 +875,6 @@ def _check_release_history_diff(
         raise ChangelogError(
             f"{tag}: release PR coverage {expected_prs} must equal current main range plus PR #{pr}: {actual_prs}"
         )
-    verify_automatic_integrations(
-        release["changes"][:-1],
-        integrations,
-        load_fragments(root),
-        tag,
-    )
-    if "automatic" in release["changes"][-1]:
-        raise ChangelogError(
-            f"{tag}: release-preparation PR #{pr} must use its reviewed fragment"
-        )
 
 
 def _generated_paths_from_checkout(root: pathlib.Path) -> set[str]:
@@ -873,12 +914,27 @@ def check_pr(
     base: str,
     head: str,
     pr: int,
-    author: str,
-    title: str | None = None,
 ) -> None:
     require_int(pr, "--pr")
     base_commit = resolve_commit(root, base)
     head_commit = resolve_commit(root, head)
+    bootstrap = not _git_path_exists(root, base_commit, CHANGE_DIR.as_posix())
+    bootstrap_records = _name_status_diff(
+        root, base_commit, head_commit, (BOOTSTRAP_PATH.as_posix(),)
+    )
+    if bootstrap:
+        if bootstrap_records != [("A", BOOTSTRAP_PATH.as_posix())]:
+            raise ChangelogError("bootstrap PR must add changelog/bootstrap.json")
+        bootstrap_pr = validate_bootstrap(
+            _git_json(root, head_commit, BOOTSTRAP_PATH.as_posix()),
+            f"{head_commit}:{BOOTSTRAP_PATH.as_posix()}",
+        )
+        if bootstrap_pr != pr:
+            raise ChangelogError(
+                f"bootstrap identity PR #{bootstrap_pr} does not match PR #{pr}"
+            )
+    elif bootstrap_records:
+        raise ChangelogError("changelog bootstrap identity is immutable")
     diff = git(
         root,
         ["diff", "--name-status", "--no-renames", base_commit, head_commit, "--", CHANGE_DIR.as_posix()],
@@ -889,18 +945,10 @@ def check_pr(
             raise ChangelogError("existing changelog fragments are immutable; only additions are allowed")
     added = [record[1] for record in records]
     expected = f"{CHANGE_DIR.as_posix()}/pr-{pr}.json"
-    bootstrap = not _git_path_exists(root, base_commit, CHANGE_DIR.as_posix())
     _check_release_history_diff(root, base_commit, head_commit, pr, bootstrap)
-    dependabot = author == "dependabot[bot]"
     if bootstrap:
         if expected not in added:
             raise ChangelogError(f"bootstrap PR must add its own fragment: {expected}")
-    elif dependabot and not added:
-        if title is None or not _is_canonical_dependabot_title(title, pr):
-            raise ChangelogError(
-                f"Dependabot PR #{pr} without a fragment must use its canonical bump title"
-            )
-        return
     elif added != [expected]:
         raise ChangelogError(
             f"PR #{pr} must add exactly one fragment named {expected}; found {added}"
@@ -920,64 +968,7 @@ def check_main_update(root: pathlib.Path, base: str, head: str) -> None:
             "main updates must contain exactly one recognized PR integration"
         )
     integration = integrations[0]
-    author = "dependabot[bot]" if _is_dependabot_integration(integration) else "main-integration"
-    check_pr(root, base, head, integration["pr"], author, integration["subject"])
-
-
-def _automatic_dependabot_entry(subject: str, pr: int) -> dict[str, Any] | None:
-    match = DEPENDABOT_RE.fullmatch(subject)
-    if not match or int(match.group(4)) != pr:
-        return None
-    dependency, old, new, _ = match.groups()
-    identifier = re.sub(r"[^a-z0-9]+", "-", dependency.lower()).strip("-")[:50]
-    return {
-        "id": f"update-{identifier}-{pr}",
-        "category": "Infrastructure",
-        "audience": "maintainers",
-        "summary": f"Update {dependency} from {old} to {new}.",
-        "compatibility": "not-applicable",
-    }
-
-
-def _is_canonical_dependabot_title(title: str, pr: int) -> bool:
-    if _automatic_dependabot_entry(title, pr) is not None:
-        return True
-    return DEPENDABOT_PR_TITLE_RE.fullmatch(title) is not None
-
-
-def _is_dependabot_integration(integration: dict[str, Any]) -> bool:
-    return (
-        integration.get("style") == "squash"
-        and integration.get("author_name") == "dependabot[bot]"
-        and isinstance(integration.get("author_email"), str)
-        and DEPENDABOT_EMAIL_RE.fullmatch(integration["author_email"]) is not None
-        and _automatic_dependabot_entry(integration["subject"], integration["pr"])
-        is not None
-    )
-
-
-def verify_automatic_integrations(
-    changes: list[dict[str, Any]],
-    integrations: list[dict[str, Any]],
-    fragments: dict[int, dict[str, Any]],
-    source: str,
-) -> None:
-    if len(changes) != len(integrations):
-        raise ChangelogError(f"{source}: integration/change count mismatch")
-    for change, integration in zip(changes, integrations):
-        if change["pr"] != integration["pr"]:
-            raise ChangelogError(f"{source}: integration PR order mismatch")
-        if "automatic" not in change:
-            continue
-        if change["pr"] in fragments:
-            raise ChangelogError(
-                f"{source}: automatic PR #{change['pr']} entry cannot replace its reviewed fragment"
-            )
-        expected = _automatic_dependabot_entry(integration["subject"], integration["pr"])
-        if not _is_dependabot_integration(integration) or change["automatic"] != expected:
-            raise ChangelogError(
-                f"{source}: automatic PR #{change['pr']} entry is not the canonical Dependabot derivation"
-            )
+    check_pr(root, base, head, integration["pr"])
 
 
 def prepare_release(
@@ -1004,15 +995,9 @@ def prepare_release(
     changes = []
     for integration in integrations:
         pr = integration["pr"]
-        if pr in fragments:
-            changes.append({"pr": pr, "fragment_sha256": object_hash(fragments[pr])})
-            continue
-        automatic = _automatic_dependabot_entry(integration["subject"], pr)
-        if automatic is None or not _is_dependabot_integration(integration):
-            raise ChangelogError(
-                f"PR #{pr} has no fragment and is not a deterministic Dependabot bump"
-            )
-        changes.append({"pr": pr, "automatic": automatic})
+        if pr not in fragments:
+            raise ChangelogError(f"PR #{pr} has no reviewed changelog fragment")
+        changes.append({"pr": pr, "fragment_sha256": object_hash(fragments[pr])})
     changes.append(
         {"pr": release_pr, "fragment_sha256": object_hash(fragments[release_pr])}
     )
@@ -1338,8 +1323,6 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     check.add_argument("--base", required=True)
     check.add_argument("--head", required=True)
     check.add_argument("--pr", type=int, required=True)
-    check.add_argument("--author", required=True)
-    check.add_argument("--title")
 
     check_main = subparsers.add_parser("check-main")
     check_main.add_argument("--base", required=True)
@@ -1399,7 +1382,7 @@ def main(argv: list[str]) -> int:
                 raise ChangelogError(f"unknown release: {args.tag}")
             atomic_write(args.output, render_release(releases[args.tag], fragments).encode("utf-8"))
         elif args.command == "check-pr":
-            check_pr(root, args.base, args.head, args.pr, args.author, args.title)
+            check_pr(root, args.base, args.head, args.pr)
         elif args.command == "check-main":
             check_main_update(root, args.base, args.head)
         elif args.command == "validate-tag":

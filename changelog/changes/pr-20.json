@@ -19,7 +19,7 @@
       "summary": "Generate release history from reviewed, immutable pull-request fragments and explicit published-release boundaries.",
       "compatibility": "not-applicable",
       "details": [
-        "CI verifies exact first-parent PR coverage, rejects historical rewrites, and derives only canonical Dependabot bumps automatically."
+        "CI verifies exact first-parent PR coverage, rejects historical rewrites, and derives future squash identities from immutable reviewed fragments instead of editable commit subjects."
       ]
     },
     {
