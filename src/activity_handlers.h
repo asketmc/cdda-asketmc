@@ -39,7 +39,7 @@ std::vector<tripoint_bub_ms> route_adjacent( const Character &you, const tripoin
 bool move_loot_item_is_eligible( Character &you, const item &candidate,
                                  const tripoint_abs_ms &source );
 bool move_loot_item_has_unload_work( Character &you, item &candidate,
-                                     const tripoint_abs_ms &source );
+                                     const tripoint_abs_ms &source, bool has_destinations );
 
 enum class requirement_check_result : int {
     SKIP_LOCATION = 0,

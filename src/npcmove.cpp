@@ -432,7 +432,8 @@ cata::optional<sortable_loot_plan> find_sortable_loot( npc &worker )
                 return sort_destination_available( candidate, point );
             } );
             return available_destination ||
-                   move_loot_item_has_unload_work( worker, candidate, source );
+                   move_loot_item_has_unload_work( worker, candidate, source,
+                           !destinations.empty() );
         };
 
         bool has_work_at_source = false;

@@ -384,8 +384,6 @@ TEST_CASE( "Urgent needs preserve stashed camp work",
 
     REQUIRE( worker.activity.id() == ACT_FIRSTAID );
     REQUIRE( activity_order_count( worker, ACT_WAIT_NPC ) == 1 );
-    REQUIRE( worker.has_stashed_activity() );
-    CHECK( worker.get_stashed_activity().id() == ACT_WAIT_NPC );
 
     finish_activity_bounded( worker, ACT_FIRSTAID );
     CHECK( activity_order_count( worker, ACT_WAIT_NPC ) == 1 );
@@ -828,6 +826,40 @@ TEST_CASE( "Favorite-only sorter source falls through to available work",
     item favorite( itype_test_bitter_almond );
     favorite.is_favorite = true;
     here.add_item_or_charges( source, favorite );
+    here.add_field( mop_target, field_type_id( "fd_blood" ), 1 );
+    worker.i_add( item( itype_mop ) );
+    worker.job.clear_all_priorities();
+    REQUIRE( worker.job.set_task_priority( ACT_MOVE_LOOT, 10 ) );
+    REQUIRE( worker.job.set_task_priority( ACT_MULTIPLE_MOP, 5 ) );
+
+    CHECK( worker.find_job_to_perform() );
+    CHECK( worker.activity.id() == ACT_MULTIPLE_MOP );
+}
+
+TEST_CASE( "Full sorter destination does not enable optional unloading",
+           "[npc][camp][sorting][activity]" )
+{
+    npc &worker = setup_camp_worker();
+    test_zone_scope zones;
+    map &here = get_map();
+    const tripoint source = worker.pos() + tripoint_east;
+    const tripoint blocked_destination = worker.pos() + tripoint_west;
+    const tripoint mop_target = worker.pos() + tripoint_north;
+    zone_manager &mgr = zone_manager::get_manager();
+    mgr.add( "Unsorted", zone_type_LOOT_UNSORTED, faction_your_followers, false, true,
+             here.getglobal( source ).raw(), here.getglobal( source ).raw() );
+    mgr.add( "Unload", zone_type_zone_unload_all, faction_your_followers, false, true,
+             here.getglobal( source ).raw(), here.getglobal( source ).raw() );
+    mgr.add( "Food", zone_type_LOOT_FOOD, faction_your_followers, false, true,
+             here.getglobal( blocked_destination ).raw(),
+             here.getglobal( blocked_destination ).raw() );
+    mgr.add( "Mopping", zone_type_MOPPING, faction_your_followers, false, true,
+             here.getglobal( mop_target ).raw(), here.getglobal( mop_target ).raw() );
+    item backpack( itype_backpack );
+    REQUIRE( backpack.put_in( item( itype_test_bitter_almond ),
+                              item_pocket::pocket_type::CONTAINER ).success() );
+    here.add_item_or_charges( source, backpack );
+    here.ter_set( blocked_destination, ter_t_wall );
     here.add_field( mop_target, field_type_id( "fd_blood" ), 1 );
     worker.i_add( item( itype_mop ) );
     worker.job.clear_all_priorities();

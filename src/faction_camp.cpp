@@ -3054,6 +3054,20 @@ void basecamp::start_crafting( const std::string &type, const mission_id &miss_i
             return;
         }
 
+        bool has_storage = false;
+        if( by_radio ) {
+            tinymap target_map;
+            target_map.load( project_to<coords::sm>( omt_pos ), false );
+            has_storage = has_storage_for_craft( making, target_map, tripoint_abs_ms( bb_pos ) );
+        } else {
+            map &here = get_map();
+            has_storage = has_storage_for_craft( making, here, tripoint_abs_ms( bb_pos ) );
+        }
+        if( !has_storage ) {
+            popup( _( "The camp has no compatible liquid fixture in its storage zone for this craft." ) );
+            return;
+        }
+
         int batch_size = 1;
         string_input_popup popup_input;
         int batch_max = recipe_batch_max( making );
@@ -3076,16 +3090,33 @@ void basecamp::start_crafting( const std::string &type, const mission_id &miss_i
 
         time_duration work_days = base_camps::to_workdays( making.batch_duration( get_player_character(),
                                   batch_size ) );
+        const std::vector<item> results = making.create_results( batch_size );
+        const std::vector<item> byproducts = making.create_byproducts( batch_size );
+        bool exact_storage = false;
+        if( by_radio ) {
+            tinymap target_map;
+            target_map.load( project_to<coords::sm>( omt_pos ), false );
+            exact_storage = has_storage_for_items( results, byproducts, target_map,
+                                                   tripoint_abs_ms( bb_pos ) );
+        } else {
+            map &here = get_map();
+            exact_storage = has_storage_for_items( results, byproducts, here,
+                                                   tripoint_abs_ms( bb_pos ) );
+        }
+        if( !exact_storage ) {
+            popup( _( "The camp has no compatible liquid fixture for the crafted output." ) );
+            return;
+        }
         npc_ptr comp = start_mission( miss_id, work_days, true,
                                       _( "begins to work…" ), false, {},
                                       making.required_skills );
         if( comp != nullptr ) {
             components.consume_components();
-            for( const item &results : making.create_results( batch_size ) ) {
-                comp->companion_mission_inv.add_item( results );
+            for( const item &result : results ) {
+                comp->companion_mission_inv.add_item( result );
             }
-            for( const item &byproducts : making.create_byproducts( batch_size ) ) {
-                comp->companion_mission_inv.add_item( byproducts );
+            for( const item &byproduct : byproducts ) {
+                comp->companion_mission_inv.add_item( byproduct );
             }
         }
         return;

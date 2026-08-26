@@ -789,7 +789,7 @@ bool move_loot_item_is_eligible( Character &you, const item &candidate,
 }
 
 bool move_loot_item_has_unload_work( Character &you, item &candidate,
-                                     const tripoint_abs_ms &source )
+                                     const tripoint_abs_ms &source, bool has_destinations )
 {
     zone_manager &mgr = zone_manager::get_manager();
     const faction_id fac = _fac_id( you );
@@ -803,10 +803,15 @@ bool move_loot_item_has_unload_work( Character &you, item &candidate,
 
     bool unload_mods = false;
     bool unload_molle = false;
+    bool unload_always = false;
     for( const zone_data *zone : zones ) {
         const unload_options &options = dynamic_cast<const unload_options &>( zone->get_options() );
         unload_mods |= options.unload_mods();
         unload_molle |= options.unload_molle();
+        unload_always |= options.unload_always();
+    }
+    if( has_destinations && !unload_always ) {
+        return false;
     }
     if( candidate.any_pockets_sealed() || you.rate_action_unload( candidate ) != hint_rating::good ) {
         return false;
