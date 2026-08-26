@@ -781,6 +781,7 @@ Effect | Description
 ---|---
 `assign_guard` | Makes the NPC into a guard.  If allied and at a camp, they will be assigned to that camp.
 `stop_guard` | Releases the NPC from their guard duty (also see `assign_guard`).  Friendly NPCs will return to following.
+`return_to_camp` | Returns an off-duty NPC with a retained camp assignment to that camp's duties.
 `start_camp` | The NPC will start a faction camp with the player.
 `recover_camp` | Makes the NPC the overseer of an existing camp that doesn't have an overseer.
 `remove_overseer` | Makes the NPC stop being an overseer, abandoning the faction camp.
@@ -975,6 +976,7 @@ Condition | Type | Description
 `"is_by_radio"` | simple string | `true` if the player is talking to the NPC over a radio.
 `"u_available" or "npc_available"` | simple string | `true` if u or the NPC does not have effect `"currently_busy"`.
 `"u_following" or "npc_following"` | simple string | `true` if u or the NPC is following the player character.
+`"npc_has_assigned_camp"` | simple string | `true` if the NPC has a retained camp assignment and is currently off duty.
 `"u_friend" or "npc_friend"` | simple string | `true` if u or the NPC is friendly to the player character.
 `"u_hostile" or "npc_hostile"` | simple string | `true` if u or the NPC is an enemy of the player character.
 `"u_train_skills" or "npc_train_skills"` | simple string | `true` if u or the NPC has one or more skills with more levels than the player.

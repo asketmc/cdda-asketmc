@@ -77,6 +77,7 @@ class talker_npc : public talker_character
         void set_fac( const faction_id &new_fac_name ) override;
         void add_faction_rep( int rep_change ) override;
         bool is_following() const override;
+        bool has_assigned_camp() const override;
         bool is_friendly( const Character &guy ) const override;
         bool is_enemy() const override;
         bool is_player_ally()  const override;

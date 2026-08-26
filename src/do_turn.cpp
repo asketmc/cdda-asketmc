@@ -553,12 +553,27 @@ void overmap_npc_move()
         }
         npc *npc_to_add = elem.get();
         if( ( !npc_to_add->is_active() || rl_dist( u.pos(), npc_to_add->pos() ) > SEEX * 2 ) &&
-            npc_to_add->mission == NPC_MISSION_TRAVELLING ) {
+            ( npc_to_add->mission == NPC_MISSION_TRAVELLING ||
+              ( npc_to_add->assigned_camp && npc_to_add->camp_duty &&
+                npc_to_add->mission == NPC_MISSION_GUARD_ALLY &&
+                !npc_to_add->is_camp_duty_ready() ) ) ) {
             travelling_npcs.push_back( npc_to_add );
         }
     }
     bool npcs_need_reload = false;
     for( npc *&elem : travelling_npcs ) {
+        if( elem->assigned_camp && elem->camp_duty &&
+            ( elem->mission != NPC_MISSION_TRAVELLING || elem->omt_path.empty() ) ) {
+            elem->return_to_assigned_camp();
+            if( elem->mission != NPC_MISSION_TRAVELLING ) {
+                continue;
+            }
+        }
+        if( elem->is_camp_duty_ready() ) {
+            // A travelling worker can enter any camp expansion while still carrying a path.
+            elem->return_to_assigned_camp();
+            continue;
+        }
         if( elem->has_omt_destination() ) {
             if( !elem->omt_path.empty() ) {
                 if( rl_dist( elem->omt_path.back(), elem->global_omt_location() ) > 2 ) {
@@ -571,8 +586,15 @@ void overmap_npc_move()
             if( elem->omt_path.empty() ) {
                 elem->omt_path = overmap_buffer.get_travel_path( elem->global_omt_location(), elem->goal,
                                  overmap_path_params::for_npc() );
-                if( elem->omt_path.empty() ) { // goal is unreachable, or already reached goal, reset it
-                    elem->goal = npc::no_goal_point;
+                if( elem->omt_path.empty() ) { // goal is unreachable or already reached
+                    if( elem->assigned_camp && elem->camp_duty ) {
+                        elem->return_to_assigned_camp();
+                        if( elem->mission != NPC_MISSION_TRAVELLING ) {
+                            continue;
+                        }
+                    } else {
+                        elem->goal = npc::no_goal_point;
+                    }
                 }
             } else {
                 elem->travel_overmap( elem->omt_path.back() );

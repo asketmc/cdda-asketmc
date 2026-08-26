@@ -694,6 +694,33 @@ std::map<itype_id, int> recipe::get_byproducts() const
     return ret;
 }
 
+std::vector<itype_id> recipe::guaranteed_liquid_outputs() const
+{
+    std::vector<itype_id> result;
+    if( !contained && !result_.is_null() && result_->phase == phase_id::LIQUID ) {
+        result.push_back( result_ );
+    }
+    for( const std::pair<const itype_id, int> &byproduct : byproducts ) {
+        if( byproduct.first->phase == phase_id::LIQUID ) {
+            result.push_back( byproduct.first );
+        }
+    }
+    return result;
+}
+
+std::set<itype_id> recipe::possible_group_liquid_outputs() const
+{
+    std::set<itype_id> result;
+    if( byproduct_group ) {
+        for( const itype *possible : item_group::every_possible_item_from( *byproduct_group ) ) {
+            if( possible->phase == phase_id::LIQUID ) {
+                result.emplace( possible->get_id() );
+            }
+        }
+    }
+    return result;
+}
+
 bool recipe::has_byproducts() const
 {
     return !byproducts.empty() || !!byproduct_group;

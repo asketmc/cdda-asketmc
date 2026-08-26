@@ -195,16 +195,13 @@ manifest are actually imported.
 | Crafting UI, bulk priorities, worker food/vitamins, larder medicine | #67458, #77715, #77573, #71546, #71670, #76025 | Already present |
 | Warmth response | CleverRaven #86004 (`41418fe32bf85c67348963ce75ef7b2a72862b37`) | Adapted directly to body temperature and the legacy needs cascade |
 | Local food, water, clothing, shelter and foraging | CleverRaven #86035 (`3c6ec8d3aeb14d7f366db6f3823a69c60b53fb2e`), #86052 (`4018cea0a1d4f32c0dad492f7df38b7cbbb807e4`) | Adapted without the modern behavior tree; adds ownership, protected-zone and locked-cargo guards |
-| Global NPC priorities and camp-resident state machine | #86172, #86173 | Deferred to a separate legacy-scheduler adaptation; modern framework not imported |
+| Legacy priorities and camp lifecycle | #86172, #86173 | Adapted to the 0.G cascade and `assigned_camp`; modern behavior tree and mission framework excluded |
 | Activity-actor sorting rewrites | #83980, #84311 | Not applicable to the legacy direct sorting implementation |
 | Safe self/ally first aid | TLG #1603 (`5fd614b81aeb7de418b4ed239e5b7e8f93828cba`) | Adapted with a save-compatible follower rule and activity restoration |
 | Vitamin and food selection | TLG #2982 (`87448bac93398575e854128d00840b73d3f7c7ac`) | Adapted for data-defined deficiencies, safe non-addictive treatment, rot-aware ranking, and starvation fallback |
 | Weapon comparison correctness | TLG #2746 (`336d552d6df48f73ddfd1f63f7572cd3ad15238b`) | Empty-hand selection fix and defensive offered-weapon ammo accounting only; balance changes excluded |
-
-Local scavenging uses the existing **Allow pickup** follower rule as its opt-in.
-Unowned ground items are eligible, while personal and no-NPC-pickup zones remain
-hard exclusions. Vehicle cargo additionally requires matching ownership; a
-cargo lock blocks only its own mount while the vehicle is locked.
+| Camp recipe sources and liquid checks | #78612, #81148 | Existing behavior retained; book/e-book access and non-mutating liquid preflight adapted without the later camp framework |
+| Legacy sorter | #83980, #84311 | Valid-work precheck and false no-work result fixed; activity actors, physical walking and bagful sorting excluded |
 
 Local scavenging uses the existing **Allow pickup** follower rule as its opt-in.
 Unowned ground items are eligible, while personal and no-NPC-pickup zones remain

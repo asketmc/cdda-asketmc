@@ -413,6 +413,9 @@ void talk_function::assign_guard( npc &p )
     }
     p.set_attitude( NPCATT_NULL );
     p.set_mission( NPC_MISSION_GUARD_ALLY );
+    if( p.assigned_camp ) {
+        p.camp_duty = false;
+    }
     p.chatbin.first_topic = p.chatbin.talk_friend_guard;
     p.set_omt_destination();
 }
@@ -462,11 +465,16 @@ void talk_function::stop_guard( npc &p )
     p.goal = npc::no_goal_point;
     p.guard_pos = cata::nullopt;
     if( p.assigned_camp ) {
-        if( cata::optional<basecamp *> bcp = overmap_buffer.find_camp( ( *p.assigned_camp ).xy() ) ) {
-            ( *bcp )->remove_assignee( p.getID() );
-            ( *bcp )->validate_assignees();
-        }
-        p.assigned_camp = cata::nullopt;
+        p.camp_duty = false;
+    }
+}
+
+void talk_function::return_to_camp( npc &p )
+{
+    const bool was_on_duty = p.camp_duty;
+    p.return_to_assigned_camp();
+    if( !was_on_duty && p.camp_duty ) {
+        add_msg( _( "%s returns to camp duties." ), p.get_name() );
     }
 }
 

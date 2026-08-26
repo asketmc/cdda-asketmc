@@ -122,6 +122,21 @@ global behavior tree and mission scheduler are not included.
 - Unarmed followers no longer overvalue empty hands when choosing from carried
   weapons.  Offered non-guns also avoid bogus infinite-ammo diagnostics;
   ranged/melee coefficients and silent-weapon rules remain unchanged.
+- Camp workers keep their current job through ordinary hunger, tiredness and
+  minor wounds. Serious bleeding, infection, severe injury or starvation may
+  interrupt the job, which is resumed after the need is handled.
+- Camp assignment survives temporary follow and guard orders. A follower can
+  be told to return to camp duties; displaced workers head for their camp and
+  spend downtime inside its exact footprint. An unreachable route takes the
+  worker off duty instead of retrying pathfinding every turn.
+- Camp crafting recognizes recipes from physical books and powered e-readers
+  in storage, offers only on-duty workers present at that camp, and rejects
+  local or radio liquid crafts before work starts when the target camp has no
+  compatible zoned liquid fixture. Existing fixtures containing the same liquid
+  can be reused.
+- The legacy sorter assigns move-loot only when unsorted items have a valid
+  destination, preventing empty sorting work from blocking other camp jobs.
+  The later walking sorter and activity actor framework are not imported.
 - Loading old follower rules no longer lets a preceding rule value leak into
   missing override fields.
 

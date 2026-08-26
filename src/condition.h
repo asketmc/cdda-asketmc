@@ -30,7 +30,7 @@ const std::unordered_set<std::string> simple_string_conds = { {
         "has_no_assigned_mission", "has_assigned_mission", "has_many_assigned_missions",
         "has_no_available_mission", "has_available_mission", "has_many_available_missions",
         "mission_complete", "mission_incomplete", "mission_has_generic_rewards",
-        "npc_available", "npc_following", "npc_friend", "npc_hostile",
+        "npc_available", "npc_following", "npc_has_assigned_camp", "npc_friend", "npc_hostile",
         "npc_train_skills", "npc_train_styles", "npc_train_spells",
         "at_safe_space", "is_day", "npc_has_activity", "is_outside", "u_is_outside", "npc_is_outside", "u_has_camp",
         "u_can_stow_weapon", "npc_can_stow_weapon", "u_can_drop_weapon", "npc_can_drop_weapon", "u_has_weapon", "npc_has_weapon",
@@ -236,6 +236,7 @@ struct conditional_t {
         void set_mission_failed( bool is_npc );
         void set_npc_available( bool is_npc );
         void set_npc_following( bool is_npc );
+        void set_npc_has_assigned_camp( bool is_npc );
         void set_npc_friend( bool is_npc );
         void set_npc_hostile( bool is_npc );
         void set_npc_train_skills( bool is_npc );

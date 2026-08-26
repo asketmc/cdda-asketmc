@@ -390,6 +390,9 @@ class talker
         virtual bool is_following() const {
             return false;
         }
+        virtual bool has_assigned_camp() const {
+            return false;
+        }
         virtual bool is_friendly( const Character & )  const {
             return false;
         }

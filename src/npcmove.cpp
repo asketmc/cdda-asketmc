@@ -156,6 +156,9 @@ static const trait_id trait_RETURN_TO_START_POS( "RETURN_TO_START_POS" );
 static const zone_type_id zone_type_NO_NPC_PICKUP( "NO_NPC_PICKUP" );
 static const zone_type_id zone_type_NPC_RETREAT( "NPC_RETREAT" );
 static const zone_type_id zone_type_FARM_PLOT( "FARM_PLOT" );
+static const zone_type_id zone_type_LOOT_CUSTOM( "LOOT_CUSTOM" );
+static const zone_type_id zone_type_LOOT_IGNORE( "LOOT_IGNORE" );
+static const zone_type_id zone_type_LOOT_UNSORTED( "LOOT_UNSORTED" );
 
 static constexpr float NPC_DANGER_VERY_LOW = 5.0f;
 static constexpr float NPC_DANGER_MAX = 150.0f;
@@ -222,6 +225,97 @@ const std::vector<bionic_id> weapon_cbms = { {
 
 const int avoidance_vehicles_radius = 5;
 constexpr float healing_danger_threshold = 0.01f;
+constexpr int urgent_pain_threshold = 40;
+constexpr int critical_bleed_intensity = 2;
+constexpr int move_loot_stage_do = 2;
+
+cata::optional<basecamp *> exact_assigned_camp( const npc &worker )
+{
+    if( !worker.assigned_camp ) {
+        return cata::nullopt;
+    }
+    const overmap_with_local_coords location =
+        overmap_buffer.get_existing_om_global( *worker.assigned_camp );
+    return location ? location.om->find_camp( worker.assigned_camp->xy() ) : cata::nullopt;
+}
+
+bool same_activity_order( const player_activity &left, const player_activity &right,
+                          const Character &who )
+{
+    if( !left || !right || left.id() != right.id() ) {
+        return false;
+    }
+    player_activity resumable_left = left;
+    player_activity resumable_right = right;
+    resumable_left.auto_resume = false;
+    resumable_right.auto_resume = false;
+    if( resumable_left.can_resume_with( resumable_right, who ) ||
+        resumable_right.can_resume_with( resumable_left, who ) ) {
+        return true;
+    }
+    return left.index == right.index && left.position == right.position &&
+           left.name == right.name && left.targets == right.targets &&
+           left.values == right.values && left.str_values == right.str_values &&
+           left.coords == right.coords && left.coord_set == right.coord_set &&
+           left.placement == right.placement &&
+           left.relative_placement == right.relative_placement;
+}
+
+bool has_activity_order( const npc &worker, const player_activity &order )
+{
+    if( same_activity_order( worker.activity, order, worker ) ||
+        same_activity_order( worker.get_destination_activity(), order, worker ) ||
+        same_activity_order( worker.get_stashed_activity(), order, worker ) ) {
+        return true;
+    }
+    return std::any_of( worker.backlog.begin(), worker.backlog.end(),
+    [&]( const player_activity & queued ) {
+        return same_activity_order( queued, order, worker );
+    } );
+}
+
+struct sortable_loot_plan {
+    tripoint_abs_ms source;
+    std::vector<tripoint_bub_ms> route;
+};
+
+cata::optional<std::vector<tripoint_bub_ms>> sort_source_route(
+    npc &worker, const tripoint_bub_ms &source )
+{
+    map &here = get_map();
+    if( square_dist( worker.pos_bub(), source ) <= 1 ) {
+        return std::vector<tripoint_bub_ms>();
+    }
+    std::vector<tripoint_bub_ms> route;
+    if( here.passable( source ) ) {
+        route = here.route( worker.pos_bub(), source, worker.get_pathfinding_settings(),
+                            worker.get_path_avoid() );
+        if( !route.empty() ) {
+            route.pop_back();
+        }
+    } else {
+        route = route_adjacent( worker, source );
+    }
+    if( route.empty() ) {
+        return cata::nullopt;
+    }
+    return route;
+}
+
+bool sort_destination_available( const item &candidate, const tripoint_abs_ms &destination )
+{
+    map &here = get_map();
+    const tripoint_bub_ms local = here.bub_from_abs( destination );
+    if( !here.inbounds( local ) || !here.can_put_items_ter_furn( local ) ||
+        static_cast<int>( here.i_at( local ).size() ) >= MAX_ITEM_IN_SQUARE ) {
+        return false;
+    }
+    if( const cata::optional<vpart_reference> cargo =
+            here.veh_at( local ).part_with_feature( "CARGO", false ) ) {
+        return cargo->vehicle().free_volume( cargo->part_index() ) >= candidate.volume();
+    }
+    return here.free_volume( local ) >= candidate.volume();
+}
 
 struct healing_interruption_state {
     player_activity current;
@@ -276,6 +370,85 @@ std::vector<vitamin_id> treatable_vitamin_deficiencies( const npc &who )
         }
     }
     return result;
+}
+
+cata::optional<sortable_loot_plan> find_sortable_loot( npc &worker )
+{
+    map &here = get_map();
+    zone_manager &mgr = zone_manager::get_manager();
+    if( here.check_vehicle_zones( here.get_abs_sub().z() ) ) {
+        mgr.cache_vzones();
+    }
+    const faction_id fac = worker.get_fac_id();
+    const tripoint_abs_ms origin = worker.get_location();
+    const std::unordered_set<tripoint_abs_ms> sources =
+        mgr.get_near( zone_type_LOOT_UNSORTED, origin, ACTIVITY_SEARCH_DISTANCE, nullptr, fac );
+
+    for( const tripoint_abs_ms &source :
+         get_sorted_tiles_by_distance( origin, sources ) ) {
+        if( !mgr.has_nonpersonal( zone_type_LOOT_UNSORTED, source, fac ) ) {
+            continue;
+        }
+        const tripoint_bub_ms local_source = here.bub_from_abs( source );
+        if( !here.inbounds( local_source ) || mgr.has( zone_type_LOOT_IGNORE, source, fac ) ||
+            here.get_field( local_source, fd_fire ) != nullptr ||
+            !here.can_put_items_ter_furn( local_source ) ) {
+            continue;
+        }
+
+        const auto has_work = [&]( item & candidate ) {
+            if( !move_loot_item_is_eligible( worker, candidate, source ) ) {
+                return false;
+            }
+            const zone_type_id destination = mgr.get_near_zone_type_for_item(
+                    candidate, origin, ACTIVITY_SEARCH_DISTANCE, fac, true );
+            if( destination != zone_type_LOOT_CUSTOM &&
+                mgr.has_nonpersonal( destination, source, fac ) ) {
+                return false;
+            }
+            if( destination == zone_type_LOOT_CUSTOM &&
+                mgr.custom_loot_has( source, &candidate, zone_type_LOOT_CUSTOM, fac, true ) ) {
+                return false;
+            }
+            const std::unordered_set<tripoint_abs_ms> destinations = mgr.get_near(
+                        destination, origin, ACTIVITY_SEARCH_DISTANCE, &candidate, fac, true );
+            const bool available_destination = std::any_of( destinations.begin(), destinations.end(),
+            [&]( const tripoint_abs_ms & point ) {
+                return sort_destination_available( candidate, point );
+            } );
+            return available_destination ||
+                   move_loot_item_has_unload_work( worker, candidate, source,
+                           !destinations.empty() );
+        };
+
+        bool has_work_at_source = false;
+        if( const cata::optional<vpart_reference> cargo =
+                here.veh_at( local_source ).part_with_feature( "CARGO", false ) ) {
+            for( item &candidate : cargo->vehicle().get_items( cargo->part_index() ) ) {
+                if( has_work( candidate ) ) {
+                    has_work_at_source = true;
+                    break;
+                }
+            }
+        }
+        if( !has_work_at_source ) {
+            for( item &candidate : here.i_at( local_source ) ) {
+                if( has_work( candidate ) ) {
+                    has_work_at_source = true;
+                    break;
+                }
+            }
+        }
+        if( !has_work_at_source ) {
+            continue;
+        }
+        const cata::optional<std::vector<tripoint_bub_ms>> route =
+            sort_source_route( worker, local_source );
+        if( route ) {
+            return sortable_loot_plan{ source, *route };
+        }
+    }
+    return cata::nullopt;
 }
 
 bool good_for_pickup( const item &it, npc &who )
@@ -886,6 +1059,11 @@ void npc::move()
     }
 
     npc_action action = npc_undecided;
+    activity_id interrupted_order = activity_id::NULL_ID();
+    player_activity interrupted_stashed_order;
+    player_activity interrupted_stashed_backlog;
+    bool interrupted_stashed_backlog_owned = false;
+    bool restore_interrupted_stashed_order = false;
 
     const item_location weapon = get_wielded_item();
     static const std::string no_target_str = "none";
@@ -995,7 +1173,20 @@ void npc::move()
         // No present danger
         cleanup_on_no_danger();
 
-        action = address_needs();
+        const bool protect_current_order = attitude == NPCATT_ACTIVITY &&
+                                           ( has_player_activity() || has_destination_activity() ||
+                                             has_stashed_activity() );
+        if( protect_current_order && has_player_activity() ) {
+            interrupted_order = activity.id();
+        }
+        if( protect_current_order && has_stashed_activity() ) {
+            interrupted_stashed_order = get_stashed_activity();
+            interrupted_stashed_backlog = get_stashed_backlog_activity();
+            interrupted_stashed_backlog_owned = stashed_backlog_is_owned();
+        }
+        action = address_needs( ai_cache.danger, protect_current_order );
+        restore_interrupted_stashed_order = interrupted_stashed_order &&
+                                             action != npc_undecided;
         print_action( "address_needs %s", action );
 
         if( action == npc_undecided ) {
@@ -1058,15 +1249,25 @@ void npc::move()
                 mission = NPC_MISSION_NULL;
             }
         }
-        if( assigned_camp && attitude != NPCATT_ACTIVITY ) {
+        if( assigned_camp && camp_duty && !is_camp_duty_ready() ) {
+            if( mission != NPC_MISSION_TRAVELLING ) {
+                return_to_assigned_camp();
+            }
+            action = npc_goto_destination;
+        } else if( is_camp_duty_ready() && attitude != NPCATT_ACTIVITY ) {
+            if( mission == NPC_MISSION_TRAVELLING ) {
+                return_to_assigned_camp();
+            }
             if( has_job() && calendar::once_every( 10_minutes ) && find_job_to_perform() ) {
                 action = npc_player_activity;
             } else {
                 action = npc_worker_downtime;
                 goal = global_omt_location();
             }
+        } else if( assigned_camp && mission == NPC_MISSION_TRAVELLING ) {
+            action = npc_goto_destination;
         }
-        if( is_stationary( true ) && !assigned_camp ) {
+        if( action == npc_undecided && is_stationary( true ) && !assigned_camp ) {
             // if we're in a vehicle, stay in the vehicle
             if( in_vehicle ) {
                 action = npc_pause;
@@ -1074,12 +1275,12 @@ void npc::move()
             } else {
                 action = goal == global_omt_location() ?  npc_pause : npc_goto_destination;
             }
-        } else if( has_new_items && scan_new_items() ) {
+        } else if( action == npc_undecided && has_new_items && scan_new_items() ) {
             return;
-        } else if( !fetching_item ) {
+        } else if( action == npc_undecided && !fetching_item ) {
             find_item();
             print_action( "find_item %s", action );
-        } else if( assigned_camp ) {
+        } else if( action == npc_undecided && assigned_camp ) {
             // this should be covered above, but justincase to stop them zooming away.
             action = npc_pause;
         }
@@ -1122,6 +1323,18 @@ void npc::move()
 
     add_msg_debug( debugmode::DF_NPC, "%s chose action %s.", get_name(), npc_action_name( action ) );
     execute_action( action );
+    if( interrupted_order && activity.id() != interrupted_order && !backlog.empty() &&
+        backlog.front().id() == interrupted_order ) {
+        backlog.front().auto_resume = true;
+    }
+    if( restore_interrupted_stashed_order &&
+        !has_activity_order( *this, interrupted_stashed_order ) ) {
+        set_stashed_activity( interrupted_stashed_order, interrupted_stashed_backlog,
+                              interrupted_stashed_backlog_owned );
+        set_attitude( NPCATT_ACTIVITY );
+        set_mission( NPC_MISSION_ACTIVITY );
+        current_activity_id = interrupted_stashed_order.id();
+    }
 }
 
 void npc::execute_action( npc_action action )
@@ -1894,7 +2107,7 @@ healing_options npc::patient_assessment( const Character &c )
     return try_to_fix;
 }
 
-npc_action npc::address_needs( float danger )
+npc_action npc::address_needs( float danger, bool urgent_only )
 {
     Character &player_character = get_player_character();
     const bool safe_to_heal = danger < healing_danger_threshold;
@@ -1904,8 +2117,19 @@ npc_action npc::address_needs( float danger )
     // ( also we can get huge performance boosts )
     if( one_in( 3 ) ) {
         healing_options try_to_fix_me = patient_assessment( *this );
-        if( try_to_fix_me.any_true() ) {
-            if( safe_to_heal && !use_bionic_by_id( bio_nanobots ) ) {
+        bool should_treat_injury = !urgent_only;
+        if( urgent_only ) {
+            should_treat_injury = has_effect( effect_bite ) || has_effect( effect_infected );
+            for( const bodypart_id &bp : get_all_body_parts( get_body_part_flags::only_main ) ) {
+                if( get_effect_int( effect_bleed, bp ) >= critical_bleed_intensity ||
+                    get_part_hp_cur( bp ) * 3 <= get_part_hp_max( bp ) ) {
+                    should_treat_injury = true;
+                    break;
+                }
+            }
+        }
+        if( try_to_fix_me.any_true() && safe_to_heal && should_treat_injury ) {
+            if( !use_bionic_by_id( bio_nanobots ) ) {
                 ai_cache.can_heal = has_healing_options( try_to_fix_me );
                 if( ai_cache.can_heal.any_true() ) {
                     return npc_heal;
@@ -1916,7 +2140,8 @@ npc_action npc::address_needs( float danger )
         }
         const bool may_heal_others = !is_player_ally() ||
                                      rules.has_flag( ally_rule::allow_heal_others );
-        if( safe_to_heal && get_skill_level( skill_firstaid ) > 0 && may_heal_others ) {
+        if( !urgent_only && safe_to_heal && get_skill_level( skill_firstaid ) > 0 &&
+            may_heal_others ) {
             if( is_player_ally() ) {
                 healing_options try_to_fix_other = patient_assessment( player_character );
                 if( try_to_fix_other.any_true() ) {
@@ -1943,7 +2168,7 @@ npc_action npc::address_needs( float danger )
         }
     }
 
-    if( one_in( 3 ) ) {
+    if( one_in( 3 ) && ( !urgent_only || get_perceived_pain() >= urgent_pain_threshold ) ) {
         if( get_perceived_pain() >= 15 ) {
             if( !activate_bionic_by_id( bio_painkiller ) && has_painkiller() && !took_painkiller() ) {
                 return npc_use_painkiller;
@@ -1953,14 +2178,16 @@ npc_action npc::address_needs( float danger )
         }
     }
 
-    if( one_in( 3 ) && can_reload_current() ) {
+    if( !urgent_only && one_in( 3 ) && can_reload_current() ) {
         return npc_reload;
     }
 
-    item_location reloadable = find_reloadable();
-    if( reloadable ) {
-        do_reload( reloadable );
-        return npc_noop;
+    if( !urgent_only ) {
+        item_location reloadable = find_reloadable();
+        if( reloadable ) {
+            do_reload( reloadable );
+            return npc_noop;
+        }
     }
 
     const bool local_survival = is_player_ally();
@@ -2006,6 +2233,14 @@ npc_action npc::address_needs( float danger )
         if( forage_local_food() ) {
             return activity ? npc_player_activity : npc_noop;
         }
+    }
+
+    if( urgent_only ) {
+        if( get_fatigue() > fatigue_levels::MASSIVE_FATIGUE &&
+            danger < healing_danger_threshold ) {
+            return npc_sleep;
+        }
+        return npc_undecided;
     }
 
     const bool ordinary_food_need = get_thirst() > NPC_THIRST_CONSUME ||
@@ -2732,8 +2967,22 @@ bool npc::find_job_to_perform()
         }
         player_activity scan_act = player_activity( elem );
         if( elem == ACT_MOVE_LOOT ) {
-            assign_activity( elem );
-        } else if( generic_multi_activity_handler( scan_act, *this->as_character(), true ) ) {
+            const cata::optional<sortable_loot_plan> plan = find_sortable_loot( *this );
+            if( plan ) {
+                player_activity sorting( ACT_MOVE_LOOT );
+                sorting.index = move_loot_stage_do;
+                sorting.values.push_back( 0 );
+                sorting.placement = plan->source;
+                assign_activity( sorting );
+                if( !plan->route.empty() ) {
+                    set_destination( plan->route, activity );
+                    activity.set_to_null();
+                }
+                return true;
+            }
+            continue;
+        }
+        if( generic_multi_activity_handler( scan_act, *this->as_character(), true ) ) {
             assign_activity( elem );
             return true;
         }
@@ -2745,6 +2994,22 @@ void npc::worker_downtime()
 {
     map &here = get_map();
     creature_tracker &creatures = get_creature_tracker();
+    const cata::optional<basecamp *> camp = exact_assigned_camp( *this );
+    if( !camp ) {
+        assigned_camp = cata::nullopt;
+        camp_duty = false;
+        move_pause();
+        return;
+    }
+    const auto within_assigned_camp = [&]( const tripoint & local ) {
+        return ( *camp )->point_within_camp( project_to<coords::omt>( here.getglobal( local ) ) );
+    };
+    if( chair_pos && !within_assigned_camp( here.getlocal( *chair_pos ) ) ) {
+        chair_pos = cata::nullopt;
+    }
+    if( wander_pos && !within_assigned_camp( here.getlocal( *wander_pos ) ) ) {
+        wander_pos = cata::nullopt;
+    }
     // are we already in a chair
     if( here.has_flag_furn( ter_furn_flag::TFLAG_CAN_SIT, pos() ) ) {
         // just chill here
@@ -2775,7 +3040,7 @@ void npc::worker_downtime()
             for( const tripoint &elem : here.points_in_radius( pos(), 30 ) ) {
                 if( here.has_flag_furn( ter_furn_flag::TFLAG_CAN_SIT, elem ) && !creatures.creature_at( elem ) &&
                     could_move_onto( elem ) &&
-                    here.point_within_camp( here.getabs( elem ) ) ) {
+                    within_assigned_camp( elem ) ) {
                     // this one will do
                     chair_pos = here.getglobal( elem );
                     return;
@@ -2799,19 +3064,14 @@ void npc::worker_downtime()
         return;
     }
     if( assigned_camp ) {
-        cata::optional<basecamp *> bcp = overmap_buffer.find_camp( ( *assigned_camp ).xy() );
-        if( !bcp ) {
-            assigned_camp = cata::nullopt;
-            move_pause();
-            return;
-        }
-        basecamp *temp_camp = *bcp;
+        basecamp *temp_camp = *camp;
         std::vector<tripoint> pts;
         for( const tripoint &elem : here.points_in_radius( here.getlocal( temp_camp->get_bb_pos() ),
                 10 ) ) {
             if( creatures.creature_at( elem ) || !could_move_onto( elem ) ||
                 here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, elem ) ||
-                !here.has_floor( elem ) || g->is_dangerous_tile( elem ) ) {
+                !here.has_floor( elem ) || g->is_dangerous_tile( elem ) ||
+                !within_assigned_camp( elem ) ) {
                 continue;
             }
             pts.push_back( elem );
@@ -2822,6 +3082,57 @@ void npc::worker_downtime()
         }
     }
     move_pause();
+}
+
+bool npc::is_camp_duty_ready() const
+{
+    if( !assigned_camp || !camp_duty ) {
+        return false;
+    }
+    const cata::optional<basecamp *> camp = exact_assigned_camp( *this );
+    return camp && ( *camp )->point_within_camp( global_omt_location() );
+}
+
+void npc::return_to_assigned_camp()
+{
+    if( !assigned_camp ) {
+        return;
+    }
+    const cata::optional<basecamp *> camp = exact_assigned_camp( *this );
+    if( !camp ) {
+        assigned_camp = cata::nullopt;
+        camp_duty = false;
+        return;
+    }
+    const bool at_camp = ( *camp )->point_within_camp( global_omt_location() );
+    if( camp_duty && at_camp && mission != NPC_MISSION_TRAVELLING ) {
+        return;
+    }
+
+    camp_duty = true;
+    fetching_item = false;
+    guard_pos = cata::nullopt;
+    chair_pos = cata::nullopt;
+    wander_pos = cata::nullopt;
+    set_attitude( NPCATT_NULL );
+    if( at_camp ) {
+        goal = global_omt_location();
+        set_mission( NPC_MISSION_GUARD_ALLY );
+        omt_path.clear();
+    } else {
+        goal = ( *camp )->camp_omt_pos();
+        omt_path = overmap_buffer.get_travel_path( global_omt_location(), goal,
+                   overmap_path_params::for_npc() );
+        if( omt_path.empty() ) {
+            camp_duty = false;
+            set_mission( NPC_MISSION_GUARD_ALLY );
+            add_msg_if_player_sees( *this, m_warning,
+                                    _( "%s cannot find a route back to camp." ), get_name() );
+        } else {
+            set_mission( NPC_MISSION_TRAVELLING );
+        }
+    }
+    chatbin.first_topic = chatbin.talk_friend_guard;
 }
 
 void npc::move_pause()

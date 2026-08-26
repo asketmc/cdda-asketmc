@@ -679,6 +679,11 @@ bool talker_npc::is_following() const
     return me_npc->is_following();
 }
 
+bool talker_npc::has_assigned_camp() const
+{
+    return me_npc->assigned_camp && !me_npc->camp_duty;
+}
+
 bool talker_npc::is_friendly( const Character &guy ) const
 {
     return me_npc->is_friendly( guy );

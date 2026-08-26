@@ -217,6 +217,12 @@
       },
       { "text": "Let's talk about your current activity.", "topic": "TALK_ACTIVITIES" },
       { "text": "Let's talk about the camp.", "topic": "TALK_CAMP" },
+      {
+        "text": "Return to your camp duties.",
+        "condition": "npc_has_assigned_camp",
+        "topic": "TALK_DONE",
+        "effect": "return_to_camp"
+      },
       { "text": "Let's go.", "topic": "TALK_DONE" }
     ]
   },

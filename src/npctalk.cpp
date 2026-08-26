@@ -5100,6 +5100,7 @@ void talk_effect_t<T>::parse_string_effect( const std::string &effect_id, const 
             WRAP( assign_camp ),
             WRAP( abandon_camp ),
             WRAP( stop_guard ),
+            WRAP( return_to_camp ),
             WRAP( start_camp ),
             WRAP( buy_cow ),
             WRAP( buy_chicken ),

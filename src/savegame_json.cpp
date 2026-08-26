@@ -2303,6 +2303,8 @@ void npc::load( const JsonObject &data )
     }
 
     data.read( "assigned_camp", assigned_camp );
+    camp_duty = assigned_camp.has_value();
+    data.read( "camp_duty", camp_duty );
     data.read( "job", job );
     if( data.read( "mission", misstmp ) ) {
         mission = static_cast<npc_mission>( misstmp );
@@ -2458,6 +2460,7 @@ void npc::store( JsonOut &json ) const
     json.member( "current_activity_id", current_activity_id.str() );
     json.member( "pulp_location", pulp_location );
     json.member( "assigned_camp", assigned_camp );
+    json.member( "camp_duty", camp_duty );
     json.member( "chair_pos", chair_pos );
     json.member( "wander_pos", wander_pos );
     json.member( "job", job );

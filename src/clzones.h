@@ -536,6 +536,10 @@ class zone_manager
             const zone_type_id &type, const tripoint_abs_ms &where, int range = MAX_DISTANCE,
             const item *it = nullptr, const faction_id &fac = your_fac,
             bool exclude_personal = false ) const;
+        std::unordered_set<tripoint_abs_ms> get_near_on_map(
+            const zone_type_id &type, const tripoint_abs_ms &where, int range,
+            map &target_map, const faction_id &fac = your_fac,
+            bool exclude_personal = false ) const;
         cata::optional<tripoint_abs_ms> get_nearest(
             const zone_type_id &type, const tripoint_abs_ms &where, int range = MAX_DISTANCE,
             const faction_id &fac = your_fac ) const;

@@ -1952,6 +1952,8 @@ void basecamp::abandon_camp()
     }
     for( npc_ptr &guy : get_npcs_assigned() ) {
         talk_function::stop_guard( *guy );
+        guy->assigned_camp = cata::nullopt;
+        guy->camp_duty = false;
     }
     add_msg( m_info, _( "You abandon %s." ), name );
     get_player_character().camps.erase( omt_pos );
@@ -2200,7 +2202,7 @@ void basecamp::job_assignment_ui()
         // create a list of npcs stationed at this camp
         stationed_npcs.clear();
         for( const auto &elem : get_npcs_assigned() ) {
-            if( elem ) {
+            if( elem && elem->camp_duty && elem->is_camp_duty_ready() ) {
                 stationed_npcs.push_back( elem.get() );
             }
         }
@@ -3052,6 +3054,20 @@ void basecamp::start_crafting( const std::string &type, const mission_id &miss_i
             return;
         }
 
+        bool has_storage = false;
+        if( by_radio ) {
+            tinymap target_map;
+            target_map.load( project_to<coords::sm>( omt_pos ), false );
+            has_storage = has_storage_for_craft( making, target_map, tripoint_abs_ms( bb_pos ) );
+        } else {
+            map &here = get_map();
+            has_storage = has_storage_for_craft( making, here, tripoint_abs_ms( bb_pos ) );
+        }
+        if( !has_storage ) {
+            popup( _( "The camp has no compatible liquid fixture in its storage zone for this craft." ) );
+            return;
+        }
+
         int batch_size = 1;
         string_input_popup popup_input;
         int batch_max = recipe_batch_max( making );
@@ -3074,16 +3090,33 @@ void basecamp::start_crafting( const std::string &type, const mission_id &miss_i
 
         time_duration work_days = base_camps::to_workdays( making.batch_duration( get_player_character(),
                                   batch_size ) );
+        const std::vector<item> results = making.create_results( batch_size );
+        const std::vector<item> byproducts = making.create_byproducts( batch_size );
+        bool exact_storage = false;
+        if( by_radio ) {
+            tinymap target_map;
+            target_map.load( project_to<coords::sm>( omt_pos ), false );
+            exact_storage = has_storage_for_items( results, byproducts, target_map,
+                                                   tripoint_abs_ms( bb_pos ) );
+        } else {
+            map &here = get_map();
+            exact_storage = has_storage_for_items( results, byproducts, here,
+                                                   tripoint_abs_ms( bb_pos ) );
+        }
+        if( !exact_storage ) {
+            popup( _( "The camp has no compatible liquid fixture for the crafted output." ) );
+            return;
+        }
         npc_ptr comp = start_mission( miss_id, work_days, true,
                                       _( "begins to work…" ), false, {},
                                       making.required_skills );
         if( comp != nullptr ) {
             components.consume_components();
-            for( const item &results : making.create_results( batch_size ) ) {
-                comp->companion_mission_inv.add_item( results );
+            for( const item &result : results ) {
+                comp->companion_mission_inv.add_item( result );
             }
-            for( const item &byproducts : making.create_byproducts( batch_size ) ) {
-                comp->companion_mission_inv.add_item( byproducts );
+            for( const item &byproduct : byproducts ) {
+                comp->companion_mission_inv.add_item( byproduct );
             }
         }
         return;
@@ -3092,14 +3125,13 @@ void basecamp::start_crafting( const std::string &type, const mission_id &miss_i
 
 void basecamp::start_crafting_with_ui( const mission_id &miss_id )
 {
-    std::vector<npc_ptr> available_workers;
-    for( const npc_ptr &worker : assigned_npcs ) {
-        if( worker.get() != nullptr && !worker->has_companion_mission() ) {
-            available_workers.push_back( worker );
-        }
-    }
+    std::vector<npc_ptr> available_workers = available_crafting_workers();
     if( available_workers.empty() ) {
-        popup( _( "No assigned camp worker is currently available to craft." ) );
+        if( get_npcs_assigned().empty() ) {
+            popup( _( "No follower is assigned to this camp." ) );
+        } else {
+            popup( _( "Assigned camp workers are off duty, away, or otherwise unavailable to craft." ) );
+        }
         return;
     }
 
@@ -3110,15 +3142,12 @@ void basecamp::start_crafting_with_ui( const mission_id &miss_id )
 
     recipe_subset camp_recipes;
     npc combined_worker;
-    for( const recipe_id &known_recipe : recipe_deck_all() ) {
+    for( const recipe_id &known_recipe : recipe_deck_all( &_inv ) ) {
         const recipe *rec = &known_recipe.obj();
         camp_recipes.include( rec );
         combined_worker.learn_recipe( rec );
     }
-    for( const npc_ptr &worker : assigned_npcs ) {
-        if( worker.get() == nullptr ) {
-            continue;
-        }
+    for( const npc_ptr &worker : available_workers ) {
         for( const std::pair<const skill_id, SkillLevel> &skill : worker->get_all_skills() ) {
             if( skill.second.level() > combined_worker.get_skill_level( skill.first ) ) {
                 combined_worker.set_skill_level( skill.first, skill.second.level() );
@@ -3137,6 +3166,21 @@ void basecamp::start_crafting_with_ui( const mission_id &miss_id )
     const recipe *making = select_crafting_recipe( batch_size, recipe_id(), &combined_worker,
                            true, &_inv, &camp_recipes );
     if( making == nullptr ) {
+        return;
+    }
+
+    bool has_storage = false;
+    if( by_radio ) {
+        tinymap target_map;
+        target_map.load( project_to<coords::sm>( omt_pos ), false );
+        const tripoint_abs_ms storage_origin( bb_pos );
+        has_storage = has_storage_for_craft( *making, target_map, storage_origin );
+    } else {
+        map &here = get_map();
+        has_storage = has_storage_for_craft( *making, here, tripoint_abs_ms( bb_pos ) );
+    }
+    if( !has_storage ) {
+        popup( _( "The camp has no compatible liquid fixture in its storage zone for this craft." ) );
         return;
     }
 
@@ -3182,16 +3226,34 @@ void basecamp::start_crafting_with_ui( const mission_id &miss_id )
         return;
     }
 
+    const std::vector<item> results = making->create_results( batch_size );
+    const std::vector<item> byproducts = making->create_byproducts( batch_size );
+    bool exact_storage = false;
+    if( by_radio ) {
+        tinymap target_map;
+        target_map.load( project_to<coords::sm>( omt_pos ), false );
+        exact_storage = has_storage_for_items( results, byproducts, target_map,
+                                               tripoint_abs_ms( bb_pos ) );
+    } else {
+        map &here = get_map();
+        exact_storage = has_storage_for_items( results, byproducts, here,
+                                               tripoint_abs_ms( bb_pos ) );
+    }
+    if( !exact_storage ) {
+        popup( _( "The camp has no compatible liquid fixture for the crafted output." ) );
+        return;
+    }
+
     mission_id actual_id = miss_id;
     actual_id.parameters = making->ident().str();
     npc_ptr companion = start_mission( actual_id, work_days, true, _( "begins to work…" ),
                                        false, {}, making->required_skills, worker );
     if( companion != nullptr ) {
         components.consume_components();
-        for( const item &result : making->create_results( batch_size ) ) {
+        for( const item &result : results ) {
             companion->companion_mission_inv.add_item( result );
         }
-        for( const item &byproduct : making->create_byproducts( batch_size ) ) {
+        for( const item &byproduct : byproducts ) {
             companion->companion_mission_inv.add_item( byproduct );
         }
     }
@@ -5530,18 +5592,15 @@ void basecamp::place_results( const item &result )
 
         if( result.made_of( phase_id::LIQUID ) ) {
             bool found_liquid_container = false;
-            for( const tripoint_abs_ms &potential_spot : get_liquid_dumping_spots() ) {
-                const tripoint local_spot = target_bay.getlocal( potential_spot );
-                if( target_bay.i_at( local_spot ).empty() ) {
-                    new_spot = local_spot;
-                    found_liquid_container = true;
-                    break;
-                }
+            if( const cata::optional<tripoint_abs_ms> potential_spot =
+                    liquid_storage_for( result, target_bay, storage_origin ) ) {
+                new_spot = target_bay.getlocal( *potential_spot );
+                found_liquid_container = true;
             }
             if( !found_liquid_container ) {
                 popup( _( "No eligible locations found to place resulting liquids, placing them at random.\n\n"
-                          "Eligible locations must be terrain or furniture (not an item) that can contain "
-                          "liquid, be inside a camp storage zone, and have no items on its tile." ) );
+                          "Eligible locations must be liquid-containing terrain or furniture inside a camp "
+                          "storage zone, and be empty or contain only the same liquid." ) );
             }
         }
 
@@ -5552,13 +5611,12 @@ void basecamp::place_results( const item &result )
     if( by_radio ) {
         tinymap target_bay;
         target_bay.load( project_to<coords::sm>( omt_pos ), false );
-        const tripoint_abs_ms storage_origin =
-            target_bay.getglobal( target_bay.getlocal( bb_pos ) );
+        const tripoint_abs_ms storage_origin( bb_pos );
         place_on_map( target_bay, storage_origin );
         target_bay.save();
     } else {
         map &here = get_map();
-        place_on_map( here, get_player_character().get_location() );
+        place_on_map( here, tripoint_abs_ms( bb_pos ) );
     }
 }
 

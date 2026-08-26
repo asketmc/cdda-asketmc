@@ -367,12 +367,14 @@ std::vector<basecamp_upgrade> basecamp::available_upgrades( const point &dir )
 }
 
 // recipes and craft support functions
-std::unordered_set<recipe_id> basecamp::recipe_deck_all() const
+std::unordered_set<recipe_id> basecamp::recipe_deck_all( const inventory *supplies ) const
 {
     std::unordered_set<recipe_id> recipes;
-    for( const npc_ptr &worker : assigned_npcs ) {
+    for( const npc_ptr &worker : available_crafting_workers() ) {
         if( worker != nullptr ) {
-            for( const recipe *known : worker->get_learned_recipes() ) {
+            const recipe_subset available = supplies == nullptr ? worker->get_learned_recipes() :
+                                            worker->get_available_recipes( *supplies );
+            for( const recipe *known : available ) {
                 recipes.insert( known->ident() );
             }
         }
@@ -386,6 +388,97 @@ std::unordered_set<recipe_id> basecamp::recipe_deck_all() const
         }
     }
     return recipes;
+}
+
+std::vector<npc_ptr> basecamp::available_crafting_workers() const
+{
+    std::vector<npc_ptr> result;
+    for( const npc_ptr &worker : assigned_npcs ) {
+        if( worker != nullptr && !worker->has_companion_mission() && worker->camp_duty &&
+            worker->is_camp_duty_ready() ) {
+            result.push_back( worker );
+        }
+    }
+    return result;
+}
+
+cata::optional<tripoint_abs_ms> basecamp::liquid_storage_for(
+    const item &liquid, map &target_map, const tripoint_abs_ms &storage_origin,
+    const std::unordered_map<tripoint_abs_ms, itype_id> *reservations ) const
+{
+    zone_manager &mgr = zone_manager::get_manager();
+    const std::unordered_set<tripoint_abs_ms> storage_tiles =
+        mgr.get_near_on_map( zone_type_CAMP_STORAGE, storage_origin, 60, target_map );
+    for( const tripoint_abs_ms &tile :
+         get_sorted_tiles_by_distance( storage_origin, storage_tiles ) ) {
+        if( reservations != nullptr ) {
+            const auto reservation = reservations->find( tile );
+            if( reservation != reservations->end() && reservation->second != liquid.typeId() ) {
+                continue;
+            }
+        }
+        const tripoint local_tile = target_map.getlocal( tile );
+        if( !target_map.inbounds( local_tile ) ||
+            !target_map.has_flag_ter_or_furn( ter_furn_flag::TFLAG_LIQUIDCONT, local_tile ) ) {
+            continue;
+        }
+        const map_stack contents = target_map.i_at( local_tile );
+        if( contents.empty() || std::all_of( contents.begin(), contents.end(),
+        [&liquid]( const item & stored ) {
+            return stored.made_of( phase_id::LIQUID ) && stored.typeId() == liquid.typeId();
+        } ) ) {
+            return tile;
+        }
+    }
+    return cata::nullopt;
+}
+
+bool basecamp::has_storage_for_craft( const recipe &making, map &target_map,
+                                      const tripoint_abs_ms &storage_origin ) const
+{
+    std::unordered_map<tripoint_abs_ms, itype_id> reservations;
+    const auto reserve_liquid = [&]( const itype_id & type ) {
+        const item result( type, calendar::turn );
+        const cata::optional<tripoint_abs_ms> storage = liquid_storage_for(
+                    result, target_map, storage_origin, &reservations );
+        if( !storage ) {
+            return false;
+        }
+        reservations.emplace( *storage, result.typeId() );
+        return true;
+    };
+    for( const itype_id &type : making.guaranteed_liquid_outputs() ) {
+        if( !reserve_liquid( type ) ) {
+            return false;
+        }
+    }
+    for( const itype_id &type : making.possible_group_liquid_outputs() ) {
+        if( !reserve_liquid( type ) ) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool basecamp::has_storage_for_items( const std::vector<item> &results,
+                                      const std::vector<item> &byproducts, map &target_map,
+                                      const tripoint_abs_ms &storage_origin ) const
+{
+    std::unordered_map<tripoint_abs_ms, itype_id> reservations;
+    const auto reserve_liquid = [&]( const item &result ) {
+        if( !result.made_of( phase_id::LIQUID ) ) {
+            return true;
+        }
+        const cata::optional<tripoint_abs_ms> storage = liquid_storage_for(
+                    result, target_map, storage_origin, &reservations );
+        if( !storage ) {
+            return false;
+        }
+        reservations.emplace( *storage, result.typeId() );
+        return true;
+    };
+    return std::all_of( results.begin(), results.end(), reserve_liquid ) &&
+           std::all_of( byproducts.begin(), byproducts.end(), reserve_liquid );
 }
 
 faction *basecamp::fac() const
@@ -566,6 +659,9 @@ void basecamp::add_assignee( character_id id )
         return;
     }
     npc_to_add->assigned_camp = omt_pos;
+    npc_to_add->camp_duty = true;
+    npc_to_add->chair_pos = cata::nullopt;
+    npc_to_add->wander_pos = cata::nullopt;
     assigned_npcs.push_back( npc_to_add );
 }
 
@@ -577,6 +673,9 @@ void basecamp::remove_assignee( character_id id )
         return;
     }
     npc_to_remove->assigned_camp = cata::nullopt;
+    npc_to_remove->camp_duty = false;
+    npc_to_remove->chair_pos = cata::nullopt;
+    npc_to_remove->wander_pos = cata::nullopt;
     assigned_npcs.erase( std::remove( assigned_npcs.begin(), assigned_npcs.end(), npc_to_remove ),
                          assigned_npcs.end() );
 }

@@ -779,6 +779,67 @@ std::vector<tripoint_bub_ms> route_adjacent( const Character &you, const tripoin
     return {};
 }
 
+bool move_loot_item_is_eligible( Character &you, const item &candidate,
+                                 const tripoint_abs_ms &source )
+{
+    zone_manager &mgr = zone_manager::get_manager();
+    return candidate.made_of_from_type( phase_id::SOLID ) &&
+           !( candidate.is_favorite &&
+              mgr.has( zone_type_LOOT_IGNORE_FAVORITES, source, _fac_id( you ) ) );
+}
+
+bool move_loot_item_has_unload_work( Character &you, item &candidate,
+                                     const tripoint_abs_ms &source, bool has_destinations )
+{
+    zone_manager &mgr = zone_manager::get_manager();
+    const faction_id fac = _fac_id( you );
+    const std::vector<const zone_data *> zones =
+        mgr.get_zones_at( source, zone_type_zone_unload_all, fac );
+    const bool strip_corpse = candidate.is_corpse() &&
+                              mgr.has( zone_type_zone_strip, source, fac );
+    if( zones.empty() && !strip_corpse ) {
+        return false;
+    }
+
+    bool unload_mods = false;
+    bool unload_molle = false;
+    bool unload_always = false;
+    for( const zone_data *zone : zones ) {
+        const unload_options &options = dynamic_cast<const unload_options &>( zone->get_options() );
+        unload_mods |= options.unload_mods();
+        unload_molle |= options.unload_molle();
+        unload_always |= options.unload_always();
+    }
+    if( has_destinations && !unload_always ) {
+        return false;
+    }
+    if( candidate.any_pockets_sealed() || you.rate_action_unload( candidate ) != hint_rating::good ) {
+        return false;
+    }
+    const auto unloadable = []( const item *contained ) {
+        return !contained->made_of( phase_id::LIQUID ) &&
+               !contained->made_of( phase_id::GAS );
+    };
+    for( const item_pocket::pocket_type pocket : { item_pocket::pocket_type::CONTAINER,
+            item_pocket::pocket_type::MAGAZINE,
+            item_pocket::pocket_type::MAGAZINE_WELL } ) {
+        const auto contents = candidate.all_items_top( pocket );
+        if( std::any_of( contents.begin(), contents.end(), unloadable ) ) {
+            return true;
+        }
+    }
+    if( unload_mods ) {
+        const std::vector<item *> mods = candidate.gunmods();
+        if( std::any_of( mods.begin(), mods.end(), []( const item *mod ) {
+            return !mod->is_irremovable();
+        } ) ) {
+            return true;
+        }
+    }
+    return ( unload_molle && !candidate.get_contents().get_added_pockets().empty() ) ||
+           ( candidate.has_flag( flag_MAG_DESTROY ) && candidate.ammo_remaining() == 0 );
+}
+
 static std::vector<tripoint_bub_ms> route_best_workbench(
     const Character &you, const tripoint_bub_ms &dest )
 {
@@ -2282,13 +2343,7 @@ void activity_on_turn_move_loot( player_activity &act, Character &you )
             ++num_processed;
             item &thisitem = *it->first;
 
-            // skip unpickable liquid
-            if( !thisitem.made_of_from_type( phase_id::SOLID ) ) {
-                continue;
-            }
-
-            // skip favorite items in ignore favorite zones
-            if( thisitem.is_favorite && mgr.has( zone_type_LOOT_IGNORE_FAVORITES, src, _fac_id( you ) ) ) {
+            if( !move_loot_item_is_eligible( you, thisitem, src ) ) {
                 continue;
             }
 

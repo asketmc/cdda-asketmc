@@ -1125,7 +1125,7 @@ class npc : public Character
         static overmap_location_str_id get_location_for( const npc_need &need );
 
         npc_action address_needs();
-        npc_action address_needs( float danger );
+        npc_action address_needs( float danger, bool urgent_only = false );
         struct local_item_candidate {
             item_location loc;
             float score = 0.0f;
@@ -1202,6 +1202,8 @@ class npc : public Character
         void move_away_from( const std::vector<sphere> &spheres, bool no_bashing = false );
         // workers at camp relaxing/wandering
         void worker_downtime();
+        bool is_camp_duty_ready() const;
+        void return_to_assigned_camp();
         bool find_job_to_perform();
         // Same as if the player pressed '.'
         void move_pause();
@@ -1328,6 +1330,7 @@ class npc : public Character
         // A temp variable used to link to the correct mission
         std::vector<mission_type_id> miss_ids;
         cata::optional<tripoint_abs_omt> assigned_camp = cata::nullopt;
+        bool camp_duty = false;
 
         // accessors to ai_cache functions
         const std::vector<weak_ptr_fast<Creature>> &get_cached_friends() const;
