@@ -150,9 +150,6 @@ static const npc_class_id NC_EVAC_SHOPKEEP( "NC_EVAC_SHOPKEEP" );
 static const skill_id skill_firstaid( "firstaid" );
 static const skill_id skill_survival( "survival" );
 
-static const vitamin_id vitamin_iron( "iron" );
-static const vitamin_id vitamin_vitC( "vitC" );
-
 static const trait_id trait_IGNORE_SOUND( "IGNORE_SOUND" );
 static const trait_id trait_RETURN_TO_START_POS( "RETURN_TO_START_POS" );
 
@@ -226,15 +223,16 @@ const std::vector<bionic_id> weapon_cbms = { {
 const int avoidance_vehicles_radius = 5;
 constexpr float healing_danger_threshold = 0.01f;
 
-bool has_treatable_vitamin_deficiency( const npc &who )
+std::vector<vitamin_id> treatable_vitamin_deficiencies( const npc &who )
 {
+    std::vector<vitamin_id> result;
     for( const std::pair<const vitamin_id, vitamin> &entry : vitamin::all() ) {
         if( entry.second.type() == vitamin_type::VITAMIN &&
             entry.second.severity( who.vitamin_get( entry.first ) ) > 0 ) {
-            return true;
+            result.push_back( entry.first );
         }
     }
-    return false;
+    return result;
 }
 
 bool good_for_pickup( const item &it, npc &who )
@@ -972,7 +970,7 @@ void npc::move()
     }
 
     if( action == npc_undecided && attitude == NPCATT_ACTIVITY ) {
-        if( has_stashed_activity() ) {
+        if( has_stashed_activity() && !has_player_activity() ) {
             if( !check_outbounds_activity( get_stashed_activity(), true ) ) {
                 assign_stashed_activity();
             } else {
@@ -1966,12 +1964,13 @@ npc_action npc::address_needs( float danger )
 
     const bool ordinary_food_need = get_thirst() > NPC_THIRST_CONSUME ||
                                     get_hunger() > NPC_HUNGER_CONSUME;
-    const bool vitamin_deficiency = has_treatable_vitamin_deficiency( *this );
+    const bool vitamin_deficiency = safe_to_heal &&
+                                    !treatable_vitamin_deficiencies( *this ).empty();
     if( one_in( 3 ) && ( ordinary_food_need || vitamin_deficiency ) ) {
         if( ordinary_food_need && consume_food_from_camp() ) {
             return npc_noop;
         }
-        if( consume_food() ) {
+        if( consume_food( vitamin_deficiency ) ) {
             return npc_noop;
         }
         if( consume_local_food( true ) || drink_local_clean_water( true ) ) {
@@ -3644,10 +3643,18 @@ void npc::heal_player( Character &patient )
     }
     if( !is_hallucination() ) {
         const activity_id interrupted_activity = activity.id();
+        const player_activity interrupted_stashed_activity = get_stashed_activity();
+        const player_activity interrupted_stashed_backlog = get_stashed_backlog_activity();
         int charges_used = used.type->invoke( *this, used, patient.pos(), "heal" ).value_or( 0 );
         if( !interrupted_activity.is_null() && activity.id() == ACT_FIRSTAID && !backlog.empty() &&
             backlog.front().id() == interrupted_activity ) {
             backlog.front().auto_resume = true;
+        }
+        if( interrupted_stashed_activity && !has_stashed_activity() ) {
+            set_stashed_activity( interrupted_stashed_activity, interrupted_stashed_backlog );
+            set_attitude( NPCATT_ACTIVITY );
+            set_mission( NPC_MISSION_ACTIVITY );
+            current_activity_id = interrupted_stashed_activity.id();
         }
         consume_charges( used, charges_used );
     } else {
@@ -3711,10 +3718,18 @@ void npc::heal_self()
     warn_about( "heal_self", 1_turns );
 
     const activity_id interrupted_activity = activity.id();
+    const player_activity interrupted_stashed_activity = get_stashed_activity();
+    const player_activity interrupted_stashed_backlog = get_stashed_backlog_activity();
     int charges_used = used.type->invoke( *this, used, pos(), "heal" ).value_or( 0 );
     if( !interrupted_activity.is_null() && activity.id() == ACT_FIRSTAID && !backlog.empty() &&
         backlog.front().id() == interrupted_activity ) {
         backlog.front().auto_resume = true;
+    }
+    if( interrupted_stashed_activity && !has_stashed_activity() ) {
+        set_stashed_activity( interrupted_stashed_activity, interrupted_stashed_backlog );
+        set_attitude( NPCATT_ACTIVITY );
+        set_mission( NPC_MISSION_ACTIVITY );
+        current_activity_id = interrupted_stashed_activity.id();
     }
     if( used.is_medication() && charges_used > 0 ) {
         consume_charges( used, charges_used );
@@ -3746,9 +3761,10 @@ void npc::use_painkiller()
 // Be eaten before it rots (favor soon-to-rot perishables)
 //
 // TODO: Cache the results of this, *especially* if there's nothing we want to eat.
-static float needed_vitamin_rda( const npc &who, const item &it )
+static float needed_vitamin_rda( const npc &who, const item &it,
+                                 const std::vector<vitamin_id> &deficiencies )
 {
-    if( !has_treatable_vitamin_deficiency( who ) ) {
+    if( deficiencies.empty() ) {
         return 0.0f;
     }
 
@@ -3762,13 +3778,8 @@ static float needed_vitamin_rda( const npc &who, const item &it )
     }
 
     float result = 0.0f;
-    for( const std::pair<const vitamin_id, vitamin> &entry : vitamin::all() ) {
-        const vitamin_id &vit_id = entry.first;
-        const vitamin &vitamin = entry.second;
-        if( vitamin.type() != vitamin_type::VITAMIN ||
-            vitamin.severity( who.vitamin_get( vit_id ) ) <= 0 ) {
-            continue;
-        }
+    for( const vitamin_id &vit_id : deficiencies ) {
+        const vitamin &vitamin = vit_id.obj();
         int supplied = 0;
         const auto food_vitamin = nutrients.vitamins.find( vit_id );
         if( food_vitamin != nutrients.vitamins.end() ) {
@@ -3807,7 +3818,8 @@ static bool safe_vitamin_use_methods( const item &it )
     return true;
 }
 
-static float rate_food( const npc &who, const item &it, int want_nutr, int want_quench )
+static float rate_food( const npc &who, const item &it, int want_nutr, int want_quench,
+                        const std::vector<vitamin_id> &deficiencies )
 {
     const auto &food = it.get_comestible();
     if( !food ) {
@@ -3823,7 +3835,7 @@ static float rate_food( const npc &who, const item &it, int want_nutr, int want_
     int nutr = food->get_default_nutr();
     int quench = food->quench;
 
-    const float useful_vitamin_rda = needed_vitamin_rda( who, it );
+    const float useful_vitamin_rda = needed_vitamin_rda( who, it, deficiencies );
     if( nutr <= 0 && quench <= 0 && useful_vitamin_rda <= 0.0f ) {
         // Not food - may be salt, drugs etc.
         return 0.0f;
@@ -3989,8 +4001,9 @@ bool npc::consume_food( bool allow_vitamin_treatment )
     int want_hunger = std::max( 0, get_hunger() );
     int want_quench = std::max( 0, get_thirst() );
 
-    const bool vitamin_deficiency = allow_vitamin_treatment &&
-                                    has_treatable_vitamin_deficiency( *this );
+    const std::vector<vitamin_id> deficiencies = allow_vitamin_treatment ?
+            treatable_vitamin_deficiencies( *this ) : std::vector<vitamin_id>();
+    const bool vitamin_deficiency = !deficiencies.empty();
     const auto inv_food = items_with( [vitamin_deficiency]( const item & itm ) {
         return itm.is_food() || ( vitamin_deficiency && itm.is_medication() );
     } );
@@ -4006,7 +4019,8 @@ bool npc::consume_food( bool allow_vitamin_treatment )
                                      guts.get_calories() <
                                      get_healthy_kcal() / 2;
         for( item * const &food_item : inv_food ) {
-            float cur_weight = rate_food( *this, *food_item, want_hunger, want_quench );
+            float cur_weight = rate_food( *this, *food_item, want_hunger, want_quench,
+                                          deficiencies );
             // Note: will_eat is expensive, avoid calling it if possible
             const ret_val<edible_rating> preference = will_eat( *food_item );
             const bool willing = cur_weight > 0.0f && preference.success();
@@ -4193,11 +4207,12 @@ std::vector<npc::local_item_candidate> npc::find_local_food()
 {
     const int want_hunger = std::max( 0, get_hunger() );
     const int want_quench = std::max( 0, get_thirst() );
+    const std::vector<vitamin_id> no_vitamin_treatment;
     return find_local_items( [&]( item & candidate ) {
         if( !candidate.is_food() || !will_eat( candidate ).success() ) {
             return 0.0f;
         }
-        return rate_food( *this, candidate, want_hunger, want_quench );
+        return rate_food( *this, candidate, want_hunger, want_quench, no_vitamin_treatment );
     } );
 }
 

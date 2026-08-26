@@ -2597,6 +2597,7 @@ class Character : public Creature, public visitable
         void cancel_activity();
         void cancel_stashed_activity();
         player_activity get_stashed_activity() const;
+        player_activity get_stashed_backlog_activity() const;
         void set_stashed_activity( const player_activity &act,
                                    const player_activity &act_back = player_activity() );
         bool has_stashed_activity() const;
