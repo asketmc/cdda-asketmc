@@ -1,0 +1,60 @@
+{
+  "baseline": false,
+  "baseline_entries": [],
+  "changes": [
+    {
+      "fragment_sha256": "20bdfb0f29c7dfcb3584ef0fd367833f164ba080b47fb260c4c00e44e5e8d4cf",
+      "pr": 8
+    },
+    {
+      "fragment_sha256": "b408f4b230e44b46be04a62d30b3e9cb532cc0d5e8910d0381b77550e380f809",
+      "pr": 9
+    },
+    {
+      "fragment_sha256": "1bcef3c790418712e5b30aaa882e5abbe319918858480e2e740e99caf2ead998",
+      "pr": 10
+    },
+    {
+      "fragment_sha256": "50310035a870001132972fe3ddcd7a129de105effae5e7c7cdc25807fd625790",
+      "pr": 11
+    },
+    {
+      "fragment_sha256": "d89798ebbdb2efa54c24e40e50988a9806ef44c199f05ecc29a48c26fe43722b",
+      "pr": 17
+    },
+    {
+      "fragment_sha256": "ea9cf4e3577978785ca6e2812307d9dd198695b928e572fcede75489081f9f03",
+      "pr": 19
+    },
+    {
+      "fragment_sha256": "2b1486b3b19947e6201473d3e13e04fe4e6dcbca31d2f94a4b99469cccc5f6cc",
+      "pr": 20
+    },
+    {
+      "fragment_sha256": "3198310dfde306a1f9d8d2a1ace7238be52c9bad39a0594706967bc4b25c806e",
+      "pr": 13
+    },
+    {
+      "fragment_sha256": "afa9983f9c6b37fa331c4c05a6e34fdf1a1a0945692355032a30339acf13f9be",
+      "pr": 14
+    },
+    {
+      "fragment_sha256": "c5553d473ef16961b7bbf295b98098743bf4965ffd12021f10bc52fa24af1d04",
+      "pr": 15
+    },
+    {
+      "fragment_sha256": "779d877acbd5c0042a5c921418cec72ee4cc28b481ac033597e9e6fa99a9bf95",
+      "pr": 21
+    }
+  ],
+  "date": "2026-08-26",
+  "known_limits": [],
+  "previous_release": "v0.G-additive-2026.08.26.1",
+  "schema": 1,
+  "tag": "v0.G-additive-2026.08.26.2",
+  "title": "CDDA 0.G Additive 2026.08.26.2",
+  "validation": [
+    "The tag workflow must reproduce identical executable and ZIP hashes from two clean release builds.",
+    "The exact staged archive must pass checksum, metadata, extraction, and --check-mods dda validation before publication."
+  ]
+}
