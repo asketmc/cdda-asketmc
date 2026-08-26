@@ -837,6 +837,48 @@ bool zone_manager::has_nonpersonal( const zone_type_id &type, const tripoint_abs
     return false;
 }
 
+bool zone_manager::has_personal( const tripoint_abs_ms &where, const faction_id &fac ) const
+{
+    for( const zone_data &zone : zones ) {
+        if( zone.get_is_personal() && zone.get_enabled() && zone.get_faction() == fac &&
+            zone.has_inside( where ) ) {
+            return true;
+        }
+    }
+    map &here = get_map();
+    for( const zone_data *zone : here.get_vehicle_zones( here.get_abs_sub().z() ) ) {
+        if( zone->get_is_personal() && zone->get_enabled() && zone->get_faction() == fac &&
+            zone->has_inside( where ) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::unordered_set<tripoint_abs_ms> zone_manager::get_personal_zone_points(
+    const faction_id &fac ) const
+{
+    std::unordered_set<tripoint_abs_ms> result;
+    for( const zone_data &zone : zones ) {
+        if( zone.get_is_personal() && zone.get_enabled() && zone.get_faction() == fac ) {
+            for( const tripoint_abs_ms &p : tripoint_range<tripoint_abs_ms>(
+                     zone.get_start_point(), zone.get_end_point() ) ) {
+                result.insert( p );
+            }
+        }
+    }
+    map &here = get_map();
+    for( const zone_data *zone : here.get_vehicle_zones( here.get_abs_sub().z() ) ) {
+        if( zone->get_is_personal() && zone->get_enabled() && zone->get_faction() == fac ) {
+            for( const tripoint_abs_ms &p : tripoint_range<tripoint_abs_ms>(
+                     zone->get_start_point(), zone->get_end_point() ) ) {
+                result.insert( p );
+            }
+        }
+    }
+    return result;
+}
+
 bool zone_manager::has_near( const zone_type_id &type, const tripoint_abs_ms &where, int range,
                              const faction_id &fac ) const
 {

@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "pr": 13,
+  "entries": [
+    {
+      "id": "guarded-follower-local-survival",
+      "category": "Features",
+      "audience": "players",
+      "summary": "Let followers obtain safe food, clean water, emergency warmth, shelter, and last-resort forage from permitted nearby supplies.",
+      "compatibility": "save-compatible",
+      "known_limits": [
+        "Followers use only owned, accessible supplies and do not autonomously consume dirty water or forage outside emergency hunger."
+      ]
+    },
+    {
+      "id": "follower-resource-boundaries",
+      "category": "Bugfixes",
+      "audience": "players",
+      "summary": "Respect ownership, pickup rules, personal zones, no-pickup zones, locked vehicle cargo, and unreachable-candidate fallback during autonomous survival.",
+      "compatibility": "save-compatible"
+    }
+  ]
+}

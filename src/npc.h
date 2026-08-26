@@ -1118,6 +1118,26 @@ class npc : public Character
 
         npc_action address_needs();
         npc_action address_needs( float danger );
+        struct local_item_candidate {
+            item_location loc;
+            float score = 0.0f;
+        };
+        bool needs_warmth() const;
+        float cold_part_warmth_score( const item &candidate ) const;
+        bool wear_warmest_inventory_item();
+        std::vector<local_item_candidate> find_local_items(
+            const std::function<float( item & )> &score );
+        std::vector<local_item_candidate> find_local_food();
+        std::vector<local_item_candidate> find_local_warm_clothing();
+        std::vector<tripoint> find_local_clean_water() const;
+        std::vector<tripoint> find_local_shelter() const;
+        std::vector<tripoint> find_local_harvest() const;
+        bool consume_local_food( bool allow_movement );
+        bool wear_local_clothing( bool allow_movement );
+        bool drink_local_clean_water( bool allow_movement );
+        bool take_local_shelter();
+        bool forage_local_food();
+        bool move_to_local_resource( const tripoint &target );
         npc_action address_player();
         npc_action long_term_goal_action();
         // Returns true if did something and we should end turn

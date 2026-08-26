@@ -522,6 +522,10 @@ class zone_manager
                   const faction_id &fac = your_fac ) const;
         bool has_nonpersonal( const zone_type_id &type, const tripoint_abs_ms &where,
                               const faction_id &fac = your_fac ) const;
+        bool has_personal( const tripoint_abs_ms &where,
+                           const faction_id &fac = your_fac ) const;
+        std::unordered_set<tripoint_abs_ms> get_personal_zone_points(
+            const faction_id &fac = your_fac ) const;
         bool has_near( const zone_type_id &type, const tripoint_abs_ms &where,
                        int range = MAX_DISTANCE, const faction_id &fac = your_fac ) const;
         bool has_loot_dest_near( const tripoint_abs_ms &where ) const;
