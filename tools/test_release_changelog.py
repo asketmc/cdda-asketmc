@@ -379,6 +379,47 @@ class GitCoverageTest(unittest.TestCase):
         release_changelog.check_pr(self.root, start, "HEAD", 1)
         release_changelog.check_main_update(self.root, start, "HEAD")
 
+    def test_post_bootstrap_identity_edits_fail_both_integration_gates(self) -> None:
+        commit_file(self.root, "root.txt", "root\n", "Root")
+        write_bootstrap_identity(self.root, 1)
+        fragment_path = self.root / "changelog" / "changes" / "pr-1.json"
+        fragment_path.parent.mkdir(parents=True)
+        fragment_path.write_bytes(
+            release_changelog.canonical_json_bytes(valid_fragment(1))
+        )
+        run_git(self.root, "add", ".")
+        run_git(self.root, "commit", "-m", "Bootstrap (#1)")
+        base = run_git(self.root, "rev-parse", "HEAD")
+
+        write_bootstrap_identity(self.root, 2)
+        run_git(self.root, "add", "changelog/bootstrap.json")
+        run_git(self.root, "commit", "-m", "Replace bootstrap identity (#2)")
+        with self.assertRaisesRegex(
+            release_changelog.ChangelogError,
+            "changelog bootstrap identity is immutable",
+        ):
+            release_changelog.check_pr(self.root, base, "HEAD", 2)
+        with self.assertRaisesRegex(
+            release_changelog.ChangelogError,
+            "changelog bootstrap identity is immutable",
+        ):
+            release_changelog.check_main_update(self.root, base, "HEAD")
+
+        run_git(self.root, "checkout", "-b", "delete-bootstrap", base)
+        (self.root / "changelog" / "bootstrap.json").unlink()
+        run_git(self.root, "add", "-u", "changelog/bootstrap.json")
+        run_git(self.root, "commit", "-m", "Delete bootstrap identity (#2)")
+        with self.assertRaisesRegex(
+            release_changelog.ChangelogError,
+            "changelog bootstrap identity is immutable",
+        ):
+            release_changelog.check_pr(self.root, base, "HEAD", 2)
+        with self.assertRaisesRegex(
+            release_changelog.ChangelogError,
+            "changelog bootstrap identity is immutable",
+        ):
+            release_changelog.check_main_update(self.root, base, "HEAD")
+
     def test_pr_gate_accepts_one_new_fragment_and_rejects_old_fragment_edits(self) -> None:
         fragment_path = self.root / "changelog" / "changes" / "pr-1.json"
         fragment_path.parent.mkdir(parents=True)

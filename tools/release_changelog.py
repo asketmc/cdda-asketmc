@@ -1299,10 +1299,6 @@ def verify_assets(
             matches = [line for line in build_lines if line.startswith(f"{label}:")]
             if matches != [f"{label}: {digest}"]:
                 raise ChangelogError(f"build manifest receipt mismatch: {label}")
-    if tags[0] != expected_tag and releases[expected_tag]["baseline"] is False:
-        # Historical release verification is allowed, but a newly tagged release must
-        # always be represented in the chain. No lexicographic tag guessing occurs.
-        pass
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
