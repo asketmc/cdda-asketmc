@@ -818,7 +818,7 @@ bool move_loot_item_has_unload_work( Character &you, item &candidate,
     for( const item_pocket::pocket_type pocket : { item_pocket::pocket_type::CONTAINER,
             item_pocket::pocket_type::MAGAZINE,
             item_pocket::pocket_type::MAGAZINE_WELL } ) {
-        const std::vector<item *> contents = candidate.all_items_top( pocket );
+        const auto contents = candidate.all_items_top( pocket );
         if( std::any_of( contents.begin(), contents.end(), unloadable ) ) {
             return true;
         }
