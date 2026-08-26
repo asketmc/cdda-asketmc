@@ -158,10 +158,8 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn("PR_TITLE: ${{ github.event.pull_request.title }}", self.quality)
         self.assertIn("PUSH_BEFORE_SHA: ${{ github.event.before }}", self.quality)
         self.assertIn("PUSH_HEAD_SHA: ${{ github.sha }}", self.quality)
-        self.assertIn(
-            "REBASE_MERGES_ALLOWED: ${{ github.event.repository.allow_rebase_merge }}",
-            self.quality,
-        )
+        self.assertIn("GH_REPO: ${{ github.repository }}", self.quality)
+        self.assertIn("GH_TOKEN: ${{ github.token }}", self.quality)
         self.assertIn('--base "${PR_BASE_SHA}"', self.quality)
         self.assertIn('--head "${PR_HEAD_SHA}"', self.quality)
         self.assertIn('--pr "${PR_NUMBER}"', self.quality)
@@ -169,7 +167,9 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn("release_changelog.py check-main", self.quality)
         self.assertIn('--base "${PUSH_BEFORE_SHA}"', self.quality)
         self.assertIn('--head "${PUSH_HEAD_SHA}"', self.quality)
-        self.assertIn('[[ "${REBASE_MERGES_ALLOWED}" != "false" ]]', self.quality)
+        self.assertIn(
+            'gh api "repos/${GH_REPO}" --jq \'.allow_rebase_merge\'', self.quality
+        )
 
     def test_new_and_existing_releases_share_exact_remote_readback(self) -> None:
         build = self.workflow[self.workflow.index("  publish-release:") :]
@@ -178,6 +178,10 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertLess(create, readback)
         self.assertEqual(build.count("mkdir existing"), 1)
         self.assertEqual(build.count("cmp RELEASE_NOTES.md existing/RELEASE_NOTES.md"), 1)
+        self.assertIn(
+            "--jq '.body | @base64' | base64 --decode > existing/RELEASE_BODY.md",
+            build,
+        )
 
     def test_every_job_declares_least_privilege_permissions(self) -> None:
         jobs = re.split(r"(?m)^  (?=[a-z][a-z0-9-]*:$)", self.workflow.split("\njobs:\n", 1)[1])

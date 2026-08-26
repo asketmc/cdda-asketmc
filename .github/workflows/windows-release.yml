@@ -356,7 +356,7 @@ jobs:
           test "$(gh release view "${GITHUB_REF_NAME}" --json name --jq '.name')" = "${release_title}"
           test "$(gh release view "${GITHUB_REF_NAME}" --json isDraft --jq '.isDraft')" = "false"
           gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" \
-            --jq '.body' > existing/RELEASE_BODY.md
+            --jq '.body | @base64' | base64 --decode > existing/RELEASE_BODY.md
           cmp RELEASE_NOTES.md existing/RELEASE_BODY.md
           mapfile -t remote_assets < <(gh release view "${GITHUB_REF_NAME}" --json assets --jq '.assets[].name' | sort)
           mapfile -t expected_assets < <(printf '%s\n' "${asset_name}" BUILD_MANIFEST.txt RELEASE_MANIFEST.json RELEASE_NOTES.md SHA256SUMS.txt | sort)
