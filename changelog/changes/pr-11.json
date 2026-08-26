@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "pr": 11,
+  "entries": [
+    {
+      "id": "update-actions-upload-artifact",
+      "category": "Infrastructure",
+      "audience": "maintainers",
+      "summary": "Update actions/upload-artifact from 4.6.2 to 7.0.1.",
+      "compatibility": "not-applicable"
+    }
+  ]
+}

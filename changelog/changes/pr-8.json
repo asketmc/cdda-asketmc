@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "pr": 8,
+  "entries": [
+    {
+      "id": "update-actions-checkout",
+      "category": "Infrastructure",
+      "audience": "maintainers",
+      "summary": "Update actions/checkout from 5.1.0 to 7.0.1.",
+      "compatibility": "not-applicable"
+    }
+  ]
+}

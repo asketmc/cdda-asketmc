@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "pr": 4,
+  "entries": [
+    {
+      "id": "repairable-emp-electronics",
+      "category": "Features",
+      "audience": "players",
+      "summary": "Make EMP-damaged electronics repairable and support the optional temporary reboot behavior.",
+      "compatibility": "save-compatible",
+      "details": [
+        "EMP damage now uses explicit electronic faults and data-driven repair or reboot behavior instead of permanently ruining affected devices."
+      ]
+    }
+  ]
+}

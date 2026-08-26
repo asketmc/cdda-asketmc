@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "pr": 16,
+  "entries": [
+    {
+      "id": "windows-check-mods-exit-code",
+      "category": "Infrastructure",
+      "audience": "maintainers",
+      "summary": "Wait for the packaged Windows GUI process and validate its real --check-mods exit code.",
+      "compatibility": "not-applicable",
+      "details": [
+        "The release gate now fails on the process object's exit code instead of relying on an unset PowerShell LASTEXITCODE value."
+      ]
+    }
+  ]
+}

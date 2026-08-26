@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "pr": 3,
+  "entries": [
+    {
+      "id": "windows-audio-recovery",
+      "category": "Bugfixes",
+      "audience": "players",
+      "summary": "Recover from Windows audio initialization failures without aborting game startup.",
+      "compatibility": "save-compatible",
+      "details": [
+        "Retry the selected SDL audio backend once, then try DirectSound when no explicit SDL_AUDIODRIVER override is set.",
+        "Load the soundpack only after the mixer opens and continue without sound if every bounded attempt fails.",
+        "Log the selected backend, playback devices, mixer backend, default device, and obtained format."
+      ],
+      "known_limits": [
+        "The recovery remains on the bundled SDL 2 and SDL_mixer stack; Windows hardware-fault injection was not part of validation."
+      ]
+    }
+  ]
+}
