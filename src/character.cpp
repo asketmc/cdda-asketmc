@@ -1392,6 +1392,7 @@ bool Character::check_outbounds_activity( const player_activity &act, bool check
             stashed_outbounds_activity = act;
             if( !backlog.empty() ) {
                 stashed_outbounds_backlog = backlog.front();
+                backlog.pop_front();
             }
             activity = player_activity();
         }
