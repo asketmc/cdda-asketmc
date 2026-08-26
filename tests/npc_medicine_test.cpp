@@ -16,6 +16,7 @@
 #include "vitamin.h"
 
 static const activity_id ACT_FIRSTAID( "ACT_FIRSTAID" );
+static const activity_id ACT_FIND_MOUNT( "ACT_FIND_MOUNT" );
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 static const activity_id ACT_WAIT_NPC( "ACT_WAIT_NPC" );
 
@@ -393,6 +394,40 @@ TEST_CASE( "NPC healing does not duplicate a naturally stashed backlog",
     CHECK( guy.activity.id() == ACT_WAIT_NPC );
     REQUIRE( guy.backlog.size() == 1 );
     CHECK( guy.backlog.front().id() == ACT_MOVE_LOOT );
+}
+
+TEST_CASE( "NPC healing transfers a no-resume stashed backlog exactly once",
+           "[npc][needs][medicine][activity]" )
+{
+    npc &guy = setup_medicine_npc();
+    const bodypart_id arm( "arm_r" );
+    guy.apply_damage( nullptr, arm, 25 );
+    guy.i_add( item( itype_bandages ) );
+    guy.assign_activity( ACT_WAIT_NPC, 5000 );
+    guy.backlog.emplace_back( ACT_FIND_MOUNT );
+    guy.backlog.front().index = 7;
+    guy.backlog.front().auto_resume = true;
+    guy.activity.placement = tripoint_abs_ms( tripoint( 100000, 100000, 0 ) );
+
+    REQUIRE( guy.check_outbounds_activity( guy.activity ) );
+    REQUIRE( guy.activity.is_null() );
+    REQUIRE( guy.has_stashed_activity() );
+    REQUIRE( guy.get_stashed_backlog_activity().id() == ACT_FIND_MOUNT );
+    CHECK( guy.get_stashed_backlog_activity().index == 7 );
+    CHECK( guy.get_stashed_backlog_activity().auto_resume );
+    CHECK( guy.backlog.empty() );
+
+    REQUIRE( start_selected_healing( guy, 0.0f ) );
+    finish_firstaid_only( guy );
+    REQUIRE( guy.has_stashed_activity() );
+    CHECK( guy.backlog.empty() );
+
+    guy.assign_stashed_activity();
+    CHECK( guy.activity.id() == ACT_WAIT_NPC );
+    REQUIRE( guy.backlog.size() == 1 );
+    CHECK( guy.backlog.front().id() == ACT_FIND_MOUNT );
+    CHECK( guy.backlog.front().index == 7 );
+    CHECK( guy.backlog.front().auto_resume );
 }
 
 TEST_CASE( "NPC nanobot healing stops for immediate hazards",
