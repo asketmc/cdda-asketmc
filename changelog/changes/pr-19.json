@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "pr": 19,
+  "entries": [
+    {
+      "id": "remove-blocked-scorecard-workflow",
+      "category": "Infrastructure",
+      "audience": "maintainers",
+      "summary": "Remove the OpenSSF Scorecard workflow that could not run under the repository's GitHub-owned Actions allowlist.",
+      "compatibility": "not-applicable",
+      "details": [
+        "The pinned actionlint and zizmor audits, explicit workflow permissions, and release provenance attestation remain enabled."
+      ]
+    }
+  ]
+}

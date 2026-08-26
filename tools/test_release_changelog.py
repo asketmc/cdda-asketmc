@@ -209,9 +209,11 @@ class RepositoryReleaseHistoryTest(unittest.TestCase):
         integrations = release_changelog.first_parent_integrations(
             ROOT,
             "v0.G-additive-2026.08.26.1",
-            "c685ae3aafcdbcbd5b8d54d200b62aee1e633b80",
+            "dd5525739dff0f516cbb6c8414942e748cb1914e",
         )
-        self.assertEqual([item["pr"] for item in integrations], [8, 9, 10, 11, 17])
+        self.assertEqual(
+            [item["pr"] for item in integrations], [8, 9, 10, 11, 17, 19]
+        )
         _, _, fragments = release_changelog.lint_repository(ROOT, True)
         self.assertTrue(all(item["pr"] in fragments for item in integrations))
 
