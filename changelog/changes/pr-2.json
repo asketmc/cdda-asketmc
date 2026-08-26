@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "pr": 2,
+  "entries": [
+    {
+      "id": "inventory-and-repair-performance",
+      "category": "Performance",
+      "audience": "players",
+      "summary": "Reduce repeated work in recipe lookup, inventory key handling, and repair selection.",
+      "compatibility": "save-compatible",
+      "details": [
+        "Recipe lookup filters candidates before collecting complete source sets.",
+        "Reserved input bindings and repeated repair calculations are cached without changing modifier or component semantics."
+      ]
+    }
+  ]
+}
