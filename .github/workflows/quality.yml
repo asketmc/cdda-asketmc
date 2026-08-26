@@ -15,8 +15,12 @@ concurrency:
 
 jobs:
   portable-contracts:
+    name: Portable contracts
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    permissions:
+      # Read-only checkout of this repository; this gate publishes nothing.
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -34,6 +38,15 @@ jobs:
           echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  actionlint.tar.gz" | sha256sum --check
           tar -xzf actionlint.tar.gz actionlint
           ./actionlint
+
+      - name: Audit GitHub Actions workflows for security defects
+        run: |
+          curl --fail --location --retry 3 \
+            --output zizmor.tar.gz \
+            https://github.com/zizmorcore/zizmor/releases/download/v1.29.0/zizmor-x86_64-unknown-linux-gnu.tar.gz
+          echo "dd96df044a6e8538d5f423790f453bdd03d49e5b2bcc38214acc41a2f1297839  zizmor.tar.gz" | sha256sum --check
+          tar -xzf zizmor.tar.gz zizmor
+          ./zizmor --no-online-audits --persona=pedantic --min-severity=low .github/workflows
       - name: Python feature contracts
         run: |
           python3 -m unittest \
