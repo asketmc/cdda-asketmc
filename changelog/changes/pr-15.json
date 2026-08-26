@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "pr": 15,
+  "entries": [
+    {
+      "id": "legacy-camp-priority-lifecycle",
+      "category": "Features",
+      "audience": "players",
+      "summary": "Let assigned camp workers interrupt work for critical needs, resume it exactly once, return to their assigned camp, and spend downtime inside it.",
+      "compatibility": "save-compatible",
+      "known_limits": [
+        "This keeps the 0.G scheduler and sorting model; it does not import the modern global behavior tree or activity-actor sorter."
+      ]
+    },
+    {
+      "id": "camp-job-fallthrough",
+      "category": "Bugfixes",
+      "audience": "players",
+      "summary": "Fall through to feasible lower-priority camp jobs when sorting has no reachable source or usable destination.",
+      "compatibility": "save-compatible"
+    },
+    {
+      "id": "camp-crafting-preflight",
+      "category": "Bugfixes",
+      "audience": "players",
+      "summary": "Make local and radio camp liquid-storage checks query-pure and reserve separate fixtures for incompatible liquid results.",
+      "compatibility": "save-compatible"
+    }
+  ]
+}
