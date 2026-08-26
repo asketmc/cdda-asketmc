@@ -3931,18 +3931,12 @@ bool npc::needs_warmth() const
 
 float npc::cold_part_warmth_score( const item &candidate ) const
 {
-    const std::map<bodypart_id, int> current_warmth = worn.warmth( *this );
     float score = 0.0f;
     for( const bodypart_id &bp : get_all_body_parts() ) {
         if( get_part_temp_conv( bp ) > BODYTEMP_VERY_COLD || !candidate.covers( bp ) ) {
             continue;
         }
-        const int candidate_warmth = candidate.get_warmth( bp );
-        const auto current = current_warmth.find( bp );
-        const int existing_warmth = current == current_warmth.end() ? 0 : current->second;
-        if( candidate_warmth > existing_warmth ) {
-            score += candidate_warmth - existing_warmth;
-        }
+        score += std::max( 0, candidate.get_warmth( bp ) );
     }
     return score;
 }
