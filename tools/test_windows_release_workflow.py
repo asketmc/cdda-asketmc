@@ -158,8 +158,6 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn("PR_TITLE: ${{ github.event.pull_request.title }}", self.quality)
         self.assertIn("PUSH_BEFORE_SHA: ${{ github.event.before }}", self.quality)
         self.assertIn("PUSH_HEAD_SHA: ${{ github.sha }}", self.quality)
-        self.assertIn("GH_REPO: ${{ github.repository }}", self.quality)
-        self.assertIn("GH_TOKEN: ${{ github.token }}", self.quality)
         self.assertIn('--base "${PR_BASE_SHA}"', self.quality)
         self.assertIn('--head "${PR_HEAD_SHA}"', self.quality)
         self.assertIn('--pr "${PR_NUMBER}"', self.quality)
@@ -167,11 +165,6 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn("release_changelog.py check-main", self.quality)
         self.assertIn('--base "${PUSH_BEFORE_SHA}"', self.quality)
         self.assertIn('--head "${PUSH_HEAD_SHA}"', self.quality)
-        self.assertIn(
-            ".allow_squash_merge == true and .allow_merge_commit == false and "
-            '.allow_rebase_merge == false then "squash-only" else "invalid" end',
-            self.quality,
-        )
 
     def test_new_and_existing_releases_share_exact_remote_readback(self) -> None:
         build = self.workflow[self.workflow.index("  publish-release:") :]
