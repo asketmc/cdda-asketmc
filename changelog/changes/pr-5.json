@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "pr": 5,
+  "entries": [
+    {
+      "id": "deterministic-windows-release-build",
+      "category": "Build",
+      "audience": "maintainers",
+      "summary": "Build Windows x64 Tiles and Sound packages in CI and publish checksum-bound tagged releases.",
+      "compatibility": "not-applicable",
+      "details": [
+        "Pull requests compile with the checksum-pinned MXE GCC toolchain without retaining binaries.",
+        "Tagged main commits build twice and publish only when executable and ZIP hashes reproduce."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "pr": 17,
+  "entries": [
+    {
+      "id": "ci-supply-chain-hardening",
+      "category": "Infrastructure",
+      "audience": "maintainers",
+      "summary": "Harden CI with explicit least privilege, pinned security audits, grouped dependency updates, and build provenance attestations.",
+      "compatibility": "not-applicable",
+      "details": [
+        "Workflow jobs declare their permissions, actionlint and zizmor inspect workflow changes, and release archives receive Sigstore-backed GitHub provenance.",
+        "Dependabot tracks grouped Actions and Python-tooling updates to reduce overlapping CI runs."
+      ]
+    }
+  ]
+}

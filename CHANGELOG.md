@@ -1,0 +1,143 @@
+# CDDA 0.G Additive release changelog
+
+This file is generated from reviewed changelog fragments and immutable release manifests. Do not edit it by hand.
+
+- The release sections below are deltas, newest first.
+- [PATCHNOTES_ADDITIVE_0G.md](PATCHNOTES_ADDITIVE_0G.md) remains the cumulative, curated overview of the fork.
+- [Release process](doc/RELEASING.md) explains how a release is prepared and verified.
+
+## CDDA 0.G Additive 2026.08.26.1
+
+Released: 2026-08-26
+
+Changes since [v0.G-additive-2026.08.25](https://github.com/asketmc/cdda-asketmc/releases/tag/v0.G-additive-2026.08.25).
+
+For the cumulative fork overview, see [PATCHNOTES_ADDITIVE_0G.md](https://github.com/asketmc/cdda-asketmc/blob/main/PATCHNOTES_ADDITIVE_0G.md).
+
+### Player changes
+
+#### Features
+
+- Make EMP-damaged electronics repairable and support the optional temporary reboot behavior. ([PR #4](https://github.com/asketmc/cdda-asketmc/pull/4))
+  - EMP damage now uses explicit electronic faults and data-driven repair or reboot behavior instead of permanently ruining affected devices.
+  - Save compatibility: Compatible with existing 0.G additive saves.
+- Let followers sleep normally and keep fatigue, temperature, and wetness state across active play and loading. ([PR #6](https://github.com/asketmc/cdda-asketmc/pull/6))
+  - Save compatibility: Compatible with existing 0.G additive saves.
+  - Known limit: Offline temperature catch-up is capped and uses current conditions rather than reconstructing historical weather.
+- Use normal digestion for camp water and allow camp residents to receive mopping work. ([PR #6](https://github.com/asketmc/cdda-asketmc/pull/6))
+  - Save compatibility: Compatible with existing 0.G additive saves.
+
+#### Bugfixes
+
+- Recover from Windows audio initialization failures without aborting game startup. ([PR #3](https://github.com/asketmc/cdda-asketmc/pull/3))
+  - Retry the selected SDL audio backend once, then try DirectSound when no explicit SDL\_AUDIODRIVER override is set.
+  - Load the soundpack only after the mixer opens and continue without sound if every bounded attempt fails.
+  - Log the selected backend, playback devices, mixer backend, default device, and obtained format.
+  - Save compatibility: Compatible with existing 0.G additive saves.
+  - Known limit: The recovery remains on the bundled SDL 2 and SDL\_mixer stack; Windows hardware-fault injection was not part of validation.
+- Keep NPC sorting out of personal zones and add new work priorities without overwriting saved choices. ([PR #6](https://github.com/asketmc/cdda-asketmc/pull/6))
+  - Save compatibility: Compatible with existing 0.G additive saves.
+- Report pickup targets removed during an activity without opening a debug-error popup. ([PR #7](https://github.com/asketmc/cdda-asketmc/pull/7))
+  - The activity tells the player how many queued items disappeared, records useful context in debug.log, and continues with surviving targets.
+  - An item location that was never valid still raises a diagnostic because it indicates a programming error.
+  - Save compatibility: Compatible with existing 0.G additive saves.
+- Let NPC mopping jobs find, fetch, and safely wield stored mops. ([PR #12](https://github.com/asketmc/cdda-asketmc/pull/12))
+  - Save compatibility: Compatible with existing 0.G additive saves.
+- Preserve pickup descriptions across save/load and quietly invalidate already-lost NPC butchery targets. ([PR #12](https://github.com/asketmc/cdda-asketmc/pull/12))
+  - Unexpected item-location failures remain loud diagnostics instead of being broadly suppressed.
+  - Save compatibility: Compatible with existing 0.G additive saves.
+
+### Build and maintainer changes
+
+#### Build
+
+- Build Windows x64 Tiles and Sound packages in CI and publish checksum-bound tagged releases. ([PR #5](https://github.com/asketmc/cdda-asketmc/pull/5))
+  - Pull requests compile with the checksum-pinned MXE GCC toolchain without retaining binaries.
+  - Tagged main commits build twice and publish only when executable and ZIP hashes reproduce.
+
+#### Infrastructure
+
+- Wait for the packaged Windows GUI process and validate its real --check-mods exit code. ([PR #16](https://github.com/asketmc/cdda-asketmc/pull/16))
+  - The release gate now fails on the process object's exit code instead of relying on an unset PowerShell LASTEXITCODE value.
+
+### Known limits
+
+- Windows audio recovery was source-compiled and contract-tested, but automatic fallback was not exercised with an injected hardware failure.
+- Follower offline temperature catch-up is capped and uses current conditions instead of replaying historical weather.
+- The release keeps the bounded 0.G donor closure; SDL 3, autonomous follower redesigns, and unrelated later content are not included.
+
+### Validation recorded for this release
+
+- Two clean release builds produced identical executable and ZIP hashes.
+- The exact staged ZIP was checksum-verified and extracted on Windows.
+- Embedded full-commit provenance was verified.
+- The packaged executable passed --check-mods dda.
+
+## CDDA 0.G Additive 2026.08.25
+
+Released: 2026-08-25
+
+This is the first release in the strict changelog chain. It records the fork state at adoption and the pull requests merged into that build.
+
+For the cumulative fork overview, see [PATCHNOTES_ADDITIVE_0G.md](https://github.com/asketmc/cdda-asketmc/blob/main/PATCHNOTES_ADDITIVE_0G.md).
+
+### Player changes
+
+#### Features
+
+- Add the selected EOC scripting APIs required by the fork's additive content and automation features.
+  - Save compatibility: Compatible with existing 0.G additive saves.
+  - Known limit: This is the documented dependency closure, not a wholesale import of the later EOC architecture.
+- Add practical quality-of-life behavior for fast deconstruction, heavy-vehicle movement, BMI health, batch handling, and practical skill use.
+  - Save compatibility: Compatible with existing 0.G additive saves.
+- Add vehicle locks, tiedown handling, workshop functions, generator and backup behavior, automatic drinking, routing improvements, and related vehicle content.
+  - Save compatibility: Compatible with existing 0.G additive saves.
+  - Known limit: Existing vehicles are not broadly retrofitted with newly added parts.
+- Expand follower crafting, rules, nutrition, storage, radio control, camp transfer, brick production, and CBM surgery.
+  - Save compatibility: Compatible with existing 0.G additive saves.
+
+#### Interface
+
+- Expand the Ultica and Surveyors visual sets with current terrain IDs, higher-resolution sprites, multi-Z support, occlusion, animations, themes, fonts, and sound cues.
+  - Existing worlds remain loadable; a new world is recommended when complete exposure to added map content matters.
+  - Save compatibility: A new world is recommended to receive the complete change.
+- Backport inventory, crafting, e-reader, search, item-information, and ASCII-art interface improvements.
+  - Save compatibility: Compatible with existing 0.G additive saves.
+
+#### Mods
+
+- Add riot-equipment repair, CBM salvage, and the bounded Useful Helicopters compatibility subset.
+  - Save compatibility: Compatible with existing 0.G additive saves.
+
+#### Bugfixes
+
+- Fix selected NPC dialogue-close crashes and NPC rotation failures.
+  - Save compatibility: Compatible with existing 0.G additive saves.
+- Keep contained items owned by unloaded NPCs resolvable after saving and loading. ([PR #1](https://github.com/asketmc/cdda-asketmc/pull/1))
+  - Character-rooted contained item locations wait until unloaded NPC owners are registered, while map and vehicle locations retain eager validation.
+  - Save compatibility: Compatible with existing 0.G additive saves.
+
+#### Performance
+
+- Reduce repeated work in recipe lookup, inventory key handling, and repair selection. ([PR #2](https://github.com/asketmc/cdda-asketmc/pull/2))
+  - Recipe lookup filters candidates before collecting complete source sets.
+  - Reserved input bindings and repeated repair calculations are cached without changing modifier or component semantics.
+  - Save compatibility: Compatible with existing 0.G additive saves.
+
+### Build and maintainer changes
+
+#### Infrastructure
+
+- Enforce the 0.G additive preservation boundary with donor provenance, exclusion records, focused contracts, and a fail-closed audit.
+
+### Known limits
+
+- The fork deliberately excludes unrelated later-branch removals, migrations, balance changes, and large architectural rewrites.
+- The cumulative scope and donor-specific limitations remain authoritative in PATCHNOTES\_ADDITIVE\_0G.md and the backport reports.
+
+### Validation recorded for this release
+
+- The exact tagged tree produced a Windows x64 Tiles and Sound build.
+- Dark Days Ahead mod JSON, additive audit, and portable feature contracts passed.
+- The focused item-location regression object compiled.
+- A copied-save load smoke completed with no new item\_location errors.

@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "pr": 6,
+  "entries": [
+    {
+      "id": "follower-local-survival",
+      "category": "Features",
+      "audience": "players",
+      "summary": "Let followers sleep normally and keep fatigue, temperature, and wetness state across active play and loading.",
+      "compatibility": "save-compatible",
+      "known_limits": [
+        "Offline temperature catch-up is capped and uses current conditions rather than reconstructing historical weather."
+      ]
+    },
+    {
+      "id": "camp-water-and-mopping",
+      "category": "Features",
+      "audience": "players",
+      "summary": "Use normal digestion for camp water and allow camp residents to receive mopping work.",
+      "compatibility": "save-compatible"
+    },
+    {
+      "id": "npc-sorting-priorities",
+      "category": "Bugfixes",
+      "audience": "players",
+      "summary": "Keep NPC sorting out of personal zones and add new work priorities without overwriting saved choices.",
+      "compatibility": "save-compatible"
+    }
+  ]
+}

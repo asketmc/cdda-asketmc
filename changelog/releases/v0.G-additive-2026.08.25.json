@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "tag": "v0.G-additive-2026.08.25",
+  "title": "CDDA 0.G Additive 2026.08.25",
+  "date": "2026-08-25",
+  "previous_release": null,
+  "baseline": true,
+  "changes": [
+    {
+      "pr": 1,
+      "fragment_sha256": "9b32cf124857128762afae68254de58d246a706eaa8bff0df3170163c3e9e4f9"
+    },
+    {
+      "pr": 2,
+      "fragment_sha256": "acc5a408a50e74f9dc97bcb4d5e4de9f7a274ca78aee9c66178b920dc39e4274"
+    }
+  ],
+  "baseline_entries": [
+    {
+      "id": "expanded-ultica-visuals",
+      "category": "Interface",
+      "audience": "players",
+      "summary": "Expand the Ultica and Surveyors visual sets with current terrain IDs, higher-resolution sprites, multi-Z support, occlusion, animations, themes, fonts, and sound cues.",
+      "compatibility": "new-world-recommended",
+      "details": [
+        "Existing worlds remain loadable; a new world is recommended when complete exposure to added map content matters."
+      ]
+    },
+    {
+      "id": "inventory-crafting-reader-interface",
+      "category": "Interface",
+      "audience": "players",
+      "summary": "Backport inventory, crafting, e-reader, search, item-information, and ASCII-art interface improvements.",
+      "compatibility": "save-compatible"
+    },
+    {
+      "id": "selected-eoc-scripting-apis",
+      "category": "Features",
+      "audience": "players",
+      "summary": "Add the selected EOC scripting APIs required by the fork's additive content and automation features.",
+      "compatibility": "save-compatible",
+      "known_limits": [
+        "This is the documented dependency closure, not a wholesale import of the later EOC architecture."
+      ]
+    },
+    {
+      "id": "practical-activity-qol",
+      "category": "Features",
+      "audience": "players",
+      "summary": "Add practical quality-of-life behavior for fast deconstruction, heavy-vehicle movement, BMI health, batch handling, and practical skill use.",
+      "compatibility": "save-compatible"
+    },
+    {
+      "id": "vehicle-security-and-cargo",
+      "category": "Features",
+      "audience": "players",
+      "summary": "Add vehicle locks, tiedown handling, workshop functions, generator and backup behavior, automatic drinking, routing improvements, and related vehicle content.",
+      "compatibility": "save-compatible",
+      "known_limits": [
+        "Existing vehicles are not broadly retrofitted with newly added parts."
+      ]
+    },
+    {
+      "id": "followers-and-camps-baseline",
+      "category": "Features",
+      "audience": "players",
+      "summary": "Expand follower crafting, rules, nutrition, storage, radio control, camp transfer, brick production, and CBM surgery.",
+      "compatibility": "save-compatible"
+    },
+    {
+      "id": "repair-salvage-and-helicopter-compatibility",
+      "category": "Mods",
+      "audience": "players",
+      "summary": "Add riot-equipment repair, CBM salvage, and the bounded Useful Helicopters compatibility subset.",
+      "compatibility": "save-compatible"
+    },
+    {
+      "id": "npc-dialogue-and-rotation-stability",
+      "category": "Bugfixes",
+      "audience": "players",
+      "summary": "Fix selected NPC dialogue-close crashes and NPC rotation failures.",
+      "compatibility": "save-compatible"
+    },
+    {
+      "id": "additive-preservation-audit",
+      "category": "Infrastructure",
+      "audience": "maintainers",
+      "summary": "Enforce the 0.G additive preservation boundary with donor provenance, exclusion records, focused contracts, and a fail-closed audit.",
+      "compatibility": "not-applicable"
+    }
+  ],
+  "known_limits": [
+    "The fork deliberately excludes unrelated later-branch removals, migrations, balance changes, and large architectural rewrites.",
+    "The cumulative scope and donor-specific limitations remain authoritative in PATCHNOTES_ADDITIVE_0G.md and the backport reports."
+  ],
+  "validation": [
+    "The exact tagged tree produced a Windows x64 Tiles and Sound build.",
+    "Dark Days Ahead mod JSON, additive audit, and portable feature contracts passed.",
+    "The focused item-location regression object compiled.",
+    "A copied-save load smoke completed with no new item_location errors."
+  ]
+}

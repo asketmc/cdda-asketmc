@@ -1,6 +1,32 @@
 version: 2
 updates:
+  # Workflow actions are pinned to full commit SHAs, so Dependabot is the only
+  # thing that moves them. Group every action bump into a single weekly PR so
+  # one CI run validates the whole set instead of four overlapping runs.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - github_actions
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  # The PR gate pip-installs this file before running the graphics contracts,
+  # so it is executable dependency surface and needs the same tracking.
+  - package-ecosystem: pip
+    directory: /tools/gfx_tools/ultica_hires
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - python
+    groups:
+      python-tooling:
+        patterns:
+          - "*"

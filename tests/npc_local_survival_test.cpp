@@ -24,6 +24,7 @@ static const faction_id faction_your_followers( "your_followers" );
 static const itype_id itype_meat_fatty_cooked( "meat_fatty_cooked" );
 static const itype_id itype_meat_scrap_cooked( "meat_scrap_cooked" );
 static const itype_id itype_bottle_plastic( "bottle_plastic" );
+static const itype_id itype_coat_winter( "coat_winter" );
 static const itype_id itype_sweater( "sweater" );
 static const itype_id itype_water_clean( "water_clean" );
 static const furn_str_id furn_f_toilet( "f_toilet" );
@@ -287,6 +288,13 @@ TEST_CASE_METHOD( local_survival_test_fixture, "NPC local warmth and shelter", "
     SECTION( "inventory clothing" ) {
         guy.i_add( item( itype_sweater ) );
         CHECK( guy.wear_warmest_inventory_item() );
+        CHECK( guy.is_wearing( itype_sweater ) );
+    }
+    SECTION( "useful layers add warmth to an existing outfit" ) {
+        REQUIRE( guy.wear_item( item( itype_coat_winter ), false ) );
+        guy.i_add( item( itype_sweater ) );
+        REQUIRE( guy.wear_warmest_inventory_item() );
+        CHECK( guy.is_wearing( itype_coat_winter ) );
         CHECK( guy.is_wearing( itype_sweater ) );
     }
     SECTION( "clothing must improve a dangerously cold body part" ) {

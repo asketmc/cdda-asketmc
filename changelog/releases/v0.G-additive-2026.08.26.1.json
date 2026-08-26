@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "tag": "v0.G-additive-2026.08.26.1",
+  "title": "CDDA 0.G Additive 2026.08.26.1",
+  "date": "2026-08-26",
+  "previous_release": "v0.G-additive-2026.08.25",
+  "baseline": false,
+  "changes": [
+    {
+      "pr": 4,
+      "fragment_sha256": "e71826175e099651591a36c0b33259392b97eba2f1daa9c670574964d43a9af8"
+    },
+    {
+      "pr": 3,
+      "fragment_sha256": "8abaa563a165a13237aa92a44b7f667e25bbcca0e89b404ac530c3df0c5263a4"
+    },
+    {
+      "pr": 5,
+      "fragment_sha256": "6834bfbc685debb91b9a57b678a07e1cb10a1292ec7429f5954658a7d813ee53"
+    },
+    {
+      "pr": 6,
+      "fragment_sha256": "075a194e0ba042623e414fb973657737bcfec77a2623a27dc45d7e2151904c50"
+    },
+    {
+      "pr": 7,
+      "fragment_sha256": "2c9a7e55183d7efb011a2dc1d7b1fc67ba56008a17addc32e23d56baba246270"
+    },
+    {
+      "pr": 12,
+      "fragment_sha256": "806349be3e3fcc5412098711d1c78974d0f14e1975517d92137f335ed6c92568"
+    },
+    {
+      "pr": 16,
+      "fragment_sha256": "0a3f043241a5d230988cbebf878c101f0e7e9de0244ba5d8f0b6982cce85ddf8"
+    }
+  ],
+  "baseline_entries": [],
+  "known_limits": [
+    "Windows audio recovery was source-compiled and contract-tested, but automatic fallback was not exercised with an injected hardware failure.",
+    "Follower offline temperature catch-up is capped and uses current conditions instead of replaying historical weather.",
+    "The release keeps the bounded 0.G donor closure; SDL 3, autonomous follower redesigns, and unrelated later content are not included."
+  ],
+  "validation": [
+    "Two clean release builds produced identical executable and ZIP hashes.",
+    "The exact staged ZIP was checksum-verified and extracted on Windows.",
+    "Embedded full-commit provenance was verified.",
+    "The packaged executable passed --check-mods dda."
+  ]
+}
