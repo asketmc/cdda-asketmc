@@ -1023,6 +1023,34 @@ std::unordered_set<tripoint_abs_ms> zone_manager::get_near( const zone_type_id &
     return near_point_set;
 }
 
+std::unordered_set<tripoint_abs_ms> zone_manager::get_near_on_map(
+    const zone_type_id &type, const tripoint_abs_ms &where, int range,
+    map &target_map, const faction_id &fac, bool exclude_personal ) const
+{
+    std::unordered_set<tripoint_abs_ms> result;
+    const auto add_zone = [&]( const zone_data & zone ) {
+        if( !zone.get_enabled() || zone.get_type() != type || zone.get_faction() != fac ||
+            ( exclude_personal && zone.get_is_personal() ) ) {
+            return;
+        }
+        for( const tripoint_abs_ms &point : tripoint_range<tripoint_abs_ms>(
+                 zone.get_start_point(), zone.get_end_point() ) ) {
+            if( point.z() == where.z() && square_dist( point, where ) <= range ) {
+                result.insert( point );
+            }
+        }
+    };
+
+    for( const zone_data &zone : zones ) {
+        add_zone( zone );
+    }
+    for( const zone_data *zone : target_map.get_vehicle_zones(
+             target_map.get_abs_sub().z(), false ) ) {
+        add_zone( *zone );
+    }
+    return result;
+}
+
 cata::optional<tripoint_abs_ms> zone_manager::get_nearest( const zone_type_id &type,
         const tripoint_abs_ms &where, int range, const faction_id &fac ) const
 {

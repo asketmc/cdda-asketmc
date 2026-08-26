@@ -231,6 +231,82 @@ constexpr float healing_danger_threshold = 0.01f;
 constexpr int urgent_pain_threshold = 40;
 constexpr int critical_bleed_intensity = 2;
 
+bool same_activity_order( const player_activity &left, const player_activity &right,
+                          const Character &who )
+{
+    if( !left || !right || left.id() != right.id() ) {
+        return false;
+    }
+    player_activity resumable_left = left;
+    player_activity resumable_right = right;
+    resumable_left.auto_resume = false;
+    resumable_right.auto_resume = false;
+    if( resumable_left.can_resume_with( resumable_right, who ) ||
+        resumable_right.can_resume_with( resumable_left, who ) ) {
+        return true;
+    }
+    return left.index == right.index && left.position == right.position &&
+           left.name == right.name && left.targets == right.targets &&
+           left.values == right.values && left.str_values == right.str_values &&
+           left.coords == right.coords && left.coord_set == right.coord_set &&
+           left.placement == right.placement &&
+           left.relative_placement == right.relative_placement;
+}
+
+bool has_activity_order( const npc &worker, const player_activity &order )
+{
+    if( same_activity_order( worker.activity, order, worker ) ||
+        same_activity_order( worker.get_destination_activity(), order, worker ) ||
+        same_activity_order( worker.get_stashed_activity(), order, worker ) ) {
+        return true;
+    }
+    return std::any_of( worker.backlog.begin(), worker.backlog.end(),
+    [&]( const player_activity & queued ) {
+        return same_activity_order( queued, order, worker );
+    } );
+}
+
+bool sort_source_reachable( npc &worker, const tripoint_bub_ms &source )
+{
+    map &here = get_map();
+    if( square_dist( worker.pos_bub(), source ) <= 1 ) {
+        return true;
+    }
+    if( here.passable( source ) ) {
+        return !here.route( worker.pos_bub(), source, worker.get_pathfinding_settings(),
+                            worker.get_path_avoid() ).empty();
+    }
+    std::unordered_set<tripoint_bub_ms> adjacent;
+    for( const tripoint_bub_ms &point : here.points_in_radius( source, 1 ) ) {
+        if( point != worker.pos_bub() && here.passable( point ) ) {
+            adjacent.insert( point );
+        }
+    }
+    for( const tripoint_bub_ms &point :
+         get_sorted_tiles_by_distance( worker.pos_bub(), adjacent ) ) {
+        if( !here.route( worker.pos_bub(), point, worker.get_pathfinding_settings(),
+                         worker.get_path_avoid() ).empty() ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool sort_destination_available( const item &candidate, const tripoint_abs_ms &destination )
+{
+    map &here = get_map();
+    const tripoint_bub_ms local = here.bub_from_abs( destination );
+    if( !here.inbounds( local ) || !here.can_put_items_ter_furn( local ) ||
+        static_cast<int>( here.i_at( local ).size() ) >= MAX_ITEM_IN_SQUARE ) {
+        return false;
+    }
+    if( const cata::optional<vpart_reference> cargo =
+            here.veh_at( local ).part_with_feature( "CARGO", false ) ) {
+        return cargo->vehicle().free_volume( cargo->part_index() ) >= candidate.volume();
+    }
+    return here.free_volume( local ) >= candidate.volume();
+}
+
 bool has_treatable_vitamin_deficiency( const npc &who )
 {
     for( const std::pair<const vitamin_id, vitamin> &entry : vitamin::all() ) {
@@ -261,7 +337,8 @@ bool has_sortable_loot( npc &worker )
         const tripoint_bub_ms local_source = here.bub_from_abs( source );
         if( !here.inbounds( local_source ) || mgr.has( zone_type_LOOT_IGNORE, source, fac ) ||
             here.get_field( local_source, fd_fire ) != nullptr ||
-            !here.can_put_items_ter_furn( local_source ) ) {
+            !here.can_put_items_ter_furn( local_source ) ||
+            !sort_source_reachable( worker, local_source ) ) {
             continue;
         }
 
@@ -279,8 +356,12 @@ bool has_sortable_loot( npc &worker )
                 mgr.custom_loot_has( source, &candidate, zone_type_LOOT_CUSTOM, fac, true ) ) {
                 return false;
             }
-            return !mgr.get_near( destination, origin, ACTIVITY_SEARCH_DISTANCE,
-                                  &candidate, fac, true ).empty();
+            const std::unordered_set<tripoint_abs_ms> destinations = mgr.get_near(
+                        destination, origin, ACTIVITY_SEARCH_DISTANCE, &candidate, fac, true );
+            return std::any_of( destinations.begin(), destinations.end(),
+            [&]( const tripoint_abs_ms & point ) {
+                return sort_destination_available( candidate, point );
+            } );
         };
 
         if( const cata::optional<vpart_reference> cargo =
@@ -1171,8 +1252,12 @@ void npc::move()
         backlog.front().id() == interrupted_order ) {
         backlog.front().auto_resume = true;
     }
-    if( restore_interrupted_stashed_order && !has_stashed_activity() ) {
+    if( restore_interrupted_stashed_order &&
+        !has_activity_order( *this, interrupted_stashed_order ) ) {
         set_stashed_activity( interrupted_stashed_order, interrupted_stashed_backlog );
+        set_attitude( NPCATT_ACTIVITY );
+        set_mission( NPC_MISSION_ACTIVITY );
+        current_activity_id = interrupted_stashed_order.id();
     }
 }
 
@@ -2834,6 +2919,12 @@ void npc::worker_downtime()
     const auto within_assigned_camp = [&]( const tripoint & local ) {
         return ( *camp )->point_within_camp( project_to<coords::omt>( here.getglobal( local ) ) );
     };
+    if( chair_pos && !within_assigned_camp( here.getlocal( *chair_pos ) ) ) {
+        chair_pos = cata::nullopt;
+    }
+    if( wander_pos && !within_assigned_camp( here.getlocal( *wander_pos ) ) ) {
+        wander_pos = cata::nullopt;
+    }
     // are we already in a chair
     if( here.has_flag_furn( ter_furn_flag::TFLAG_CAN_SIT, pos() ) ) {
         // just chill here

@@ -403,16 +403,20 @@ std::vector<npc_ptr> basecamp::available_crafting_workers() const
 }
 
 cata::optional<tripoint_abs_ms> basecamp::liquid_storage_for(
-    const item &liquid, map &target_map, const tripoint_abs_ms &storage_origin ) const
+    const item &liquid, map &target_map, const tripoint_abs_ms &storage_origin,
+    const std::unordered_map<tripoint_abs_ms, itype_id> *reservations ) const
 {
     zone_manager &mgr = zone_manager::get_manager();
-    if( target_map.check_vehicle_zones( target_map.get_abs_sub().z() ) ) {
-        mgr.cache_vzones( &target_map );
-    }
     const std::unordered_set<tripoint_abs_ms> storage_tiles =
-        mgr.get_near( zone_type_CAMP_STORAGE, storage_origin, 60 );
+        mgr.get_near_on_map( zone_type_CAMP_STORAGE, storage_origin, 60, target_map );
     for( const tripoint_abs_ms &tile :
          get_sorted_tiles_by_distance( storage_origin, storage_tiles ) ) {
+        if( reservations != nullptr ) {
+            const auto reservation = reservations->find( tile );
+            if( reservation != reservations->end() && reservation->second != liquid.typeId() ) {
+                continue;
+            }
+        }
         const tripoint local_tile = target_map.getlocal( tile );
         if( !target_map.inbounds( local_tile ) ||
             !target_map.has_flag_ter_or_furn( ter_furn_flag::TFLAG_LIQUIDCONT, local_tile ) ) {
@@ -444,15 +448,21 @@ bool basecamp::has_storage_for_craft( const recipe &making, map &target_map,
         return true;
     }
 
-    return std::all_of( results.begin(), results.end(),
-    [&]( const item & result ) {
-        return !result.made_of( phase_id::LIQUID ) ||
-               liquid_storage_for( result, target_map, storage_origin );
-    } ) && std::all_of( byproducts.begin(), byproducts.end(),
-    [&]( const item & result ) {
-        return !result.made_of( phase_id::LIQUID ) ||
-               liquid_storage_for( result, target_map, storage_origin );
-    } );
+    std::unordered_map<tripoint_abs_ms, itype_id> reservations;
+    const auto reserve_liquid = [&]( const item & result ) {
+        if( !result.made_of( phase_id::LIQUID ) ) {
+            return true;
+        }
+        const cata::optional<tripoint_abs_ms> storage = liquid_storage_for(
+                    result, target_map, storage_origin, &reservations );
+        if( !storage ) {
+            return false;
+        }
+        reservations.emplace( *storage, result.typeId() );
+        return true;
+    };
+    return std::all_of( results.begin(), results.end(), reserve_liquid ) &&
+           std::all_of( byproducts.begin(), byproducts.end(), reserve_liquid );
 }
 
 faction *basecamp::fac() const
@@ -634,6 +644,8 @@ void basecamp::add_assignee( character_id id )
     }
     npc_to_add->assigned_camp = omt_pos;
     npc_to_add->camp_duty = true;
+    npc_to_add->chair_pos = cata::nullopt;
+    npc_to_add->wander_pos = cata::nullopt;
     assigned_npcs.push_back( npc_to_add );
 }
 
@@ -646,6 +658,8 @@ void basecamp::remove_assignee( character_id id )
     }
     npc_to_remove->assigned_camp = cata::nullopt;
     npc_to_remove->camp_duty = false;
+    npc_to_remove->chair_pos = cata::nullopt;
+    npc_to_remove->wander_pos = cata::nullopt;
     assigned_npcs.erase( std::remove( assigned_npcs.begin(), assigned_npcs.end(), npc_to_remove ),
                          assigned_npcs.end() );
 }

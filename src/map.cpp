@@ -1083,7 +1083,7 @@ bool map::check_vehicle_zones( const int zlev )
     return false;
 }
 
-std::vector<zone_data *> map::get_vehicle_zones( const int zlev )
+std::vector<zone_data *> map::get_vehicle_zones( const int zlev, bool update_zone_cache )
 {
     std::vector<zone_data *> veh_zones;
     bool rebuild = false;
@@ -1095,7 +1095,7 @@ std::vector<zone_data *> map::get_vehicle_zones( const int zlev )
             veh_zones.emplace_back( &zone.second );
         }
     }
-    if( rebuild ) {
+    if( rebuild && update_zone_cache ) {
         zone_manager::get_manager().cache_vzones();
     }
     return veh_zones;

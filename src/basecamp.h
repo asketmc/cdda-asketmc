@@ -10,6 +10,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -293,7 +294,8 @@ class basecamp
         }
         cata::optional<tripoint_abs_ms> liquid_storage_for(
             const item &liquid, map &target_map,
-            const tripoint_abs_ms &storage_origin ) const;
+            const tripoint_abs_ms &storage_origin,
+            const std::unordered_map<tripoint_abs_ms, itype_id> *reservations = nullptr ) const;
         bool form_storage_zones( map &here, const tripoint_abs_ms &abspos );
         void place_results( const item &result );
 
