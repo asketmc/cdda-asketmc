@@ -23,7 +23,6 @@ static const ter_str_id ter_downspout( "t_gutter_downspout" );
 static const furn_str_id furn_ladder( "f_ladder" );
 static const furn_str_id furn_rope( "f_rope_up" );
 static const furn_str_id furn_web( "f_web_up" );
-static const trap_str_id trap_ledge( "tr_ledge" );
 static const trait_id trait_web_rappel( "WEB_RAPPEL" );
 static const json_character_flag json_flag_web_rappel( "WEB_RAPPEL" );
 static const itype_id itype_grapnel_test( "grapnel" );
@@ -40,7 +39,6 @@ static void prepare_drop( const int height )
             here.set( p, ter_open_air.id(), furn_str_id( "f_null" ).id() );
         }
     }
-    here.trap_set( drop_top, trap_ledge.id() );
     here.ter_set( tripoint( drop_top.xy(), -height ), ter_pavement.id() );
     here.ter_set( tripoint( drop_top.xy(), -height - 1 ), ter_rock.id() );
 }
