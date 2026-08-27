@@ -84,7 +84,7 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
     def test_focused_climbing_catch_gate_executes_and_fails_closed(self) -> None:
         self.assertIn("sudo apt-get install --yes ccache wine64", self.workflow)
         self.assertIn(
-            'TEST_SOURCES="test_main.cpp map_helpers.cpp player_helpers.cpp climbing_test.cpp"',
+            'TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp player_helpers.cpp climbing_test.cpp"',
             self.workflow,
         )
         self.assertIn('"${test_bin}"', self.workflow)

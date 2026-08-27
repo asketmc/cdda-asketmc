@@ -25,6 +25,7 @@ static const furn_id furn_rope( "f_rope_up" );
 static const furn_id furn_web( "f_web_up" );
 static const trap_id trap_ledge( "tr_ledge" );
 static const trait_id trait_web_rappel( "WEB_RAPPEL" );
+static const json_character_flag json_flag_web_rappel( "WEB_RAPPEL" );
 static const itype_id itype_grapnel_test( "grapnel" );
 static const vproto_id vehicle_shopping_cart( "shopping_cart" );
 
@@ -110,8 +111,10 @@ TEST_CASE( "supported ledge descent action is safe and preserves climbing tools"
 {
     avatar &you = get_avatar();
     map &here = get_map();
+    here.vertical_shift( 0 );
     clear_character( you );
-    on_out_of_scope reset_you( [&you]() {
+    on_out_of_scope reset_you( [&here, &you]() {
+        here.vertical_shift( 0 );
         clear_character( you );
     } );
 
@@ -134,7 +137,10 @@ TEST_CASE( "supported ledge descent action is safe and preserves climbing tools"
         here.ter_set( drop_top + tripoint_below + tripoint_east, ter_downspout );
         you.i_add( item( itype_grapnel_test ) );
         you.set_mutation( trait_web_rappel );
+        you.activate_mutation( trait_web_rappel );
         REQUIRE( you.has_amount( itype_grapnel_test, 1 ) );
+        REQUIRE( you.has_active_mutation( trait_web_rappel ) );
+        REQUIRE( you.has_flag( json_flag_web_rappel ) );
 
         CHECK( iexamine_helper::climb_down_supported_ledge(
                    you, drop_top, 1, 1.0f, 0.0f ) );

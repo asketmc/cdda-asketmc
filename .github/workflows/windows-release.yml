@@ -203,7 +203,7 @@ jobs:
             "CROSS=${cross}" \
             "CCACHE=${cache_mode}" RELEASE=1 TILES=1 SOUND=1 LOCALIZE=0 RUNTESTS=1 \
             LINTJSON=0 ASTYLE=0 WARNINGS=-w BACKTRACE=1 LIBBACKTRACE=1 PCH=0 \
-            TEST_SOURCES="test_main.cpp map_helpers.cpp player_helpers.cpp climbing_test.cpp" \
+            TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp player_helpers.cpp climbing_test.cpp" \
             tests
           test_bin="tests/${first_prefix}cata_test.exe"
           test -s "${test_bin}"
