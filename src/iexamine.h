@@ -174,6 +174,8 @@ namespace iexamine_helper
 {
 bool drink_nectar( Character &you );
 void handle_harvest( Character &you, const std::string &itemid, bool force_drop );
+bool climb_down_supported_ledge( Character &you, const tripoint &examp, int height,
+                                 float weary_mult, float fall_mod );
 } // namespace iexamine_helper
 
 using iexamine_examine_function = void ( * )( Character &, const tripoint & );

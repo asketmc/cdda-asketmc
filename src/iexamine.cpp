@@ -4950,6 +4950,20 @@ void iexamine::pay_gas( Character &you, const tripoint &examp )
     }
 }
 
+bool iexamine_helper::climb_down_supported_ledge( Character &you, const tripoint &examp,
+        const int height, const float weary_mult, const float fall_mod )
+{
+    if( height <= 0 || !you.can_climb_down_safely( examp, height ) ) {
+        return false;
+    }
+
+    you.moves -= to_moves<int>( 1_seconds + 1_seconds * fall_mod ) * weary_mult;
+    you.setpos( examp );
+    you.add_msg_if_player( _( "You use the available support to climb down safely." ) );
+    g->vertical_move( -height, true );
+    return true;
+}
+
 void iexamine::ledge( Character &you, const tripoint &examp )
 {
 
@@ -5077,34 +5091,34 @@ void iexamine::ledge( Character &you, const tripoint &examp )
                 }
             }
 
-            you.moves -= to_moves<int>( 1_seconds + 1_seconds * fall_mod ) * weary_mult;
-            you.setpos( examp );
+            if( !iexamine_helper::climb_down_supported_ledge(
+                    you, examp, height, weary_mult, fall_mod ) ) {
+                you.moves -= to_moves<int>( 1_seconds + 1_seconds * fall_mod ) * weary_mult;
+                you.setpos( examp );
 
-            if( safe_descent ) {
-                you.add_msg_if_player( _( "You use the available support to climb down safely." ) );
-                g->vertical_move( -height, true );
-            } else if( web_rappel ) {
-                you.add_msg_if_player(
-                    _( "You affix a long, sticky strand on the ledge and begin your descent." ) );
-                tripoint web = examp;
-                web.z--;
-                // Leave a web rope on each step
-                for( int i = 0; i < height; i++ ) {
-                    here.furn_set( web, furn_f_web_up );
+                if( web_rappel ) {
+                    you.add_msg_if_player(
+                        _( "You affix a long, sticky strand on the ledge and begin your descent." ) );
+                    tripoint web = examp;
                     web.z--;
+                    // Leave a web rope on each step
+                    for( int i = 0; i < height; i++ ) {
+                        here.furn_set( web, furn_f_web_up );
+                        web.z--;
+                    }
+                    g->vertical_move( -height, true );
+                } else if( has_grapnel ) {
+                    you.add_msg_if_player( _( "You tie the rope around your waist and begin to climb down." ) );
+                    g->vertical_move( -1, true );
+                    you.use_amount( itype_grapnel, 1 );
+                    here.furn_set( you.pos(), furn_f_rope_up );
+                } else if( !g->slip_down( true ) ) {
+                    // One tile of falling less (possibly zero)
+                    add_msg_debug( debugmode::DF_IEXAMINE, "Safe movement down one Z-level" );
+                    g->vertical_move( -1, true );
+                } else {
+                    return;
                 }
-                g->vertical_move( -height, true );
-            } else if( has_grapnel ) {
-                you.add_msg_if_player( _( "You tie the rope around your waist and begin to climb down." ) );
-                g->vertical_move( -1, true );
-                you.use_amount( itype_grapnel, 1 );
-                here.furn_set( you.pos(), furn_f_rope_up );
-            } else if( !g->slip_down( true ) ) {
-                // One tile of falling less (possibly zero)
-                add_msg_debug( debugmode::DF_IEXAMINE, "Safe movement down one Z-level" );
-                g->vertical_move( -1, true );
-            } else {
-                return;
             }
             if( here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, you.pos() ) ) {
                 you.set_underwater( true );

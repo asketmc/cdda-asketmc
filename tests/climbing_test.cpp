@@ -1,10 +1,14 @@
 #include "cata_catch.h"
 
 #include "avatar.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
+#include "iexamine.h"
+#include "item.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_iterator.h"
+#include "player_helpers.h"
 #include "point.h"
 #include "type_id.h"
 #include "units.h"
@@ -17,7 +21,11 @@ static const ter_id ter_wall( "t_wall" );
 static const ter_id ter_chain_fence( "t_chainfence" );
 static const ter_id ter_downspout( "t_gutter_downspout" );
 static const furn_id furn_ladder( "f_ladder" );
+static const furn_id furn_rope( "f_rope_up" );
+static const furn_id furn_web( "f_web_up" );
 static const trap_id trap_ledge( "tr_ledge" );
+static const trait_id trait_web_rappel( "WEB_RAPPEL" );
+static const itype_id itype_grapnel_test( "grapnel" );
 static const vproto_id vehicle_shopping_cart( "shopping_cart" );
 
 static const tripoint drop_top( 60, 60, 0 );
@@ -95,4 +103,56 @@ TEST_CASE( "multi-level ledge descent requires support on every level", "[climbi
 
     here.ter_set( lower_support, ter_downspout );
     CHECK( you.can_climb_down_safely( drop_top, 2 ) );
+}
+
+TEST_CASE( "supported ledge descent action is safe and preserves climbing tools",
+           "[climbing][z-level][iexamine]" )
+{
+    avatar &you = get_avatar();
+    map &here = get_map();
+    clear_character( you );
+    on_out_of_scope reset_you( [&you]() {
+        clear_character( you );
+    } );
+
+    const tripoint start = drop_top + tripoint_west;
+    you.setpos( start );
+    you.moves = 1000;
+
+    SECTION( "an unsupported ledge leaves the risky action untouched" ) {
+        prepare_drop( 1 );
+        const int starting_moves = you.moves;
+
+        CHECK_FALSE( iexamine_helper::climb_down_supported_ledge(
+                         you, drop_top, 1, 1.0f, 0.0f ) );
+        CHECK( you.pos() == start );
+        CHECK( you.moves == starting_moves );
+    }
+
+    SECTION( "one supported level descends without consuming a grapnel or deploying webs" ) {
+        prepare_drop( 1 );
+        here.ter_set( drop_top + tripoint_below + tripoint_east, ter_downspout );
+        you.i_add( item( itype_grapnel_test ) );
+        you.set_mutation( trait_web_rappel );
+        REQUIRE( you.has_amount( itype_grapnel_test, 1 ) );
+
+        CHECK( iexamine_helper::climb_down_supported_ledge(
+                   you, drop_top, 1, 1.0f, 0.0f ) );
+        CHECK( you.pos() == drop_top + tripoint_below );
+        CHECK( you.has_amount( itype_grapnel_test, 1 ) );
+        CHECK( here.furn( you.pos() ) != furn_rope );
+        CHECK( here.furn( you.pos() ) != furn_web );
+    }
+
+    SECTION( "multi-level support descends the exact supported height" ) {
+        prepare_drop( 2 );
+        here.ter_set( drop_top + tripoint_below + tripoint_east, ter_downspout );
+        here.ter_set( drop_top + tripoint_below + tripoint_below + tripoint_east,
+                      ter_downspout );
+
+        CHECK( iexamine_helper::climb_down_supported_ledge(
+                   you, drop_top, 2, 1.0f, 0.0f ) );
+        CHECK( you.pos() == drop_top + tripoint_below + tripoint_below );
+        CHECK( here.furn( drop_top + tripoint_below ) != furn_web );
+    }
 }

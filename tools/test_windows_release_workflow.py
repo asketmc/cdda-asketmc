@@ -16,6 +16,7 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
             encoding="utf-8"
         )
         cls.makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+        cls.tests_makefile = (ROOT / "tests" / "Makefile").read_text(encoding="utf-8")
 
     def test_all_actions_are_pinned_to_full_commit(self) -> None:
         uses = re.findall(r"^\s+(?:- )?uses:\s*([^\s#]+)", self.workflow, flags=re.MULTILINE)
@@ -79,6 +80,20 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn('test "${first_zip}" = "${second_zip}"', self.workflow)
         self.assertIn('build_distribution "${second_prefix}" 0', self.workflow)
         self.assertIn('export SOURCE_DATE_EPOCH="${source_epoch}"', self.workflow)
+
+    def test_focused_climbing_catch_gate_executes_and_fails_closed(self) -> None:
+        self.assertIn("sudo apt-get install --yes ccache wine64", self.workflow)
+        self.assertIn(
+            'TEST_SOURCES="test_main.cpp map_helpers.cpp player_helpers.cpp climbing_test.cpp"',
+            self.workflow,
+        )
+        self.assertIn('"${test_bin}"', self.workflow)
+        self.assertIn('"[climbing][z-level]"', self.workflow)
+        self.assertIn("timeout 10m", self.workflow)
+        self.assertIn("focused climbing gate discovered zero test cases", self.workflow)
+        self.assertIn("focused climbing gate reported", self.workflow)
+        self.assertIn("ifdef TEST_SOURCES", self.tests_makefile)
+        self.assertIn("SOURCES = $(TEST_SOURCES)", self.tests_makefile)
 
     def test_reviewed_documents_are_inside_and_outside_the_archive(self) -> None:
         build = self.workflow[

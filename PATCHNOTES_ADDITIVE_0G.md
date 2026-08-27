@@ -10,7 +10,8 @@ The matching Windows Tiles+Sound package is published under GitHub Releases.
   braced wall, or vehicle.
 - A multi-level descent is safe only when every level has support. Unsupported
   ledges retain the existing risky climb or fall confirmation and damage.
-- Existing grappling-hook, rope, and web-rappelling behavior is unchanged.
+- Unsupported ledges keep the existing grappling-hook, rope, and web-rappelling
+  behavior. Supported routes take priority without consuming or deploying them.
 
 ## Windows audio recovery
 
