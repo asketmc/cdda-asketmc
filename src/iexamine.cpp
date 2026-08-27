@@ -5027,6 +5027,7 @@ void iexamine::ledge( Character &you, const tripoint &examp )
             bool has_grapnel = you.has_amount( itype_grapnel, 1 );
             bool web_rappel = you.has_flag( json_flag_WEB_RAPPEL );
             const int climb_cost = you.climbing_cost( where, examp );
+            const bool safe_descent = you.can_climb_down_safely( examp, height );
             const float fall_mod = you.fall_damage_mod();
             add_msg_debug( debugmode::DF_IEXAMINE, "Climb cost %d", climb_cost );
             add_msg_debug( debugmode::DF_IEXAMINE, "Fall damage modifier %.2f", fall_mod );
@@ -5040,13 +5041,13 @@ void iexamine::ledge( Character &you, const tripoint &examp )
                                        "Looks like %d stories.  Nothing your webs can't handle.  Descend?", height );
             }
 
-            if( height > 1 && !query_yn( query_str, height ) ) {
+            if( height > 1 && !safe_descent && !query_yn( query_str, height ) ) {
                 return;
             } else if( height == 1 ) {
                 you.set_activity_level( ACTIVE_EXERCISE );
                 weary_mult = 1.0f / you.exertion_adjusted_move_multiplier( ACTIVE_EXERCISE );
 
-                if( has_grapnel ) {
+                if( has_grapnel && !safe_descent ) {
                     if( !query_yn( _( "Use your grappling hook to climb down?" ) ) ) {
                         has_grapnel = false;
                     } else {
@@ -5054,7 +5055,7 @@ void iexamine::ledge( Character &you, const tripoint &examp )
                     }
                 }
 
-                if( !has_grapnel ) {
+                if( !has_grapnel && !safe_descent ) {
                     const char *query;
                     if( web_rappel ) {
                         query = _( "Use your webs to descend?" );
@@ -5079,7 +5080,10 @@ void iexamine::ledge( Character &you, const tripoint &examp )
             you.moves -= to_moves<int>( 1_seconds + 1_seconds * fall_mod ) * weary_mult;
             you.setpos( examp );
 
-            if( web_rappel ) {
+            if( safe_descent ) {
+                you.add_msg_if_player( _( "You use the available support to climb down safely." ) );
+                g->vertical_move( -height, true );
+            } else if( web_rappel ) {
                 you.add_msg_if_player(
                     _( "You affix a long, sticky strand on the ledge and begin your descent." ) );
                 tripoint web = examp;
