@@ -14,16 +14,16 @@
 #include "units.h"
 #include "vehicle.h"
 
-static const ter_id ter_open_air( "t_open_air" );
-static const ter_id ter_pavement( "t_pavement" );
-static const ter_id ter_rock( "t_rock" );
-static const ter_id ter_wall( "t_wall" );
-static const ter_id ter_chain_fence( "t_chainfence" );
-static const ter_id ter_downspout( "t_gutter_downspout" );
-static const furn_id furn_ladder( "f_ladder" );
-static const furn_id furn_rope( "f_rope_up" );
-static const furn_id furn_web( "f_web_up" );
-static const trap_id trap_ledge( "tr_ledge" );
+static const ter_str_id ter_open_air( "t_open_air" );
+static const ter_str_id ter_pavement( "t_pavement" );
+static const ter_str_id ter_rock( "t_rock" );
+static const ter_str_id ter_wall( "t_wall" );
+static const ter_str_id ter_chain_fence( "t_chainfence" );
+static const ter_str_id ter_downspout( "t_gutter_downspout" );
+static const furn_str_id furn_ladder( "f_ladder" );
+static const furn_str_id furn_rope( "f_rope_up" );
+static const furn_str_id furn_web( "f_web_up" );
+static const trap_str_id trap_ledge( "tr_ledge" );
 static const trait_id trait_web_rappel( "WEB_RAPPEL" );
 static const json_character_flag json_flag_web_rappel( "WEB_RAPPEL" );
 static const itype_id itype_grapnel_test( "grapnel" );
@@ -37,12 +37,12 @@ static void prepare_drop( const int height )
     map &here = get_map();
     for( int z = 0; z >= -height; --z ) {
         for( const tripoint &p : here.points_in_radius( tripoint( drop_top.xy(), z ), 2 ) ) {
-            here.set( p, ter_open_air, furn_id( "f_null" ) );
+            here.set( p, ter_open_air.id(), furn_str_id( "f_null" ).id() );
         }
     }
-    here.trap_set( drop_top, trap_ledge );
-    here.ter_set( tripoint( drop_top.xy(), -height ), ter_pavement );
-    here.ter_set( tripoint( drop_top.xy(), -height - 1 ), ter_rock );
+    here.trap_set( drop_top, trap_ledge.id() );
+    here.ter_set( tripoint( drop_top.xy(), -height ), ter_pavement.id() );
+    here.ter_set( tripoint( drop_top.xy(), -height - 1 ), ter_rock.id() );
 }
 
 TEST_CASE( "supported ledge descent mirrors upward climbing", "[climbing][z-level]" )
@@ -57,19 +57,19 @@ TEST_CASE( "supported ledge descent mirrors upward climbing", "[climbing][z-leve
 
     SECTION( "a downspout supports a safe descent" ) {
         prepare_drop( 1 );
-        here.ter_set( drop_top + tripoint_below + tripoint_east, ter_downspout );
+        here.ter_set( drop_top + tripoint_below + tripoint_east, ter_downspout.id() );
         CHECK( you.can_climb_down_safely( drop_top, 1 ) );
     }
 
     SECTION( "a ladder supports a safe descent" ) {
         prepare_drop( 1 );
-        here.furn_set( drop_top + tripoint_below, furn_ladder );
+        here.furn_set( drop_top + tripoint_below, furn_ladder.id() );
         CHECK( you.can_climb_down_safely( drop_top, 1 ) );
     }
 
     SECTION( "a fence supports a safe descent" ) {
         prepare_drop( 1 );
-        here.ter_set( drop_top + tripoint_below + tripoint_east, ter_chain_fence );
+        here.ter_set( drop_top + tripoint_below + tripoint_east, ter_chain_fence.id() );
         CHECK( you.can_climb_down_safely( drop_top, 1 ) );
     }
 
@@ -78,7 +78,7 @@ TEST_CASE( "supported ledge descent mirrors upward climbing", "[climbing][z-leve
         const tripoint lower = drop_top + tripoint_below;
         for( const tripoint &offset : { tripoint_north, tripoint_south, tripoint_east,
                                        tripoint_west, tripoint_north_east } ) {
-            here.ter_set( lower + offset, ter_wall );
+            here.ter_set( lower + offset, ter_wall.id() );
         }
         CHECK( you.can_climb_down_safely( drop_top, 1 ) );
     }
@@ -99,10 +99,10 @@ TEST_CASE( "multi-level ledge descent requires support on every level", "[climbi
 
     const tripoint upper_support = drop_top + tripoint_below + tripoint_east;
     const tripoint lower_support = upper_support + tripoint_below;
-    here.ter_set( upper_support, ter_downspout );
+    here.ter_set( upper_support, ter_downspout.id() );
     CHECK_FALSE( you.can_climb_down_safely( drop_top, 2 ) );
 
-    here.ter_set( lower_support, ter_downspout );
+    here.ter_set( lower_support, ter_downspout.id() );
     CHECK( you.can_climb_down_safely( drop_top, 2 ) );
 }
 
@@ -134,7 +134,7 @@ TEST_CASE( "supported ledge descent action is safe and preserves climbing tools"
 
     SECTION( "one supported level descends without consuming a grapnel or deploying webs" ) {
         prepare_drop( 1 );
-        here.ter_set( drop_top + tripoint_below + tripoint_east, ter_downspout );
+        here.ter_set( drop_top + tripoint_below + tripoint_east, ter_downspout.id() );
         you.i_add( item( itype_grapnel_test ) );
         you.set_mutation( trait_web_rappel );
         you.activate_mutation( trait_web_rappel );
@@ -146,19 +146,19 @@ TEST_CASE( "supported ledge descent action is safe and preserves climbing tools"
                    you, drop_top, 1, 1.0f, 0.0f ) );
         CHECK( you.pos() == drop_top + tripoint_below );
         CHECK( you.has_amount( itype_grapnel_test, 1 ) );
-        CHECK( here.furn( you.pos() ) != furn_rope );
-        CHECK( here.furn( you.pos() ) != furn_web );
+        CHECK( here.furn( you.pos() ) != furn_rope.id() );
+        CHECK( here.furn( you.pos() ) != furn_web.id() );
     }
 
     SECTION( "multi-level support descends the exact supported height" ) {
         prepare_drop( 2 );
-        here.ter_set( drop_top + tripoint_below + tripoint_east, ter_downspout );
+        here.ter_set( drop_top + tripoint_below + tripoint_east, ter_downspout.id() );
         here.ter_set( drop_top + tripoint_below + tripoint_below + tripoint_east,
-                      ter_downspout );
+                      ter_downspout.id() );
 
         CHECK( iexamine_helper::climb_down_supported_ledge(
                    you, drop_top, 2, 1.0f, 0.0f ) );
         CHECK( you.pos() == drop_top + tripoint_below + tripoint_below );
-        CHECK( here.furn( drop_top + tripoint_below ) != furn_web );
+        CHECK( here.furn( drop_top + tripoint_below ) != furn_web.id() );
     }
 }
