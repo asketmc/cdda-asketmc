@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "pr": 24,
+  "entries": [
+    {
+      "id": "windows-per-monitor-dpi",
+      "category": "Interface",
+      "audience": "players",
+      "summary": "Keep the Windows tiles interface sharp and fully visible across mixed-DPI monitors.",
+      "compatibility": "save-compatible",
+      "details": [
+        "Windowed and maximized layouts preserve at least an 80x24 terminal while fitting the active monitor work area.",
+        "Moving the game between monitors refreshes fonts, render targets, window placement, and fullscreen restore dimensions without compounding scale changes."
+      ]
+    }
+  ]
+}
