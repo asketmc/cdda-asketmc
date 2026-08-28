@@ -163,6 +163,12 @@ class inventory_entry
 
         int get_total_charges() const;
         int get_selected_charges() const;
+        units::mass get_total_weight() const {
+            return cached_weight;
+        }
+        units::volume get_total_volume() const {
+            return cached_volume;
+        }
 
         size_t get_available_count() const;
         const item_category *get_category_ptr() const;
@@ -187,6 +193,8 @@ class inventory_entry
 
     private:
         const item_category *custom_category = nullptr;
+        units::mass cached_weight = 0_gram;
+        units::volume cached_volume = 0_ml;
     protected:
         // indents the entry if it is contained in an item
         bool _indent = true;
@@ -646,6 +654,7 @@ class inventory_selector
         }
 
         void categorize_map_items( bool toggle );
+        void enable_sorting();
 
         // An array of cells for the stat lines. Example: ["Weight (kg)", "10", "/", "20"].
         using stat = std::array<std::string, 4>;
@@ -696,7 +705,6 @@ class inventory_selector
                 bool only_digits = false );
         /** Query the user for a filter and apply it. */
         void query_set_filter();
-        void enable_sorting();
         void query_sort_mode();
         std::string sort_mode_name() const;
         /** Query the user for count and return it. */

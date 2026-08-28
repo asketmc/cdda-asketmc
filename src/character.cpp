@@ -8046,7 +8046,10 @@ units::volume Character::free_space() const
 
 units::mass Character::free_weight_capacity() const
 {
-    return weapon.get_remaining_weight_capacity() + worn.free_weight_capacity();
+    const units::mass pocket_capacity = weapon.get_remaining_weight_capacity() +
+                                        worn.free_weight_capacity();
+    const units::mass carry_capacity = std::max( 0_gram, weight_capacity() - weight_carried() );
+    return std::min( pocket_capacity, carry_capacity );
 }
 
 units::volume Character::holster_volume() const

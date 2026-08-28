@@ -2160,6 +2160,7 @@ drop_locations game_menus::inv::multidrop( avatar &you )
     } );
 
     inventory_drop_selector inv_s( you, preset );
+    inv_s.enable_sorting();
 
     inv_s.add_character_items( you );
     inv_s.set_title( _( "Multidrop" ) );

@@ -270,13 +270,13 @@ global behavior tree and mission scheduler are not included.
 
 - Advanced Inventory Manager adds **amount**, **barter value per volume**, and
   **barter value per weight** sorting.
-- Capacity-limited **Move All** checks both volume and pocket weight capacity,
-  warns about the active limit, and tries smaller fitting items first. The
+- Capacity-limited **Move All** checks volume, pocket limits, and character
+  carry weight, warns about the active limit, and tries smaller items first. The
   donor's unrelated bucket and container behavior changes are not included.
 - Classic pickup (`g`) and drop (`D`) selectors can sort stacks within their
   existing categories by total weight or total volume with **Ctrl+S**.
-- Right Arrow and Numpad 6 confirm numeric quantity input when the cursor is at
-  the end; ordinary text editing keeps its normal cursor behavior.
+- Right Arrow and Numpad 6 with NumLock off confirm numeric quantity input when
+  the cursor is at the end; ordinary text editing keeps its normal behavior.
 - Recipe details now show the exact **minor failure chance** for this fork's
   unchanged 0.G crafting roll. This is information only: success, minor
   failure, catastrophic failure, skill, proficiency, and component behavior

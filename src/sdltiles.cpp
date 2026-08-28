@@ -2048,6 +2048,8 @@ static int sdl_keysym_to_curses( const SDL_Keysym &keysym )
             return KEY_LEFT;
         case SDLK_RIGHT:
             return KEY_RIGHT;
+        case SDLK_KP_6:
+            return keysym.mod & KMOD_NUM ? 0 : KEY_RIGHT;
         case SDLK_UP:
             return KEY_UP;
         case SDLK_DOWN:

@@ -1955,7 +1955,10 @@
     "id": "SORT",
     "category": "INVENTORY",
     "name": "Sort items",
-    "bindings": [ { "input_method": "keyboard_code", "key": "s", "mod": [ "ctrl" ] } ]
+    "bindings": [
+      { "input_method": "keyboard_char", "key": "CTRL+S" },
+      { "input_method": "keyboard_code", "key": "s", "mod": [ "ctrl" ] }
+    ]
   },
   {
     "type": "keybinding",
@@ -4338,7 +4341,7 @@
     "type": "keybinding",
     "id": "TEXT.RIGHT",
     "name": "Move cursor right",
-    "bindings": [ { "input_method": "keyboard_any", "key": "RIGHT" }, { "input_method": "keyboard_code", "key": "KEYPAD_6" } ]
+    "bindings": [ { "input_method": "keyboard_any", "key": "RIGHT" } ]
   },
   {
     "type": "keybinding",

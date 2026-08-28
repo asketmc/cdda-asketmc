@@ -565,6 +565,12 @@ void inventory_entry::update_cache()
     item_name_t &names = get_cached_name( &*any_item() );
     cached_name = &names.first;
     cached_name_full = &names.second;
+    cached_weight = 0_gram;
+    cached_volume = 0_ml;
+    for( const item_location &loc : locations ) {
+        cached_weight += loc->weight();
+        cached_volume += loc->volume();
+    }
 }
 
 void inventory_entry::cache_denial( inventory_selector_preset const &preset ) const
@@ -1282,6 +1288,7 @@ inventory_entry *inventory_column::add_entry( const inventory_entry &entry )
         if( entry_with_loc != dest.end() ) {
             std::vector<item_location> &locations = entry_with_loc->locations;
             std::move( entry.locations.begin(), entry.locations.end(), std::back_inserter( locations ) );
+            entry_with_loc->update_cache();
             return &*entry_with_loc;
         }
     }
@@ -1323,30 +1330,16 @@ bool inventory_column::sort_compare( inventory_entry const &lhs, inventory_entry
         return left_fav;
     }
 
-    const auto total_weight = []( const inventory_entry & entry ) {
-        units::mass result = 0_gram;
-        for( const item_location &loc : entry.locations ) {
-            result += loc->weight();
-        }
-        return result;
-    };
-    const auto total_volume = []( const inventory_entry & entry ) {
-        units::volume result = 0_ml;
-        for( const item_location &loc : entry.locations ) {
-            result += loc->volume();
-        }
-        return result;
-    };
     if( sort_mode == inventory_sort_mode::weight ) {
-        const units::mass left_weight = total_weight( lhs );
-        const units::mass right_weight = total_weight( rhs );
+        const units::mass left_weight = lhs.get_total_weight();
+        const units::mass right_weight = rhs.get_total_weight();
         if( left_weight != right_weight ) {
             return left_weight > right_weight;
         }
     }
     if( sort_mode == inventory_sort_mode::volume ) {
-        const units::volume left_volume = total_volume( lhs );
-        const units::volume right_volume = total_volume( rhs );
+        const units::volume left_volume = lhs.get_total_volume();
+        const units::volume right_volume = rhs.get_total_volume();
         if( left_volume != right_volume ) {
             return left_volume > right_volume;
         }
@@ -2546,11 +2539,18 @@ void inventory_selector::draw_footer( const catacurses::window &w ) const
                                            _( "Sort" ), sort_mode_name() );
         }
         right_footer += " >";
-        right_print( w, getmaxy( w ) - border, border + 1, c_light_gray, right_footer );
+        const int right_width = utf8_width( right_footer, true );
+        const int right_x = right_width + filter_offset + border + 1 < getmaxx( w ) ?
+                            right_print( w, getmaxy( w ) - border, border + 1,
+                                         c_light_gray, right_footer ) : getmaxx( w ) - border;
         const auto footer = get_footer( mode );
         if( !footer.first.empty() ) {
             const int string_width = utf8_width( footer.first );
-            const int x1 = filter_offset + std::max( getmaxx( w ) - string_width - filter_offset, 0 ) / 2;
+            const int footer_room = right_x - filter_offset;
+            if( string_width + 4 > footer_room ) {
+                return;
+            }
+            const int x1 = filter_offset + ( footer_room - string_width ) / 2;
             const int x2 = x1 + string_width - 1;
             const int y = getmaxy( w ) - border;
 
@@ -3399,7 +3399,6 @@ inventory_drop_selector::inventory_drop_selector( Character &p,
     inventory_multiselector( p, preset, selection_column_title ),
     warn_liquid( warn_liquid )
 {
-    enable_sorting();
 #if defined(__ANDROID__)
     // allow user to type a drop number without dismissing virtual keyboard after each keypress
     ctxt.allow_text_entry = true;

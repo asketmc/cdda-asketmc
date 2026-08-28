@@ -1,5 +1,7 @@
 #include "catch/catch.hpp"
 
+#include <list>
+
 #include "activity_actor_definitions.h"
 #include "advanced_inv.h"
 #include "advanced_inv_area.h"
@@ -139,12 +141,12 @@ TEST_CASE( "advanced inventory capacity sorting moves small fitting items first"
     REQUIRE( baseball.weight() < rock.weight() );
 
     SECTION( "front-processing activities receive the light item first" ) {
-        sort_advanced_inv_move_all_items( items, advanced_inv_capacity_limit::weight, false );
+        prepare_advanced_inv_move_all_items( items, units::volume_max, 0_gram, false );
         CHECK( items.front().loc() == baseball_loc );
     }
 
     SECTION( "back-processing activities receive the light item first" ) {
-        sort_advanced_inv_move_all_items( items, advanced_inv_capacity_limit::weight, true );
+        prepare_advanced_inv_move_all_items( items, units::volume_max, 0_gram, true );
         CHECK( items.back().loc() == baseball_loc );
     }
 
@@ -153,8 +155,32 @@ TEST_CASE( "advanced inventory capacity sorting moves small fitting items first"
             { briefcase_loc, 1 }, { baseball_loc, 1 }
         };
         REQUIRE( baseball.volume() < briefcase.volume() );
-        sort_advanced_inv_move_all_items( volume_items, advanced_inv_capacity_limit::volume, false );
+        prepare_advanced_inv_move_all_items( volume_items, 0_ml, units::mass_max, false );
         CHECK( volume_items.front().loc() == baseball_loc );
+    }
+
+    SECTION( "items from one container remain contiguous" ) {
+        item bag( "test_backpack" );
+        REQUIRE( bag.put_in( item( "test_rock" ), item_pocket::pocket_type::CONTAINER ).success() );
+        REQUIRE( bag.put_in( item( "test_baseball" ),
+                             item_pocket::pocket_type::CONTAINER ).success() );
+        item_location bag_loc = dummy.i_add( bag );
+        const std::list<item *> contents = bag_loc->all_items_top();
+        REQUIRE( contents.size() == 2 );
+        auto content = contents.begin();
+        item *first_content = *content++;
+        item *second_content = *content;
+        std::vector<drop_or_stash_item_info> grouped = {
+            { item_location( bag_loc, first_content ), 1 }, { briefcase_loc, 1 },
+            { item_location( bag_loc, second_content ), 1 }
+        };
+        prepare_advanced_inv_move_all_items( grouped, units::volume_max, 0_gram, false );
+        const auto same_parent = []( const drop_or_stash_item_info & lhs,
+        const drop_or_stash_item_info & rhs ) {
+            return lhs.loc().has_parent() && rhs.loc().has_parent() &&
+                   lhs.loc().parent_item() == rhs.loc().parent_item();
+        };
+        CHECK( ( same_parent( grouped[0], grouped[1] ) || same_parent( grouped[1], grouped[2] ) ) );
     }
 }
 
@@ -179,11 +205,24 @@ TEST_CASE( "advanced inventory filters incompatible container candidates before 
     std::vector<drop_or_stash_item_info> candidates = {
         { fitting, 1 }, { incompatible, 1 }
     };
-    sort_advanced_inv_move_all_items( candidates, advanced_inv_capacity_limit::weight, false );
+    prepare_advanced_inv_move_all_items( candidates, units::volume_max, 0_gram, false );
     REQUIRE( candidates.front().loc() == incompatible );
     filter_advanced_inv_container_items( candidates, container );
     REQUIRE( candidates.size() == 1 );
     CHECK( candidates.front().loc() == fitting );
+}
+
+TEST_CASE( "inventory free weight respects character carry capacity",
+           "[advanced_inventory][capacity][backport]" )
+{
+    clear_avatar();
+    avatar &dummy = get_avatar();
+    dummy.str_max = 1;
+    dummy.worn.wear_item( dummy, item( "test_backpack" ), false, false );
+    const units::mass carry_free = dummy.weight_capacity() - dummy.weight_carried();
+    REQUIRE( carry_free > 0_gram );
+    REQUIRE( carry_free < dummy.worn.free_weight_capacity() );
+    CHECK( dummy.free_weight_capacity() == carry_free );
 }
 
 TEST_CASE( "numeric quantity input accepts right only at the end",
@@ -194,6 +233,15 @@ TEST_CASE( "numeric quantity input accepts right only at the end",
     CHECK_FALSE( numeric_input_accepts_right( false, true, 2, 2 ) );
     CHECK_FALSE( numeric_input_accepts_right( true, false, 2, 2 ) );
     CHECK_FALSE( numeric_input_accepts_right( true, true, 1, 2 ) );
+}
+
+TEST_CASE( "classic inventory sort binding works in keychar mode",
+           "[inventory][sorting][input][backport]" )
+{
+    input_context context( "INVENTORY", keyboard_mode::keychar );
+    context.register_action( "SORT" );
+    CHECK( context.is_event_type_enabled( input_event_t::keyboard_char ) );
+    CHECK( context.input_to_action( input_event( 19, input_event_t::keyboard_char ) ) == "SORT" );
 }
 
 TEST_CASE( "advanced inventory exposes amount and value-density sorts",

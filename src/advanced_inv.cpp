@@ -10,6 +10,7 @@
 #include <new>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -92,24 +93,74 @@ advanced_inv_capacity_limit advanced_inv_most_limited_capacity(
            advanced_inv_capacity_limit::weight;
 }
 
-void sort_advanced_inv_move_all_items( std::vector<drop_or_stash_item_info> &items,
-                                       const advanced_inv_capacity_limit limit,
-                                       const bool activity_processes_from_back )
+advanced_inv_move_all_plan prepare_advanced_inv_move_all_items(
+    std::vector<drop_or_stash_item_info> &items, const units::volume free_volume,
+    const units::mass free_weight, const bool activity_processes_from_back )
 {
-    if( limit == advanced_inv_capacity_limit::none ) {
-        return;
-    }
-    const auto dimensions = [limit]( const drop_or_stash_item_info & entry ) {
-        const int64_t volume = entry.loc()->volume().value();
-        const int64_t weight = entry.loc()->weight().value();
-        return limit == advanced_inv_capacity_limit::volume ?
-               std::make_pair( volume, weight ) : std::make_pair( weight, volume );
+    struct cached_item {
+        size_t index;
+        int64_t volume;
+        int64_t weight;
+        size_t group;
     };
-    std::stable_sort( items.begin(), items.end(), [&]( const drop_or_stash_item_info & lhs,
-    const drop_or_stash_item_info & rhs ) {
-        return activity_processes_from_back ? dimensions( lhs ) > dimensions( rhs ) :
-               dimensions( lhs ) < dimensions( rhs );
+    struct item_group {
+        std::pair<int64_t, int64_t> dimensions = { 0, 0 };
+        size_t order;
+    };
+
+    units::volume source_volume = 0_ml;
+    units::mass source_weight = 0_gram;
+    std::vector<cached_item> cached;
+    std::vector<item_group> groups;
+    std::unordered_map<const item *, size_t> group_ids;
+    cached.reserve( items.size() );
+    for( size_t i = 0; i < items.size(); ++i ) {
+        const item_location &loc = items[i].loc();
+        const int64_t volume = loc->volume().value();
+        const int64_t weight = loc->weight().value();
+        source_volume += units::from_milliliter( volume );
+        source_weight += units::from_gram( weight );
+        const item *group_item = loc.has_parent() ? loc.parent_item().get_item() : loc.get_item();
+        const auto inserted = group_ids.emplace( group_item, groups.size() );
+        if( inserted.second ) {
+            groups.push_back( { { INT64_MAX, INT64_MAX }, groups.size() } );
+        }
+        cached.push_back( { i, volume, weight, inserted.first->second } );
+    }
+
+    advanced_inv_move_all_plan result;
+    result.volume_limited = source_volume > free_volume;
+    result.weight_limited = source_weight > free_weight;
+    result.limit = advanced_inv_most_limited_capacity( source_volume, free_volume,
+                   source_weight, free_weight );
+    if( result.limit == advanced_inv_capacity_limit::none ) {
+        return result;
+    }
+    for( const cached_item &entry : cached ) {
+        const std::pair<int64_t, int64_t> dimensions =
+            result.limit == advanced_inv_capacity_limit::volume ?
+            std::make_pair( entry.volume, entry.weight ) :
+            std::make_pair( entry.weight, entry.volume );
+        groups[entry.group].dimensions.first += dimensions.first;
+        groups[entry.group].dimensions.second += dimensions.second;
+    }
+    std::stable_sort( cached.begin(), cached.end(), [&]( const cached_item & lhs,
+    const cached_item & rhs ) {
+        const item_group &left = groups[lhs.group];
+        const item_group &right = groups[rhs.group];
+        if( left.dimensions != right.dimensions ) {
+            return activity_processes_from_back ? left.dimensions > right.dimensions :
+                   left.dimensions < right.dimensions;
+        }
+        return left.order < right.order;
     } );
+    std::vector<drop_or_stash_item_info> sorted;
+    sorted.reserve( items.size() );
+    for( const cached_item &entry : cached ) {
+        sorted.emplace_back( std::move( items[entry.index] ) );
+    }
+    items = std::move( sorted );
+    return result;
 }
 
 void filter_advanced_inv_container_items( std::vector<drop_or_stash_item_info> &items,
@@ -1070,10 +1121,11 @@ bool advanced_inventory::move_all_items()
     std::string skipped_items_message = fill_lists_with_pane_items( src, player_character,
                                         pane_items, pane_favs, filter_buckets );
 
+    const bool had_nonfavorite_items = !pane_items.empty();
     if( dpane.get_area() == AIM_CONTAINER ) {
         filter_advanced_inv_container_items( pane_items, dpane.container );
         filter_advanced_inv_container_items( pane_favs, dpane.container );
-        if( pane_items.empty() && pane_favs.empty() ) {
+        if( pane_items.empty() && ( pane_favs.empty() || had_nonfavorite_items ) ) {
             popup_getkey( _( "None of the items fit in that container." ) );
             return false;
         }
@@ -1099,31 +1151,24 @@ bool advanced_inventory::move_all_items()
         add_msg( m_info, skipped_items_message );
     }
 
-    units::volume source_volume = 0_ml;
-    units::mass source_weight = 0_gram;
-    for( const drop_or_stash_item_info &entry : pane_items ) {
-        source_volume += entry.loc()->volume();
-        source_weight += entry.loc()->weight();
-    }
     const units::volume free_volume = dpane.free_volume( darea );
     const units::mass free_weight = dpane.free_weight_capacity();
-    const advanced_inv_capacity_limit limit = advanced_inv_most_limited_capacity(
-                source_volume, free_volume, source_weight, free_weight );
-    if( limit != advanced_inv_capacity_limit::none ) {
-        const bool volume_limited = source_volume > free_volume;
-        const bool weight_limited = source_weight > free_weight;
-        const std::string limitation = volume_limited && weight_limited ?
-                                       _( "room or weight capacity" ) :
-                                       volume_limited ? pgettext( "container capacity", "room" ) :
-                                       _( "weight capacity" );
-        if( !is_processing() &&
-            !query_yn( _( "There isn't enough %s.  Attempt to move as much as you can?" ),
-                        limitation ) ) {
+    const bool activity_processes_from_back = dpane.get_area() != AIM_CONTAINER &&
+            spane.get_area() != AIM_INVENTORY && spane.get_area() != AIM_WORN;
+    const advanced_inv_move_all_plan plan = prepare_advanced_inv_move_all_items(
+                pane_items, free_volume, free_weight, activity_processes_from_back );
+    if( plan.limit != advanced_inv_capacity_limit::none ) {
+        const std::string warning = plan.volume_limited && plan.weight_limited ?
+                                    _( "There isn't enough room or weight capacity.  "
+                                       "Attempt to move as much as you can?" ) :
+                                    plan.volume_limited ?
+                                    _( "There isn't enough room.  "
+                                       "Attempt to move as much as you can?" ) :
+                                    _( "There isn't enough weight capacity.  "
+                                       "Attempt to move as much as you can?" );
+        if( !is_processing() && !query_yn( warning ) ) {
             return false;
         }
-        const bool activity_processes_from_back = dpane.get_area() != AIM_CONTAINER &&
-                spane.get_area() != AIM_INVENTORY && spane.get_area() != AIM_WORN;
-        sort_advanced_inv_move_all_items( pane_items, limit, activity_processes_from_back );
     }
 
     if( dpane.get_area() == AIM_CONTAINER ) {

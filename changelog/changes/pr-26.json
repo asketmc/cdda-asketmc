@@ -10,7 +10,7 @@
       "compatibility": "save-compatible",
       "details": [
         "Advanced Inventory gains amount and value-density sorts, while classic pickup and drop can sort by stack weight or volume.",
-        "Move All considers both volume and pocket weight capacity and tries smaller fitting items first."
+        "Move All considers volume, pocket limits, and character carry weight while preserving bulk-unload groups."
       ]
     }
   ]

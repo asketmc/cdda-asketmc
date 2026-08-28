@@ -7,14 +7,8 @@
     {
       "type": "keybinding",
       "id": "SORT",
-      "target_fingerprint": "126971390936c9aad1bb214346a6a14d74f923a09142c771da06baaa1e08dd56",
+      "target_fingerprint": "34591ccc1171cd6b1fbe71d7b17deabf08e900431d858682d8c346d9b1e44e96",
       "reason": "Classic pickup and drop menus add an inventory-local sorting action"
-    },
-    {
-      "type": "keybinding",
-      "id": "TEXT.RIGHT",
-      "target_fingerprint": "b65378cc11e7834a5a464dd044f543027d228da5afdad14ffbd3411f8b1ad560",
-      "reason": "Numeric quantity input accepts the right arrow or keypad 6 as confirmation at the end"
     },
     {
       "type": "construction",
