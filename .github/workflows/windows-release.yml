@@ -203,7 +203,7 @@ jobs:
             "CROSS=${cross}" \
             "CCACHE=${cache_mode}" RELEASE=1 TILES=1 SOUND=1 LOCALIZE=0 RUNTESTS=1 \
             LINTJSON=0 ASTYLE=0 WARNINGS=-w BACKTRACE=1 LIBBACKTRACE=1 PCH=0 \
-            TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp player_helpers.cpp climbing_test.cpp" \
+            TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp player_helpers.cpp climbing_test.cpp npc_hostility_test.cpp" \
             tests
           test_bin="tests/${first_prefix}cata_test.exe"
           test -s "${test_bin}"
@@ -211,17 +211,24 @@ jobs:
           WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
             --user-dir=climbing-test-user --rng-seed 1 --reporter junit \
             --out climbing-test-results.xml "[climbing][z-level]"
+          WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
+            --user-dir=npc-hostility-test-user --rng-seed 1 --reporter junit \
+            --out npc-hostility-test-results.xml "[npc][morale][hostility]"
           python3 - <<'PY'
           import xml.etree.ElementTree as ET
 
-          root = ET.parse("climbing-test-results.xml").getroot()
-          cases = root.findall(".//testcase")
-          failures = root.findall(".//failure") + root.findall(".//error")
-          if not cases:
-              raise SystemExit("focused climbing gate discovered zero test cases")
-          if failures:
-              raise SystemExit(f"focused climbing gate reported {len(failures)} failures")
-          print(f"focused climbing gate passed {len(cases)} test cases")
+          for label, path in (
+              ("climbing", "climbing-test-results.xml"),
+              ("NPC hostility", "npc-hostility-test-results.xml"),
+          ):
+              root = ET.parse(path).getroot()
+              cases = root.findall(".//testcase")
+              failures = root.findall(".//failure") + root.findall(".//error")
+              if not cases:
+                  raise SystemExit(f"focused {label} gate discovered zero test cases")
+              if failures:
+                  raise SystemExit(f"focused {label} gate reported {len(failures)} failures")
+              print(f"focused {label} gate passed {len(cases)} test cases")
           PY
           first_exe=$(sha256sum "${first_prefix}cataclysm-tiles.exe" | cut -d' ' -f1)
           first_zip=$(sha256sum "${output_dir}/${asset}" | cut -d' ' -f1)

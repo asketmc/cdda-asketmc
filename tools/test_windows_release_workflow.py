@@ -81,17 +81,20 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn('build_distribution "${second_prefix}" 0', self.workflow)
         self.assertIn('export SOURCE_DATE_EPOCH="${source_epoch}"', self.workflow)
 
-    def test_focused_climbing_catch_gate_executes_and_fails_closed(self) -> None:
+    def test_focused_gameplay_catch_gates_execute_and_fail_closed(self) -> None:
         self.assertIn("sudo apt-get install --yes ccache wine64", self.workflow)
         self.assertIn(
-            'TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp player_helpers.cpp climbing_test.cpp"',
+            'TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp player_helpers.cpp climbing_test.cpp npc_hostility_test.cpp"',
             self.workflow,
         )
         self.assertIn('"${test_bin}"', self.workflow)
         self.assertIn('"[climbing][z-level]"', self.workflow)
+        self.assertIn('"[npc][morale][hostility]"', self.workflow)
         self.assertIn("timeout 10m", self.workflow)
-        self.assertIn("focused climbing gate discovered zero test cases", self.workflow)
-        self.assertIn("focused climbing gate reported", self.workflow)
+        self.assertIn('("climbing", "climbing-test-results.xml")', self.workflow)
+        self.assertIn('("NPC hostility", "npc-hostility-test-results.xml")', self.workflow)
+        self.assertIn("gate discovered zero test cases", self.workflow)
+        self.assertIn("gate reported", self.workflow)
         self.assertIn("ifdef TEST_SOURCES", self.tests_makefile)
         self.assertIn("SOURCES = $(TEST_SOURCES)", self.tests_makefile)
 
