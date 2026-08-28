@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "pr": 26,
+  "entries": [
+    {
+      "id": "inventory-transfer-sorting",
+      "category": "Features",
+      "audience": "players",
+      "summary": "Add practical sorting and capacity-aware bulk transfers to inventory menus.",
+      "compatibility": "save-compatible",
+      "details": [
+        "Advanced Inventory gains amount and value-density sorts, while classic pickup and drop can sort by stack weight or volume.",
+        "Move All considers both volume and pocket weight capacity and tries smaller fitting items first."
+      ]
+    }
+  ]
+}
