@@ -123,7 +123,7 @@ advanced_inv_move_all_plan prepare_advanced_inv_move_all_items(
         const item *group_item = loc.has_parent() ? loc.parent_item().get_item() : loc.get_item();
         const auto inserted = group_ids.emplace( group_item, groups.size() );
         if( inserted.second ) {
-            groups.push_back( { { INT64_MAX, INT64_MAX }, groups.size() } );
+            groups.push_back( { { 0, 0 }, groups.size() } );
         }
         cached.push_back( { i, volume, weight, inserted.first->second } );
     }
@@ -1126,7 +1126,9 @@ bool advanced_inventory::move_all_items()
         filter_advanced_inv_container_items( pane_items, dpane.container );
         filter_advanced_inv_container_items( pane_favs, dpane.container );
         if( pane_items.empty() && ( pane_favs.empty() || had_nonfavorite_items ) ) {
-            popup_getkey( _( "None of the items fit in that container." ) );
+            popup_getkey( had_nonfavorite_items && !pane_favs.empty() ?
+                          _( "None of the non-favorite items fit in that container." ) :
+                          _( "None of the items fit in that container." ) );
             return false;
         }
     }
