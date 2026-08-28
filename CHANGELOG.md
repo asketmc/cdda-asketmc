@@ -6,6 +6,61 @@ This file is generated from reviewed changelog fragments and immutable release m
 - [PATCHNOTES_ADDITIVE_0G.md](PATCHNOTES_ADDITIVE_0G.md) remains the cumulative, curated overview of the fork.
 - [Release process](doc/RELEASING.md) explains how a release is prepared and verified.
 
+## CDDA 0.G Additive 2026.08.29.1
+
+Released: 2026-08-29
+
+Changes since [v0.G-additive-2026.08.26.2](https://github.com/asketmc/cdda-asketmc/releases/tag/v0.G-additive-2026.08.26.2).
+
+For the cumulative fork overview, see [PATCHNOTES_ADDITIVE_0G.md](https://github.com/asketmc/cdda-asketmc/blob/main/PATCHNOTES_ADDITIVE_0G.md).
+
+### Player changes
+
+#### Features
+
+- Add practical sorting and capacity-aware bulk transfers to inventory menus. ([PR #26](https://github.com/asketmc/cdda-asketmc/pull/26))
+  - Advanced Inventory gains amount and value-density sorts, while classic pickup and drop can sort by stack weight or volume.
+  - Move All considers volume, pocket limits, and character carry weight while preserving bulk-unload groups.
+  - Save compatibility: Compatible with existing 0.G additive saves.
+- Preserve progress when corpse processing is interrupted and resumed. ([PR #27](https://github.com/asketmc/cdda-asketmc/pull/27))
+  - All eight corpse-processing methods track independent fractional progress on the corpse across movement and save/load.
+  - The butchery menu reports partial completion, while completed work clears its marker and produces output once.
+  - Save compatibility: Compatible with existing 0.G additive saves.
+
+#### Interface
+
+- Keep the Windows tiles interface sharp and fully visible across mixed-DPI monitors. ([PR #24](https://github.com/asketmc/cdda-asketmc/pull/24))
+  - Windowed and maximized layouts preserve at least an 80x24 terminal while fitting the active monitor work area.
+  - Moving the game between monitors refreshes fonts, render targets, window placement, and fullscreen restore dimensions without compounding scale changes.
+  - Save compatibility: Compatible with existing 0.G additive saves.
+
+#### Bugfixes
+
+- Climb down supported ledges safely when the same route is climbable upward. ([PR #22](https://github.com/asketmc/cdda-asketmc/pull/22))
+  - Downspouts, fences, ladders, braced walls, and nearby vehicles support controlled descent; multi-level routes require support on every level.
+  - Unsupported ledges retain the existing risky and tool-assisted behavior; supported routes preserve grappling hooks, ropes, and web rappelling resources.
+  - Save compatibility: Compatible with existing 0.G additive saves.
+- Killing a guaranteed-hostile NPC no longer causes innocent-kill guilt before they enter an active combat attitude. ([PR #25](https://github.com/asketmc/cdda-asketmc/pull/25))
+  - Kill-on-sight faction relationships now count as guaranteed hostility even while the NPC still has NPCATT\_NULL.
+  - Attacking and killing a genuinely neutral NPC still applies the existing innocent-kill morale penalty.
+  - Save compatibility: Compatible with existing 0.G additive saves.
+
+### Build and maintainer changes
+
+#### Infrastructure
+
+- Report pull requests above 400 or 800 changed lines without blocking CI. ([PR #22](https://github.com/asketmc/cdda-asketmc/pull/22))
+- Manual Windows build requests now publish a short-lived downloadable package and verification files. ([PR #25](https://github.com/asketmc/cdda-asketmc/pull/25))
+
+### Intentionally omitted
+
+- [PR #28](https://github.com/asketmc/cdda-asketmc/pull/28): Release metadata only; player changes are recorded in their source pull requests.
+
+### Validation recorded for this release
+
+- The tag workflow must reproduce identical executable and ZIP hashes from two clean release builds.
+- The exact staged archive must pass checksum, metadata, extraction, and --check-mods dda validation before publication.
+
 ## CDDA 0.G Additive 2026.08.26.2
 
 Released: 2026-08-26
