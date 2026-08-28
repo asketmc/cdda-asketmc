@@ -3,6 +3,16 @@
 This repository begins with the integrated source snapshot documented below.
 The matching Windows Tiles+Sound package is published under GitHub Releases.
 
+## Persistent corpse processing
+
+- Bleeding, quick and full butchery, field dressing, skinning, quartering,
+  dismembering, and dissecting now retain fractional progress on the corpse.
+- Interrupted work can be resumed after moving the corpse, changing to another
+  valid tool, or saving and loading. Each method tracks progress independently,
+  and the butchery menu shows partial completion.
+- Finished work clears its marker and produces its normal result once. Starting
+  a quick method does not block switching to a finer method later.
+
 ## Supported ledge descent
 
 - A ledge can be climbed down safely when the same one-level route is climbable

@@ -165,6 +165,9 @@ class player_activity
          */
         void canceled( Character &who );
 
+        /** Performs cancellation cleanup before discarding this activity. */
+        void abandon( Character &who );
+
         /**
          * Returns true if activities are similar enough that this activity
          * can be resumed instead of starting the other activity.
