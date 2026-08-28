@@ -203,7 +203,7 @@ jobs:
             "CROSS=${cross}" \
             "CCACHE=${cache_mode}" RELEASE=1 TILES=1 SOUND=1 LOCALIZE=0 RUNTESTS=1 \
             LINTJSON=0 ASTYLE=0 WARNINGS=-w BACKTRACE=1 LIBBACKTRACE=1 PCH=0 \
-            TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp player_helpers.cpp climbing_test.cpp npc_hostility_test.cpp" \
+            TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp player_helpers.cpp advanced_inventory_test.cpp climbing_test.cpp npc_hostility_test.cpp" \
             tests
           test_bin="tests/${first_prefix}cata_test.exe"
           test -s "${test_bin}"
@@ -214,12 +214,16 @@ jobs:
           WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
             --user-dir=npc-hostility-test-user --rng-seed 1 --reporter junit \
             --out npc-hostility-test-results.xml "[npc][morale][hostility]"
+          WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
+            --user-dir=inventory-test-user --rng-seed 1 --reporter junit \
+            --out inventory-test-results.xml "[advanced_inventory][backport],[inventory][sorting][backport],[inventory][numeric][backport]"
           python3 - <<'PY'
           import xml.etree.ElementTree as ET
 
           for label, path in (
               ("climbing", "climbing-test-results.xml"),
               ("NPC hostility", "npc-hostility-test-results.xml"),
+              ("inventory transfer", "inventory-test-results.xml"),
           ):
               root = ET.parse(path).getroot()
               cases = root.findall(".//testcase")

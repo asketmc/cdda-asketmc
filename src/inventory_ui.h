@@ -60,6 +60,12 @@ enum class toggle_mode : int {
     NON_FAVORITE_NON_WORN
 };
 
+enum class inventory_sort_mode : int {
+    name = 0,
+    weight,
+    volume
+};
+
 struct inventory_input;
 struct container_data;
 struct navigation_mode_data;
@@ -157,6 +163,12 @@ class inventory_entry
 
         int get_total_charges() const;
         int get_selected_charges() const;
+        units::mass get_total_weight() const {
+            return cached_weight;
+        }
+        units::volume get_total_volume() const {
+            return cached_volume;
+        }
 
         size_t get_available_count() const;
         const item_category *get_category_ptr() const;
@@ -181,6 +193,8 @@ class inventory_entry
 
     private:
         const item_category *custom_category = nullptr;
+        units::mass cached_weight = 0_gram;
+        units::volume cached_volume = 0_ml;
     protected:
         // indents the entry if it is contained in an item
         bool _indent = true;
@@ -452,6 +466,11 @@ class inventory_column
             paging_is_valid = false;
         }
 
+        void set_sort_mode( inventory_sort_mode mode ) {
+            sort_mode = mode;
+            invalidate_paging();
+        }
+
         /** Toggle being able to highlight unselectable entries*/
         void toggle_skip_unselectable( bool skip );
 
@@ -506,6 +525,7 @@ class inventory_column
         bool multiselect = false;
         bool paging_is_valid = false;
         bool visibility = true;
+        inventory_sort_mode sort_mode = inventory_sort_mode::name;
 
         size_t highlighted_index = std::numeric_limits<size_t>::max();
         size_t page_offset = 0;
@@ -634,6 +654,7 @@ class inventory_selector
         }
 
         void categorize_map_items( bool toggle );
+        void enable_sorting();
 
         // An array of cells for the stat lines. Example: ["Weight (kg)", "10", "/", "20"].
         using stat = std::array<std::string, 4>;
@@ -680,9 +701,12 @@ class inventory_selector
          * @param val The default value to have set in the query prompt.
          * @return A tuple of a bool and string, bool is true if user confirmed.
          */
-        std::pair< bool, std::string > query_string( const std::string &val );
+        std::pair< bool, std::string > query_string( const std::string &val,
+                bool only_digits = false );
         /** Query the user for a filter and apply it. */
         void query_set_filter();
+        void query_sort_mode();
+        std::string sort_mode_name() const;
         /** Query the user for count and return it. */
         int query_count();
 
@@ -849,6 +873,8 @@ class inventory_selector
 
         bool is_empty = true;
         bool display_stats = true;
+        bool sorting_enabled = false;
+        inventory_sort_mode sort_mode = inventory_sort_mode::name;
         bool use_invlet = true;
         selector_invlet_type invlet_type_ = SELECTOR_INVLET_DEFAULT;
         size_t entry_generation_number = 0;

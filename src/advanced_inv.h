@@ -25,6 +25,29 @@ void create_advanced_inv();
  */
 void cancel_aim_processing();
 
+enum class advanced_inv_capacity_limit {
+    none,
+    volume,
+    weight
+};
+
+struct advanced_inv_move_all_plan {
+    advanced_inv_capacity_limit limit = advanced_inv_capacity_limit::none;
+    bool volume_limited = false;
+    bool weight_limited = false;
+};
+
+advanced_inv_capacity_limit advanced_inv_most_limited_capacity(
+    units::volume source_volume, units::volume free_volume,
+    units::mass source_weight, units::mass free_weight );
+
+advanced_inv_move_all_plan prepare_advanced_inv_move_all_items(
+    std::vector<drop_or_stash_item_info> &items, units::volume free_volume,
+    units::mass free_weight, bool activity_processes_from_back );
+
+void filter_advanced_inv_container_items( std::vector<drop_or_stash_item_info> &items,
+        const item_location &container );
+
 class advanced_inventory
 {
     public:

@@ -1952,6 +1952,16 @@
   },
   {
     "type": "keybinding",
+    "id": "SORT",
+    "category": "INVENTORY",
+    "name": "Sort items",
+    "bindings": [
+      { "input_method": "keyboard_char", "key": "CTRL+S" },
+      { "input_method": "keyboard_code", "key": "s", "mod": [ "ctrl" ] }
+    ]
+  },
+  {
+    "type": "keybinding",
     "id": "EXAMINE",
     "category": "INVENTORY",
     "name": "Examine",

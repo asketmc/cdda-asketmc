@@ -1,6 +1,9 @@
 #include "catch/catch.hpp"
 
+#include <list>
+
 #include "activity_actor_definitions.h"
+#include "advanced_inv.h"
 #include "advanced_inv_area.h"
 #include "advanced_inv_pane.h"
 #include "avatar.h"
@@ -10,6 +13,7 @@
 #include "json.h"
 #include "json_loader.h"
 #include "map_helpers.h"
+#include "map_selector.h"
 #include "player_activity.h"
 #include "player_helpers.h"
 #include "uistate.h"
@@ -18,6 +22,10 @@ TEST_CASE( "advanced inventory state preserves 0.G numeric locations",
            "[advanced_inventory][save][backport]" )
 {
     CHECK( static_cast<int>( AIM_WORN ) == 13 );
+    CHECK( static_cast<int>( SORTBY_PRICE ) == 9 );
+    CHECK( static_cast<int>( SORTBY_PRICEPERVOLUME ) == 10 );
+    CHECK( static_cast<int>( SORTBY_PRICEPERWEIGHT ) == 11 );
+    CHECK( static_cast<int>( SORTBY_STACKS ) == 12 );
 
     advanced_inv_pane_save_state state;
     JsonObject old_state = json_loader::from_string(
@@ -87,9 +95,11 @@ TEST_CASE( "advanced inventory uses the selected container capacity",
     pane.set_area( container_area );
 
     CHECK( pane.free_volume( container_area ) == container->get_remaining_capacity() );
+    CHECK( pane.free_weight_capacity() == container->get_remaining_weight_capacity() );
 
     pane.container = item_location::nowhere;
     CHECK( pane.free_volume( container_area ) == 0_ml );
+    CHECK( pane.free_weight_capacity() == 0_gram );
     pane.container = container;
 
     advanced_inv_area tile_area( AIM_CENTER );
@@ -97,6 +107,236 @@ TEST_CASE( "advanced inventory uses the selected container capacity",
     pane.set_area( tile_area );
     CHECK( pane.free_volume( tile_area ) == tile_area.free_volume() );
     CHECK( pane.free_volume( tile_area ) != container->get_remaining_capacity() );
+    CHECK( pane.free_weight_capacity() == units::mass_max );
+}
+
+TEST_CASE( "advanced inventory capacity sorting moves small fitting items first",
+           "[advanced_inventory][capacity][sorting][backport]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &dummy = get_avatar();
+    map &here = get_map();
+    item &baseball = here.add_item( dummy.pos(), item( "test_baseball" ) );
+    item &rock = here.add_item( dummy.pos(), item( "test_rock" ) );
+    item &briefcase = here.add_item( dummy.pos(), item( "test_briefcase" ) );
+    item_location baseball_loc( map_cursor( dummy.pos() ), &baseball );
+    item_location rock_loc( map_cursor( dummy.pos() ), &rock );
+    item_location briefcase_loc( map_cursor( dummy.pos() ), &briefcase );
+
+    CHECK( advanced_inv_most_limited_capacity( 1_liter, 2_liter, 1_kilogram, 2_kilogram ) ==
+           advanced_inv_capacity_limit::none );
+    CHECK( advanced_inv_most_limited_capacity( 3_liter, 1_liter, 1_kilogram, 2_kilogram ) ==
+           advanced_inv_capacity_limit::volume );
+    CHECK( advanced_inv_most_limited_capacity( 1_liter, 2_liter, 3_kilogram, 1_kilogram ) ==
+           advanced_inv_capacity_limit::weight );
+    CHECK( advanced_inv_most_limited_capacity( 4_liter, 2_liter, 6_kilogram, 1_kilogram ) ==
+           advanced_inv_capacity_limit::weight );
+    CHECK( advanced_inv_most_limited_capacity( 6_liter, 1_liter, 4_kilogram, 2_kilogram ) ==
+           advanced_inv_capacity_limit::volume );
+
+    std::vector<drop_or_stash_item_info> items = {
+        { rock_loc, 1 }, { baseball_loc, 1 }
+    };
+    REQUIRE( baseball.weight() < rock.weight() );
+
+    SECTION( "front-processing activities receive the light item first" ) {
+        prepare_advanced_inv_move_all_items( items, units::volume_max, 0_gram, false );
+        CHECK( items.front().loc() == baseball_loc );
+    }
+
+    SECTION( "back-processing activities receive the light item first" ) {
+        prepare_advanced_inv_move_all_items( items, units::volume_max, 0_gram, true );
+        CHECK( items.back().loc() == baseball_loc );
+    }
+
+    SECTION( "front-processing activities receive the smaller item first" ) {
+        std::vector<drop_or_stash_item_info> volume_items = {
+            { briefcase_loc, 1 }, { baseball_loc, 1 }
+        };
+        REQUIRE( baseball.volume() < briefcase.volume() );
+        prepare_advanced_inv_move_all_items( volume_items, 0_ml, units::mass_max, false );
+        CHECK( volume_items.front().loc() == baseball_loc );
+    }
+
+    SECTION( "items from one container remain contiguous" ) {
+        item bag( "test_backpack" );
+        REQUIRE( bag.put_in( item( "test_rock" ), item_pocket::pocket_type::CONTAINER ).success() );
+        REQUIRE( bag.put_in( item( "test_baseball" ),
+                             item_pocket::pocket_type::CONTAINER ).success() );
+        item_location bag_loc = dummy.i_add( bag );
+        const std::list<item *> contents = bag_loc->all_items_top();
+        REQUIRE( contents.size() == 2 );
+        auto content = contents.begin();
+        item *first_content = *content++;
+        item *second_content = *content;
+        std::vector<drop_or_stash_item_info> grouped = {
+            { item_location( bag_loc, first_content ), 1 }, { briefcase_loc, 1 },
+            { item_location( bag_loc, second_content ), 1 }
+        };
+        prepare_advanced_inv_move_all_items( grouped, units::volume_max, 0_gram, false );
+        const auto same_parent = []( const drop_or_stash_item_info & lhs,
+        const drop_or_stash_item_info & rhs ) {
+            return lhs.loc().has_parent() && rhs.loc().has_parent() &&
+                   lhs.loc().parent_item() == rhs.loc().parent_item();
+        };
+        CHECK( ( same_parent( grouped[0], grouped[1] ) || same_parent( grouped[1], grouped[2] ) ) );
+    }
+}
+
+TEST_CASE( "advanced inventory filters incompatible container candidates before insertion",
+           "[advanced_inventory][capacity][container][backport]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &dummy = get_avatar();
+    map &here = get_map();
+    item &container_item = here.add_item( dummy.pos(), item( "test_tool_belt" ) );
+    item &incompatible_item = here.add_item( dummy.pos(), item( "test_baseball" ) );
+    item &fitting_item = here.add_item( dummy.pos(), item( "hammer_pocket_test" ) );
+    item_location container( map_cursor( dummy.pos() ), &container_item );
+    item_location incompatible( map_cursor( dummy.pos() ), &incompatible_item );
+    item_location fitting( map_cursor( dummy.pos() ), &fitting_item );
+
+    REQUIRE_FALSE( can_insert_item_directly( container, incompatible ).success() );
+    REQUIRE( can_insert_item_directly( container, fitting ).success() );
+    REQUIRE( incompatible->weight() < fitting->weight() );
+
+    std::vector<drop_or_stash_item_info> candidates = {
+        { fitting, 1 }, { incompatible, 1 }
+    };
+    prepare_advanced_inv_move_all_items( candidates, units::volume_max, 0_gram, false );
+    REQUIRE( candidates.front().loc() == incompatible );
+    filter_advanced_inv_container_items( candidates, container );
+    REQUIRE( candidates.size() == 1 );
+    CHECK( candidates.front().loc() == fitting );
+}
+
+TEST_CASE( "inventory free weight respects character carry capacity",
+           "[advanced_inventory][capacity][backport]" )
+{
+    clear_avatar();
+    avatar &dummy = get_avatar();
+    dummy.str_max = 1;
+    dummy.worn.wear_item( dummy, item( "test_backpack" ), false, false );
+    const units::mass carry_free = dummy.weight_capacity() - dummy.weight_carried();
+    REQUIRE( carry_free > 0_gram );
+    REQUIRE( carry_free < dummy.worn.free_weight_capacity() );
+    CHECK( dummy.free_weight_capacity() == carry_free );
+}
+
+TEST_CASE( "numeric quantity input accepts right only at the end",
+           "[inventory][numeric][backport]" )
+{
+    CHECK( numeric_input_accepts_right( true, true, 2, 2 ) );
+    CHECK( numeric_input_accepts_right( true, true, 3, 2 ) );
+    CHECK_FALSE( numeric_input_accepts_right( false, true, 2, 2 ) );
+    CHECK_FALSE( numeric_input_accepts_right( true, false, 2, 2 ) );
+    CHECK_FALSE( numeric_input_accepts_right( true, true, 1, 2 ) );
+}
+
+TEST_CASE( "classic inventory sort binding works in keychar mode",
+           "[inventory][sorting][input][backport]" )
+{
+    input_context context( "INVENTORY", keyboard_mode::keychar );
+    context.register_action( "SORT" );
+    CHECK( context.is_event_type_enabled( input_event_t::keyboard_char ) );
+    CHECK( context.input_to_action( input_event( 19, input_event_t::keyboard_char ) ) == "SORT" );
+}
+
+TEST_CASE( "advanced inventory exposes amount and value-density sorts",
+           "[advanced_inventory][sorting][backport]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &dummy = get_avatar();
+    map &here = get_map();
+    item &baseball = here.add_item( dummy.pos(), item( "test_baseball" ) );
+    item &briefcase = here.add_item( dummy.pos(), item( "test_briefcase" ) );
+    item_location baseball_loc( map_cursor( dummy.pos() ), &baseball );
+    item_location briefcase_loc( map_cursor( dummy.pos() ), &briefcase );
+    advanced_inventory_pane pane;
+
+    SECTION( "amount" ) {
+        pane.items.emplace_back( baseball_loc, 0, 1, AIM_CENTER, false );
+        pane.items.emplace_back( baseball_loc, 1, 3, AIM_CENTER, false );
+        pane.sortby = SORTBY_STACKS;
+        pane.sort_items();
+        CHECK( pane.items.front().stacks == 3 );
+    }
+
+    const auto value_per_volume = []( const item_location & loc ) {
+        return static_cast<double>( loc->price( true ) ) / loc->volume().value();
+    };
+    const auto value_per_weight = []( const item_location & loc ) {
+        return static_cast<double>( loc->price( true ) ) / loc->weight().value();
+    };
+
+    SECTION( "value per volume" ) {
+        REQUIRE( value_per_volume( baseball_loc ) != value_per_volume( briefcase_loc ) );
+        pane.items.emplace_back( baseball_loc, 0, 1, AIM_CENTER, false );
+        pane.items.emplace_back( briefcase_loc, 1, 1, AIM_CENTER, false );
+        pane.sortby = SORTBY_PRICEPERVOLUME;
+        pane.sort_items();
+        const item_location expected = value_per_volume( baseball_loc ) >
+                                       value_per_volume( briefcase_loc ) ? baseball_loc : briefcase_loc;
+        CHECK( pane.items.front().items.front() == expected );
+    }
+
+    SECTION( "value per weight" ) {
+        REQUIRE( value_per_weight( baseball_loc ) != value_per_weight( briefcase_loc ) );
+        pane.items.emplace_back( baseball_loc, 0, 1, AIM_CENTER, false );
+        pane.items.emplace_back( briefcase_loc, 1, 1, AIM_CENTER, false );
+        pane.sortby = SORTBY_PRICEPERWEIGHT;
+        pane.sort_items();
+        const item_location expected = value_per_weight( baseball_loc ) >
+                                       value_per_weight( briefcase_loc ) ? baseball_loc : briefcase_loc;
+        CHECK( pane.items.front().items.front() == expected );
+    }
+}
+
+TEST_CASE( "classic pickup and drop columns sort by total weight or volume",
+           "[inventory][pickup][drop][sorting][backport]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &dummy = get_avatar();
+    map &here = get_map();
+    item &briefcase = here.add_item( dummy.pos(), item( "test_briefcase" ) );
+    briefcase.invlet = 0;
+    briefcase.is_favorite = false;
+    item_location briefcase_loc( map_cursor( dummy.pos() ), &briefcase );
+    std::vector<item_location> baseballs;
+    for( int i = 0; i < 20; ++i ) {
+        item &baseball = here.add_item( dummy.pos(), item( "test_baseball" ) );
+        baseball.invlet = 0;
+        baseball.is_favorite = false;
+        baseballs.emplace_back( map_cursor( dummy.pos() ), &baseball );
+    }
+    dummy.inv->assigned_invlet.clear();
+    REQUIRE( baseballs.front()->weight() * baseballs.size() > briefcase.weight() );
+    REQUIRE( baseballs.front()->volume() * baseballs.size() < briefcase.volume() );
+
+    const item_category *shared_category = &briefcase.get_category_of_contents();
+    inventory_column column;
+    REQUIRE( column.add_entry( inventory_entry( baseballs, shared_category ) ) );
+    REQUIRE( column.add_entry( inventory_entry( { briefcase_loc }, shared_category ) ) );
+
+    column.set_sort_mode( inventory_sort_mode::weight );
+    column.prepare_paging();
+    auto entries = column.get_entries( []( const inventory_entry & entry ) {
+        return entry.is_item();
+    } );
+    REQUIRE( entries.size() == 2 );
+    CHECK( entries.front()->locations.size() == baseballs.size() );
+
+    column.set_sort_mode( inventory_sort_mode::volume );
+    column.prepare_paging();
+    entries = column.get_entries( []( const inventory_entry & entry ) {
+        return entry.is_item();
+    } );
+    REQUIRE( entries.size() == 2 );
+    CHECK( entries.front()->any_item() == briefcase_loc );
 }
 
 static void finish_insert_activity( avatar &dummy, const item_location &container,

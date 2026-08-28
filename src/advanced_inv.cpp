@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <initializer_list>
 #include <list>
@@ -9,6 +10,7 @@
 #include <new>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -68,6 +70,106 @@
 #endif
 
 static const activity_id ACT_ADV_INVENTORY( "ACT_ADV_INVENTORY" );
+
+advanced_inv_capacity_limit advanced_inv_most_limited_capacity(
+    const units::volume source_volume, const units::volume free_volume,
+    const units::mass source_weight, const units::mass free_weight )
+{
+    const bool volume_limited = source_volume > free_volume;
+    const bool weight_limited = source_weight > free_weight;
+    if( !volume_limited ) {
+        return weight_limited ? advanced_inv_capacity_limit::weight :
+               advanced_inv_capacity_limit::none;
+    }
+    if( !weight_limited ) {
+        return advanced_inv_capacity_limit::volume;
+    }
+
+    const long double volume_pressure = static_cast<long double>( source_volume.value() ) /
+                                        std::max<int64_t>( 1, free_volume.value() );
+    const long double weight_pressure = static_cast<long double>( source_weight.value() ) /
+                                        std::max<int64_t>( 1, free_weight.value() );
+    return volume_pressure >= weight_pressure ? advanced_inv_capacity_limit::volume :
+           advanced_inv_capacity_limit::weight;
+}
+
+advanced_inv_move_all_plan prepare_advanced_inv_move_all_items(
+    std::vector<drop_or_stash_item_info> &items, const units::volume free_volume,
+    const units::mass free_weight, const bool activity_processes_from_back )
+{
+    struct cached_item {
+        size_t index;
+        int64_t volume;
+        int64_t weight;
+        size_t group;
+    };
+    struct item_group {
+        std::pair<int64_t, int64_t> dimensions = { 0, 0 };
+        size_t order;
+    };
+
+    units::volume source_volume = 0_ml;
+    units::mass source_weight = 0_gram;
+    std::vector<cached_item> cached;
+    std::vector<item_group> groups;
+    std::unordered_map<const item *, size_t> group_ids;
+    cached.reserve( items.size() );
+    for( size_t i = 0; i < items.size(); ++i ) {
+        const item_location &loc = items[i].loc();
+        const int64_t volume = loc->volume().value();
+        const int64_t weight = loc->weight().value();
+        source_volume += units::from_milliliter( volume );
+        source_weight += units::from_gram( weight );
+        const item *group_item = loc.has_parent() ? loc.parent_item().get_item() : loc.get_item();
+        const auto inserted = group_ids.emplace( group_item, groups.size() );
+        if( inserted.second ) {
+            groups.push_back( { { 0, 0 }, groups.size() } );
+        }
+        cached.push_back( { i, volume, weight, inserted.first->second } );
+    }
+
+    advanced_inv_move_all_plan result;
+    result.volume_limited = source_volume > free_volume;
+    result.weight_limited = source_weight > free_weight;
+    result.limit = advanced_inv_most_limited_capacity( source_volume, free_volume,
+                   source_weight, free_weight );
+    if( result.limit == advanced_inv_capacity_limit::none ) {
+        return result;
+    }
+    for( const cached_item &entry : cached ) {
+        const std::pair<int64_t, int64_t> dimensions =
+            result.limit == advanced_inv_capacity_limit::volume ?
+            std::make_pair( entry.volume, entry.weight ) :
+            std::make_pair( entry.weight, entry.volume );
+        groups[entry.group].dimensions.first += dimensions.first;
+        groups[entry.group].dimensions.second += dimensions.second;
+    }
+    std::stable_sort( cached.begin(), cached.end(), [&]( const cached_item & lhs,
+    const cached_item & rhs ) {
+        const item_group &left = groups[lhs.group];
+        const item_group &right = groups[rhs.group];
+        if( left.dimensions != right.dimensions ) {
+            return activity_processes_from_back ? left.dimensions > right.dimensions :
+                   left.dimensions < right.dimensions;
+        }
+        return left.order < right.order;
+    } );
+    std::vector<drop_or_stash_item_info> sorted;
+    sorted.reserve( items.size() );
+    for( const cached_item &entry : cached ) {
+        sorted.emplace_back( std::move( items[entry.index] ) );
+    }
+    items = std::move( sorted );
+    return result;
+}
+
+void filter_advanced_inv_container_items( std::vector<drop_or_stash_item_info> &items,
+        const item_location &container )
+{
+    items.erase( std::remove_if( items.begin(), items.end(), [&]( const drop_or_stash_item_info & entry ) {
+        return !can_insert_item_directly( container, entry.loc() ).success();
+    } ), items.end() );
+}
 
 namespace io
 {
@@ -221,6 +323,12 @@ std::string advanced_inventory::get_sortname( advanced_inv_sortby sortby )
             return _( "spoilage" );
         case SORTBY_PRICE:
             return _( "barter value" );
+        case SORTBY_PRICEPERVOLUME:
+            return _( "barter value / volume" );
+        case SORTBY_PRICEPERWEIGHT:
+            return _( "barter value / weight" );
+        case SORTBY_STACKS:
+            return _( "amount" );
     }
     return "!BUG!";
 }
@@ -630,6 +738,31 @@ struct advanced_inv_sorter {
                     return d1.items.front()->price( true ) > d2.items.front()->price( true );
                 }
                 break;
+            case SORTBY_PRICEPERVOLUME: {
+                const double density1 = static_cast<double>( d1.items.front()->price( true ) ) /
+                                        std::max( 1, d1.items.front()->volume().value() );
+                const double density2 = static_cast<double>( d2.items.front()->price( true ) ) /
+                                        std::max( 1, d2.items.front()->volume().value() );
+                if( density1 != density2 ) {
+                    return density1 > density2;
+                }
+                break;
+            }
+            case SORTBY_PRICEPERWEIGHT: {
+                const double density1 = static_cast<double>( d1.items.front()->price( true ) ) /
+                                        std::max<int64_t>( 1, d1.items.front()->weight().value() );
+                const double density2 = static_cast<double>( d2.items.front()->price( true ) ) /
+                                        std::max<int64_t>( 1, d2.items.front()->weight().value() );
+                if( density1 != density2 ) {
+                    return density1 > density2;
+                }
+                break;
+            }
+            case SORTBY_STACKS:
+                if( d1.stacks != d2.stacks ) {
+                    return d1.stacks > d2.stacks;
+                }
+                break;
         }
         // secondary sort by name
         const std::string *n1;
@@ -646,6 +779,11 @@ struct advanced_inv_sorter {
         return localized_compare( *n1, *n2 );
     }
 };
+
+void advanced_inventory_pane::sort_items()
+{
+    std::stable_sort( items.begin(), items.end(), advanced_inv_sorter( sortby ) );
+}
 
 int advanced_inventory::print_header( advanced_inventory_pane &pane, aim_location sel )
 {
@@ -749,7 +887,7 @@ void advanced_inventory::recalc_pane( side p )
     }
 
     // Sort all items
-    std::stable_sort( pane.items.begin(), pane.items.end(), advanced_inv_sorter( pane.sortby ) );
+    pane.sort_items();
 
     // Attempt to move to the target item if there is one.
     if( pane.target_item_after_recalc ) {
@@ -974,14 +1112,6 @@ bool advanced_inventory::move_all_items()
         return false;
     }
 
-    // Check first if the destination area still has enough room for moving all.
-    const units::volume &src_volume = spane.in_vehicle() ? sarea.volume_veh : sarea.volume;
-    const units::volume dest_volume_free = dpane.free_volume( darea );
-    if( !is_processing() && src_volume > dest_volume_free &&
-        !query_yn( _( "There isn't enough room.  Attempt to move as much as you can?" ) ) ) {
-        return false;
-    }
-
     std::vector<drop_or_stash_item_info> pane_items;
     // Keep a list of favorites separated, only drop non-fav first if they exist.
     std::vector<drop_or_stash_item_info> pane_favs;
@@ -990,6 +1120,18 @@ bool advanced_inventory::move_all_items()
 
     std::string skipped_items_message = fill_lists_with_pane_items( src, player_character,
                                         pane_items, pane_favs, filter_buckets );
+
+    const bool had_nonfavorite_items = !pane_items.empty();
+    if( dpane.get_area() == AIM_CONTAINER ) {
+        filter_advanced_inv_container_items( pane_items, dpane.container );
+        filter_advanced_inv_container_items( pane_favs, dpane.container );
+        if( pane_items.empty() && ( pane_favs.empty() || had_nonfavorite_items ) ) {
+            popup_getkey( had_nonfavorite_items && !pane_favs.empty() ?
+                          _( "None of the non-favorite items fit in that container." ) :
+                          _( "None of the items fit in that container." ) );
+            return false;
+        }
+    }
 
     // Move all the favorite items only if there are no other items
     if( pane_items.empty() ) {
@@ -1009,6 +1151,26 @@ bool advanced_inventory::move_all_items()
 
     if( !skipped_items_message.empty() ) {
         add_msg( m_info, skipped_items_message );
+    }
+
+    const units::volume free_volume = dpane.free_volume( darea );
+    const units::mass free_weight = dpane.free_weight_capacity();
+    const bool activity_processes_from_back = dpane.get_area() != AIM_CONTAINER &&
+            spane.get_area() != AIM_INVENTORY && spane.get_area() != AIM_WORN;
+    const advanced_inv_move_all_plan plan = prepare_advanced_inv_move_all_items(
+                pane_items, free_volume, free_weight, activity_processes_from_back );
+    if( plan.limit != advanced_inv_capacity_limit::none ) {
+        const std::string warning = plan.volume_limited && plan.weight_limited ?
+                                    _( "There isn't enough room or weight capacity.  "
+                                       "Attempt to move as much as you can?" ) :
+                                    plan.volume_limited ?
+                                    _( "There isn't enough room.  "
+                                       "Attempt to move as much as you can?" ) :
+                                    _( "There isn't enough weight capacity.  "
+                                       "Attempt to move as much as you can?" );
+        if( !is_processing() && !query_yn( warning ) ) {
+            return false;
+        }
     }
 
     if( dpane.get_area() == AIM_CONTAINER ) {
@@ -1093,6 +1255,9 @@ bool advanced_inventory::show_sort_menu( advanced_inventory_pane &pane )
     sm.addentry( SORTBY_AMMO,     true, 'a', get_sortname( SORTBY_AMMO ) );
     sm.addentry( SORTBY_SPOILAGE,   true, 's', get_sortname( SORTBY_SPOILAGE ) );
     sm.addentry( SORTBY_PRICE, true, 'b', get_sortname( SORTBY_PRICE ) );
+    sm.addentry( SORTBY_PRICEPERVOLUME, true, 'r', get_sortname( SORTBY_PRICEPERVOLUME ) );
+    sm.addentry( SORTBY_PRICEPERWEIGHT, true, 'g', get_sortname( SORTBY_PRICEPERWEIGHT ) );
+    sm.addentry( SORTBY_STACKS, true, 't', get_sortname( SORTBY_STACKS ) );
     // Pre-select current sort.
     sm.selected = pane.sortby - SORTBY_NONE;
     // Calculate key and window variables, generate window,

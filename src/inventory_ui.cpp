@@ -37,6 +37,7 @@
 #include "trade_ui.h"
 #include "translations.h"
 #include "type_id.h"
+#include "ui.h"
 #include "uistate.h"
 #include "ui_manager.h"
 #include "units.h"
@@ -564,6 +565,12 @@ void inventory_entry::update_cache()
     item_name_t &names = get_cached_name( &*any_item() );
     cached_name = &names.first;
     cached_name_full = &names.second;
+    cached_weight = 0_gram;
+    cached_volume = 0_ml;
+    for( const item_location &loc : locations ) {
+        cached_weight += loc->weight();
+        cached_volume += loc->volume();
+    }
 }
 
 void inventory_entry::cache_denial( inventory_selector_preset const &preset ) const
@@ -1281,6 +1288,7 @@ inventory_entry *inventory_column::add_entry( const inventory_entry &entry )
         if( entry_with_loc != dest.end() ) {
             std::vector<item_location> &locations = entry_with_loc->locations;
             std::move( entry.locations.begin(), entry.locations.end(), std::back_inserter( locations ) );
+            entry_with_loc->update_cache();
             return &*entry_with_loc;
         }
     }
@@ -1322,12 +1330,31 @@ bool inventory_column::sort_compare( inventory_entry const &lhs, inventory_entry
         return left_fav;
     }
 
+    if( sort_mode == inventory_sort_mode::weight ) {
+        const units::mass left_weight = lhs.get_total_weight();
+        const units::mass right_weight = rhs.get_total_weight();
+        if( left_weight != right_weight ) {
+            return left_weight > right_weight;
+        }
+    }
+    if( sort_mode == inventory_sort_mode::volume ) {
+        const units::volume left_volume = lhs.get_total_volume();
+        const units::volume right_volume = rhs.get_total_volume();
+        if( left_volume != right_volume ) {
+            return left_volume > right_volume;
+        }
+    }
+
     return preset.sort_compare( lhs, rhs );
 }
 
 bool inventory_column::indented_sort_compare( inventory_entry const &lhs,
         inventory_entry const &rhs )
 {
+    if( !lhs.any_item().has_parent() && !rhs.any_item().has_parent() ) {
+        return sort_compare( lhs, rhs );
+    }
+
     // place children below all parents
     parent_path_t const path_lhs = path_to_top( lhs, preset );
     parent_path_t const path_rhs = path_to_top( rhs, preset );
@@ -2356,11 +2383,13 @@ void inventory_selector::refresh_window()
     wnoutrefresh( w_inv );
 }
 
-std::pair< bool, std::string > inventory_selector::query_string( const std::string &val )
+std::pair< bool, std::string > inventory_selector::query_string( const std::string &val,
+        const bool only_digits )
 {
     spopup = std::make_unique<string_input_popup>();
     spopup->max_length( 256 )
-    .text( val );
+    .text( val )
+    .only_digits( only_digits );
     spopup->identifier( "item_filter" ).hist_use_uilist( false );
 
     shared_ptr_fast<ui_adaptor> current_ui = ui.lock();
@@ -2393,7 +2422,7 @@ void inventory_selector::query_set_filter()
 
 int inventory_selector::query_count()
 {
-    std::pair< bool, std::string > query = query_string( "" );
+    std::pair< bool, std::string > query = query_string( "", true );
     int ret = -1;
     if( query.first ) {
         try {
@@ -2503,13 +2532,25 @@ void inventory_selector::draw_footer( const catacurses::window &w ) const
             wprintz( w, c_light_gray, " >" );
         }
 
-        right_print( w, getmaxy( w ) - border, border + 1, c_light_gray,
-                     string_format( "< [%s] %s >", ctxt.get_desc( "VIEW_CATEGORY_MODE" ),
-                                    io::enum_to_string( _uimode ) ) );
+        std::string right_footer = string_format( "< [%s] %s", ctxt.get_desc( "VIEW_CATEGORY_MODE" ),
+                                   io::enum_to_string( _uimode ) );
+        if( sorting_enabled ) {
+            right_footer += string_format( " | [%s] %s: %s", ctxt.get_desc( "SORT" ),
+                                           _( "Sort" ), sort_mode_name() );
+        }
+        right_footer += " >";
+        const int right_width = utf8_width( right_footer, true );
+        const int right_x = right_width + filter_offset + border + 1 < getmaxx( w ) ?
+                            right_print( w, getmaxy( w ) - border, border + 1,
+                                         c_light_gray, right_footer ) : getmaxx( w ) - border;
         const auto footer = get_footer( mode );
         if( !footer.first.empty() ) {
             const int string_width = utf8_width( footer.first );
-            const int x1 = filter_offset + std::max( getmaxx( w ) - string_width - filter_offset, 0 ) / 2;
+            const int footer_room = right_x - filter_offset;
+            if( string_width + 4 > footer_room ) {
+                return;
+            }
+            const int x1 = filter_offset + ( footer_room - string_width ) / 2;
             const int x2 = x1 + string_width - 1;
             const int y = getmaxy( w ) - border;
 
@@ -2606,6 +2647,10 @@ inventory_input inventory_selector::process_input( const std::string &action, in
 {
     inventory_input res{ action, ch, nullptr };
 
+    if( res.action == "SORT" && sorting_enabled ) {
+        return res;
+    }
+
     if( res.action == "SELECT" ) {
         cata::optional<point> o_p = ctxt.get_coordinates_text( w_inv );
         if( o_p ) {
@@ -2663,6 +2708,8 @@ void inventory_selector::on_input( const inventory_input &input )
         query_set_filter();
     } else if( input.action == "RESET_FILTER" ) {
         set_filter( "" );
+    } else if( input.action == "SORT" && sorting_enabled ) {
+        query_sort_mode();
     } else if( input.action == "TOGGLE_SKIP_UNSELECTABLE" ) {
         toggle_skip_unselectable();
     } else {
@@ -2688,6 +2735,58 @@ void inventory_selector::on_input( const inventory_input &input )
                 highlight_one_of( inv );
             }
         }
+    }
+}
+
+void inventory_selector::enable_sorting()
+{
+    sorting_enabled = true;
+    ctxt.register_action( "SORT", to_translation( "Sort items" ) );
+}
+
+std::string inventory_selector::sort_mode_name() const
+{
+    switch( sort_mode ) {
+        case inventory_sort_mode::name:
+            return _( "name" );
+        case inventory_sort_mode::weight:
+            return _( "weight" );
+        case inventory_sort_mode::volume:
+            return _( "volume" );
+    }
+    return std::string();
+}
+
+void inventory_selector::query_sort_mode()
+{
+    uilist menu;
+    menu.text = _( "Sort by…" );
+    menu.addentry( static_cast<int>( inventory_sort_mode::name ), true, 'n', _( "name" ) );
+    menu.addentry( static_cast<int>( inventory_sort_mode::weight ), true, 'w', _( "weight" ) );
+    menu.addentry( static_cast<int>( inventory_sort_mode::volume ), true, 'v', _( "volume" ) );
+    menu.selected = static_cast<int>( sort_mode );
+    menu.query();
+    if( menu.ret < static_cast<int>( inventory_sort_mode::name ) ||
+        menu.ret > static_cast<int>( inventory_sort_mode::volume ) ) {
+        return;
+    }
+
+    std::vector<item_location> highlighted;
+    if( get_highlighted().is_item() ) {
+        highlighted = get_highlighted().locations;
+    }
+    sort_mode = static_cast<inventory_sort_mode>( menu.ret );
+    for( inventory_column *column : columns ) {
+        column->set_sort_mode( sort_mode );
+    }
+    if( highlighted.empty() ) {
+        prepare_layout();
+    } else {
+        highlight_one_of( highlighted );
+    }
+    shared_ptr_fast<ui_adaptor> current_ui = ui.lock();
+    if( current_ui ) {
+        current_ui->invalidate_ui();
     }
 }
 
@@ -3479,6 +3578,7 @@ pickup_selector::pickup_selector( Character &p, const inventory_selector_preset 
 {
     ctxt.register_action( "WEAR" );
     ctxt.register_action( "WIELD" );
+    enable_sorting();
 #if defined(__ANDROID__)
     // allow user to type a drop number without dismissing virtual keyboard after each keypress
     ctxt.allow_text_entry = true;

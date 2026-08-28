@@ -485,7 +485,9 @@ const std::string &string_input_popup::query_string( const bool loop, const bool
             _position = -1;
             _canceled = true;
             return _text;
-        } else if( action == "TEXT.CONFIRM" ) {
+        } else if( action == "TEXT.CONFIRM" ||
+                   ( action == "TEXT.RIGHT" && numeric_input_accepts_right(
+                         _only_digits, edit.empty(), _position, ret.size() ) ) ) {
             add_to_history( ret.str() );
             _confirmed = true;
             _text = ret.str();
@@ -683,4 +685,10 @@ void string_input_popup::add_callback( const std::string &action,
 void string_input_popup::add_callback( int input, const std::function<bool()> &callback_func )
 {
     callbacks.emplace_back( "", input, callback_func );
+}
+
+bool numeric_input_accepts_right( const bool only_digits, const bool edit_empty,
+                                  const int cursor_position, const size_t text_length )
+{
+    return only_digits && edit_empty && cursor_position >= static_cast<int>( text_length );
 }
