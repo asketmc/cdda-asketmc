@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "pr": 27,
+  "entries": [
+    {
+      "id": "persistent-corpse-processing",
+      "category": "Features",
+      "audience": "players",
+      "summary": "Preserve progress when corpse processing is interrupted and resumed.",
+      "compatibility": "save-compatible",
+      "details": [
+        "All eight corpse-processing methods track independent fractional progress on the corpse across movement and save/load.",
+        "The butchery menu reports partial completion, while completed work clears its marker and produces output once."
+      ]
+    }
+  ]
+}
