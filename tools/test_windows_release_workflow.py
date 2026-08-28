@@ -101,15 +101,17 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
     def test_focused_gameplay_catch_gates_execute_and_fail_closed(self) -> None:
         self.assertIn("sudo apt-get install --yes ccache wine64", self.workflow)
         self.assertIn(
-            'TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp player_helpers.cpp climbing_test.cpp npc_hostility_test.cpp"',
+            'TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp player_helpers.cpp advanced_inventory_test.cpp climbing_test.cpp npc_hostility_test.cpp"',
             self.workflow,
         )
         self.assertIn('"${test_bin}"', self.workflow)
         self.assertIn('"[climbing][z-level]"', self.workflow)
         self.assertIn('"[npc][morale][hostility]"', self.workflow)
+        self.assertIn('"[advanced_inventory][backport],[inventory][sorting][backport]"', self.workflow)
         self.assertIn("timeout 10m", self.workflow)
         self.assertIn('("climbing", "climbing-test-results.xml")', self.workflow)
         self.assertIn('("NPC hostility", "npc-hostility-test-results.xml")', self.workflow)
+        self.assertIn('("inventory transfer", "inventory-test-results.xml")', self.workflow)
         self.assertIn("gate discovered zero test cases", self.workflow)
         self.assertIn("gate reported", self.workflow)
         self.assertIn("ifdef TEST_SOURCES", self.tests_makefile)
