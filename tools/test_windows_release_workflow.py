@@ -81,6 +81,17 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn('build_distribution "${second_prefix}" 0', self.workflow)
         self.assertIn('export SOURCE_DATE_EPOCH="${source_epoch}"', self.workflow)
 
+    def test_manual_dispatch_uploads_a_downloadable_build(self) -> None:
+        start = self.workflow.index("- name: Stage requested Windows build")
+        end = self.workflow.index("- name: Stage tagged release bundle")
+        stage = self.workflow[start:end]
+        self.assertIn("if: github.event_name == 'workflow_dispatch'", stage)
+        self.assertIn("name: windows-build-${{ github.sha }}", stage)
+        self.assertIn("release-output/cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip", stage)
+        self.assertIn("release-output/SHA256SUMS.txt", stage)
+        self.assertIn("release-output/BUILD_MANIFEST.txt", stage)
+        self.assertIn("if-no-files-found: error", stage)
+
     def test_focused_gameplay_catch_gates_execute_and_fail_closed(self) -> None:
         self.assertIn("sudo apt-get install --yes ccache wine64", self.workflow)
         self.assertIn(

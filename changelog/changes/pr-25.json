@@ -12,6 +12,13 @@
         "Kill-on-sight faction relationships now count as guaranteed hostility even while the NPC still has NPCATT_NULL.",
         "Attacking and killing a genuinely neutral NPC still applies the existing innocent-kill morale penalty."
       ]
+    },
+    {
+      "id": "requested-windows-build-artifact",
+      "category": "Infrastructure",
+      "audience": "maintainers",
+      "summary": "Manual Windows build requests now publish a short-lived downloadable package and verification files.",
+      "compatibility": "not-applicable"
     }
   ]
 }
