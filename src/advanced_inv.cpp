@@ -1070,6 +1070,15 @@ bool advanced_inventory::move_all_items()
     std::string skipped_items_message = fill_lists_with_pane_items( src, player_character,
                                         pane_items, pane_favs, filter_buckets );
 
+    if( dpane.get_area() == AIM_CONTAINER ) {
+        filter_advanced_inv_container_items( pane_items, dpane.container );
+        filter_advanced_inv_container_items( pane_favs, dpane.container );
+        if( pane_items.empty() && pane_favs.empty() ) {
+            popup_getkey( _( "None of the items fit in that container." ) );
+            return false;
+        }
+    }
+
     // Move all the favorite items only if there are no other items
     if( pane_items.empty() ) {
         // Check if the list is still empty for when all that's in the aim_worn list is a wielded weapon.
@@ -1088,14 +1097,6 @@ bool advanced_inventory::move_all_items()
 
     if( !skipped_items_message.empty() ) {
         add_msg( m_info, skipped_items_message );
-    }
-
-    if( dpane.get_area() == AIM_CONTAINER ) {
-        filter_advanced_inv_container_items( pane_items, dpane.container );
-        if( pane_items.empty() ) {
-            popup_getkey( _( "None of the items fit in that container." ) );
-            return false;
-        }
     }
 
     units::volume source_volume = 0_ml;
