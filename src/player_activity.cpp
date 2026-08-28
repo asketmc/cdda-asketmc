@@ -369,8 +369,7 @@ void player_activity::do_turn( Character &you )
                 case UILIST_CANCEL:
                 case 2:
                     auto_resume = false;
-                    canceled( you );
-                    set_to_null();
+                    abandon( you );
                     break;
                 case 3:
                     ignoreQuery = true;
@@ -435,6 +434,12 @@ void player_activity::canceled( Character &who )
     } else if( *this ) {
         butcher_save_progress( *this );
     }
+}
+
+void player_activity::abandon( Character &who )
+{
+    canceled( who );
+    set_to_null();
 }
 
 float player_activity::exertion_level() const

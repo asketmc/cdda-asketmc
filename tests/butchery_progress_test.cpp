@@ -150,8 +150,7 @@ TEST_CASE( "discarding corpse processing checkpoints progress",
     player_activity act = set_up_activity( you, ACT_BUTCHER, corpse );
     act.moves_left = act.moves_total * 3 / 5;
 
-    act.canceled( you );
-    act.set_to_null();
+    act.abandon( you );
 
     CHECK( act.is_null() );
     CHECK( butcher_get_progress( *corpse, butcher_type::QUICK ) ==
