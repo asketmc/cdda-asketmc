@@ -162,8 +162,11 @@ TEST_CASE( "advanced inventory filters incompatible container candidates before 
            "[advanced_inventory][capacity][container][backport]" )
 {
     clear_avatar();
+    clear_map();
     avatar &dummy = get_avatar();
-    item_location container = dummy.i_add( item( "test_tool_belt" ) );
+    map &here = get_map();
+    item &container_item = here.add_item( dummy.pos(), item( "test_tool_belt" ) );
+    item_location container( map_cursor( dummy.pos() ), &container_item );
     item_location incompatible = dummy.i_add( item( "test_baseball" ) );
     item_location fitting = dummy.i_add( item( "hammer_pocket_test" ) );
 
