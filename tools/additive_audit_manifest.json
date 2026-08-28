@@ -7,7 +7,7 @@
     {
       "type": "keybinding",
       "id": "SORT",
-      "target_fingerprint": "b790684f3f08f6e9faba97357880728788e34f1ce206fcf692446a2d2227ac88",
+      "target_fingerprint": "126971390936c9aad1bb214346a6a14d74f923a09142c771da06baaa1e08dd56",
       "reason": "Classic pickup and drop menus add an inventory-local sorting action"
     },
     {

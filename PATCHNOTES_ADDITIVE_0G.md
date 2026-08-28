@@ -274,7 +274,7 @@ global behavior tree and mission scheduler are not included.
   warns about the active limit, and tries smaller fitting items first. The
   donor's unrelated bucket and container behavior changes are not included.
 - Classic pickup (`g`) and drop (`D`) selectors can sort stacks within their
-  existing categories by total weight or total volume with **s**.
+  existing categories by total weight or total volume with **Ctrl+S**.
 - Right Arrow and Numpad 6 confirm numeric quantity input when the cursor is at
   the end; ordinary text editing keeps its normal cursor behavior.
 - Recipe details now show the exact **minor failure chance** for this fork's

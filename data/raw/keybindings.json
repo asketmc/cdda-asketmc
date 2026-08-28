@@ -1955,7 +1955,7 @@
     "id": "SORT",
     "category": "INVENTORY",
     "name": "Sort items",
-    "bindings": [ { "input_method": "keyboard_any", "key": "s" } ]
+    "bindings": [ { "input_method": "keyboard_code", "key": "s", "mod": [ "ctrl" ] } ]
   },
   {
     "type": "keybinding",
