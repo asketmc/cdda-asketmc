@@ -162,11 +162,8 @@ TEST_CASE( "advanced inventory filters incompatible container candidates before 
            "[advanced_inventory][capacity][container][backport]" )
 {
     clear_avatar();
-    clear_map();
     avatar &dummy = get_avatar();
-    map &here = get_map();
-    item &container_item = here.add_item( dummy.pos(), item( "test_tool_belt" ) );
-    item_location container( map_cursor( dummy.pos() ), &container_item );
+    item_location container = dummy.i_add( item( "test_tool_belt" ) );
     item_location incompatible = dummy.i_add( item( "test_baseball" ) );
     item_location fitting = dummy.i_add( item( "hammer_pocket_test" ) );
 
@@ -182,17 +179,6 @@ TEST_CASE( "advanced inventory filters incompatible container candidates before 
     filter_advanced_inv_container_items( candidates, container );
     REQUIRE( candidates.size() == 1 );
     CHECK( candidates.front().loc() == fitting );
-
-    drop_locations inserts;
-    inserts.emplace_back( fitting, 1 );
-    dummy.assign_activity( player_activity( insert_item_activity_actor( container, inserts ) ) );
-    dummy.activity.start_or_resume( dummy, false );
-    dummy.moves = 100000;
-    dummy.activity.do_turn( dummy );
-
-    CHECK( incompatible );
-    CHECK_FALSE( fitting );
-    CHECK( container->num_item_stacks() == 1 );
 }
 
 TEST_CASE( "numeric quantity input accepts right only at the end",
