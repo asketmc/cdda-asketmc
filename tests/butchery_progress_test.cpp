@@ -82,7 +82,7 @@ TEST_CASE( "corpse processing activities save independent progress",
         act.moves_total = 1000;
         act.moves_left = 900 - static_cast<int>( i ) * 100;
         act.targets.push_back( corpse );
-        activity_handlers::butcher_do_turn( &act, &you );
+        butcher_save_progress( act );
     }
 
     for( size_t i = 0; i < processing.size(); ++i ) {
@@ -104,6 +104,8 @@ TEST_CASE( "corpse progress survives serialization", "[butchery][progress][seria
 
     CHECK( butcher_get_progress( restored, butcher_type::DISSECT ) == Approx( 0.375 ) );
     CHECK( butcher_get_progress( restored, butcher_type::QUICK ) == 0.0 );
+    restored.set_var( "QUICK_progress", 0.001 );
+    CHECK( butcher_get_progress_percent( restored, butcher_type::QUICK ) == 1 );
 }
 
 TEST_CASE( "interrupted butchery resumes after moving the corpse and changing tools",
@@ -118,10 +120,11 @@ TEST_CASE( "interrupted butchery resumes after moving the corpse and changing to
     const int original_total = you.activity.moves_total;
     you.activity.moves_left = original_total * 3 / 5;
     activity_handlers::butcher_do_turn( &you.activity, &you );
-    const double saved_progress = butcher_get_progress( *corpse, butcher_type::QUICK );
-    REQUIRE( saved_progress == Approx( 0.4 ).margin( 0.001 ) );
+    CHECK( butcher_get_progress( *corpse, butcher_type::QUICK ) == 0.0 );
 
     you.cancel_activity();
+    const double saved_progress = butcher_get_progress( *corpse, butcher_type::QUICK );
+    REQUIRE( saved_progress == Approx( 0.4 ).margin( 0.001 ) );
     you.backlog.clear();
     REQUIRE( butcher_get_progress( *corpse, butcher_type::QUICK ) == Approx( saved_progress ) );
 
@@ -178,7 +181,7 @@ TEST_CASE( "corpse processing stops when its target moves unexpectedly",
     item_location corpse = add_test_corpse( you.pos() );
     player_activity act = set_up_activity( you, ACT_BUTCHER, corpse );
     act.moves_left = act.moves_total / 2;
-    activity_handlers::butcher_do_turn( &act, &you );
+    butcher_save_progress( act );
     const double saved_progress = butcher_get_progress( *corpse, butcher_type::QUICK );
 
     item moved = *corpse;

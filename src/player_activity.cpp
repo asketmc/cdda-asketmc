@@ -431,6 +431,8 @@ void player_activity::canceled( Character &who )
 {
     if( *this && actor ) {
         actor->canceled( *this, who );
+    } else if( *this ) {
+        butcher_save_progress( *this );
     }
 }
 

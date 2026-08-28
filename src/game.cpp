@@ -8883,10 +8883,10 @@ static void butcher_submenu( const std::vector<map_stack::iterator> &corpses, in
     };
     auto progress_str = [&]( butcher_type bt ) {
         if( index != -1 ) {
-            const double progress = butcher_get_progress( *corpses[index], bt );
-            if( progress > 0.0 ) {
+            const int progress = butcher_get_progress_percent( *corpses[index], bt );
+            if( progress > 0 ) {
                 return " " + colorize( string_format( _( "%d%% complete" ),
-                                                      static_cast<int>( progress * 100 ) ), c_dark_gray );
+                                                      progress ), c_dark_gray );
             }
         } else {
             for( const map_stack::iterator &it : corpses ) {

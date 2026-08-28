@@ -396,6 +396,12 @@ double butcher_get_progress( const item &corpse_item, const butcher_type action 
     return std::isfinite( progress ) ? std::max( 0.0, std::min( 1.0, progress ) ) : 0.0;
 }
 
+int butcher_get_progress_percent( const item &corpse_item, const butcher_type action )
+{
+    const double progress = butcher_get_progress( corpse_item, action );
+    return progress > 0.0 ? std::max( 1, static_cast<int>( progress * 100 ) ) : 0;
+}
+
 static butcher_type get_butcher_type( const player_activity &act )
 {
     if( act.id() == ACT_BUTCHER_FULL ) {
@@ -414,6 +420,27 @@ static butcher_type get_butcher_type( const player_activity &act )
         return butcher_type::DISMEMBER;
     }
     return butcher_type::QUICK;
+}
+
+void butcher_save_progress( player_activity &act )
+{
+    const activity_id &id = act.id();
+    if( ( id != ACT_BLEED && id != ACT_BUTCHER && id != ACT_BUTCHER_FULL &&
+          id != ACT_FIELD_DRESS && id != ACT_SKIN && id != ACT_QUARTER &&
+          id != ACT_DISMEMBER && id != ACT_DISSECT ) || act.targets.empty() ||
+        act.moves_total <= 0 || act.moves_left <= 0 ) {
+        return;
+    }
+    item_location &target = act.targets.back();
+    if( !target || !target->is_corpse() ) {
+        return;
+    }
+    const double progress = static_cast<double>( act.moves_total - act.moves_left ) /
+                            act.moves_total;
+    if( progress > 0.0 ) {
+        target->set_var( butcher_progress_var( get_butcher_type( act ) ),
+                         std::min( 1.0, progress ) );
+    }
 }
 
 static void set_up_butchery( player_activity &act, Character &you, butcher_type action )
@@ -2755,10 +2782,6 @@ void activity_handlers::butcher_do_turn( player_activity *act, Character *you )
         act->set_to_null();
         return;
     }
-    const double progress = static_cast<double>( act->moves_total - act->moves_left ) /
-                            act->moves_total;
-    target->set_var( butcher_progress_var( get_butcher_type( *act ) ),
-                     std::max( 0.0, std::min( 1.0, progress ) ) );
 }
 
 void activity_handlers::wait_finish( player_activity *act, Character *you )
