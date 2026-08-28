@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "pr": 25,
+  "entries": [
+    {
+      "id": "hostile-npc-kill-morale",
+      "category": "Bugfixes",
+      "audience": "players",
+      "summary": "Killing a guaranteed-hostile NPC no longer causes innocent-kill guilt before they enter an active combat attitude.",
+      "compatibility": "save-compatible",
+      "details": [
+        "Kill-on-sight faction relationships now count as guaranteed hostility even while the NPC still has NPCATT_NULL.",
+        "Attacking and killing a genuinely neutral NPC still applies the existing innocent-kill morale penalty."
+      ]
+    }
+  ]
+}
