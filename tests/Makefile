@@ -4,7 +4,11 @@
 # As each test will have a main function we need to handle this file by file.
 # We're using the fairly typical convention that any file ending in _test.cpp
 # is a test executable.
+ifdef TEST_SOURCES
+SOURCES = $(TEST_SOURCES)
+else
 SOURCES = $(wildcard *.cpp)
+endif
 OBJS = $(sort $(SOURCES:%.cpp=$(ODIR)/%.o))
 
 CATA_LIB=../$(BUILD_PREFIX)cataclysm.a

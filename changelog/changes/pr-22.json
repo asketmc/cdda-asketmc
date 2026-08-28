@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "pr": 22,
+  "entries": [
+    {
+      "id": "supported-ledge-descent",
+      "category": "Bugfixes",
+      "audience": "players",
+      "summary": "Climb down supported ledges safely when the same route is climbable upward.",
+      "compatibility": "save-compatible",
+      "details": [
+        "Downspouts, fences, ladders, braced walls, and nearby vehicles support controlled descent; multi-level routes require support on every level.",
+        "Unsupported ledges retain the existing risky and tool-assisted behavior; supported routes preserve grappling hooks, ropes, and web rappelling resources."
+      ]
+    },
+    {
+      "id": "advisory-pr-size-report",
+      "category": "Infrastructure",
+      "audience": "maintainers",
+      "summary": "Report pull requests above 400 or 800 changed lines without blocking CI.",
+      "compatibility": "not-applicable"
+    }
+  ]
+}

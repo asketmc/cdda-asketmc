@@ -51,6 +51,7 @@ jobs:
       - name: Python feature contracts
         run: |
           python3 -m unittest \
+            tools.test_pr_size_lint \
             tools.test_package_windows_release \
             tools.test_release_changelog \
             tools.test_windows_release_workflow \
@@ -62,6 +63,12 @@ jobs:
             tools.gfx_tools.test_build_ultica_hires \
             tools.gfx_tools.test_beauty_backport_assets \
             tools.gfx_tools.test_visual_ui_donor_contracts
+      - name: Report pull request size
+        if: github.event_name == 'pull_request'
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 tools/pr_size_lint.py --base "${PR_BASE_SHA}" --head "${PR_HEAD_SHA}"
       - name: Validate reviewed changelog input and generated release history
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}

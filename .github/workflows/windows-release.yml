@@ -66,7 +66,7 @@ jobs:
       - name: Install host tools
         run: |
           sudo apt-get update
-          sudo apt-get install --yes ccache
+          sudo apt-get install --yes ccache wine64
 
       - name: Restore MXE archives
         id: mxe-cache
@@ -196,6 +196,33 @@ jobs:
             cache_mode=0
           fi
           build_distribution "${first_prefix}" "${cache_mode}"
+          make -j"$(nproc)" \
+            "BUILD_PREFIX=${first_prefix}" \
+            "JSON_FORMATTER_BIN=${first_prefix}json_formatter.exe" \
+            "VERSION=${version}" \
+            "CROSS=${cross}" \
+            "CCACHE=${cache_mode}" RELEASE=1 TILES=1 SOUND=1 LOCALIZE=0 RUNTESTS=1 \
+            LINTJSON=0 ASTYLE=0 WARNINGS=-w BACKTRACE=1 LIBBACKTRACE=1 PCH=0 \
+            TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp player_helpers.cpp climbing_test.cpp" \
+            tests
+          test_bin="tests/${first_prefix}cata_test.exe"
+          test -s "${test_bin}"
+          wine_bin="$(command -v wine || command -v wine64)"
+          WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
+            --user-dir=climbing-test-user --rng-seed 1 --reporter junit \
+            --out climbing-test-results.xml "[climbing][z-level]"
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+
+          root = ET.parse("climbing-test-results.xml").getroot()
+          cases = root.findall(".//testcase")
+          failures = root.findall(".//failure") + root.findall(".//error")
+          if not cases:
+              raise SystemExit("focused climbing gate discovered zero test cases")
+          if failures:
+              raise SystemExit(f"focused climbing gate reported {len(failures)} failures")
+          print(f"focused climbing gate passed {len(cases)} test cases")
+          PY
           first_exe=$(sha256sum "${first_prefix}cataclysm-tiles.exe" | cut -d' ' -f1)
           first_zip=$(sha256sum "${output_dir}/${asset}" | cut -d' ' -f1)
 

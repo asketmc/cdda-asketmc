@@ -3,6 +3,16 @@
 This repository begins with the integrated source snapshot documented below.
 The matching Windows Tiles+Sound package is published under GitHub Releases.
 
+## Supported ledge descent
+
+- A ledge can be climbed down safely when the same one-level route is climbable
+  upward or has strong nearby support such as a downspout, fence, ladder,
+  braced wall, or vehicle.
+- A multi-level descent is safe only when every level has support. Unsupported
+  ledges retain the existing risky climb or fall confirmation and damage.
+- Unsupported ledges keep the existing grappling-hook, rope, and web-rappelling
+  behavior. Supported routes take priority without consuming or deploying them.
+
 ## Windows audio recovery
 
 - Audio initialization now records the active SDL backend and available

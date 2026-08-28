@@ -2403,6 +2403,7 @@ class Character : public Creature, public visitable
          * Return value can depend on the orientation of the terrain.
          */
         int climbing_cost( const tripoint &from, const tripoint &to ) const;
+        bool can_climb_down_safely( const tripoint &top, int height ) const;
 
         void pause(); // '.' command; pauses & resets recoil
 

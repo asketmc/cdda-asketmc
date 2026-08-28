@@ -11634,6 +11634,28 @@ int Character::climbing_cost( const tripoint &from, const tripoint &to ) const
     // TODO: All sorts of mutations, equipment weight etc.
 }
 
+bool Character::can_climb_down_safely( const tripoint &top, const int height ) const
+{
+    constexpr int max_assisted_descent_difficulty = 7;
+    if( height <= 0 ) {
+        return false;
+    }
+
+    map &here = get_map();
+    tripoint upper = top;
+    for( int level = 0; level < height; ++level ) {
+        const tripoint lower = upper + tripoint_below;
+        const bool reverse_climb = climbing_cost( lower, upper ) > 0;
+        const bool assisted_descent = here.valid_move( lower, upper, false, true ) &&
+                                      here.climb_difficulty( lower ) <= max_assisted_descent_difficulty;
+        if( !reverse_climb && !assisted_descent ) {
+            return false;
+        }
+        upper = lower;
+    }
+    return true;
+}
+
 void Character::environmental_revert_effect()
 {
     addictions.clear();
