@@ -369,6 +369,7 @@ void player_activity::do_turn( Character &you )
                 case UILIST_CANCEL:
                 case 2:
                     auto_resume = false;
+                    canceled( you );
                     set_to_null();
                     break;
                 case 3:

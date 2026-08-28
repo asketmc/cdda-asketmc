@@ -108,6 +108,56 @@ TEST_CASE( "corpse progress survives serialization", "[butchery][progress][seria
     CHECK( butcher_get_progress_percent( restored, butcher_type::QUICK ) == 1 );
 }
 
+TEST_CASE( "active corpse processing survives serialization before interruption",
+           "[butchery][progress][serialization][activity]" )
+{
+    avatar &you = get_avatar();
+    prepare_butcher( you );
+    item_location corpse = add_test_corpse( you.pos() );
+    player_activity act = set_up_activity( you, ACT_BUTCHER, corpse );
+    const int original_total = act.moves_total;
+    act.moves_left = original_total * 3 / 5;
+
+    activity_handlers::butcher_do_turn( &act, &you );
+    REQUIRE( butcher_get_progress( *corpse, butcher_type::QUICK ) == 0.0 );
+
+    std::ostringstream saved;
+    JsonOut json( saved );
+    act.serialize( json );
+    player_activity restored;
+    restored.deserialize( json_loader::from_string( saved.str() ).get_object() );
+
+    REQUIRE( restored.id() == ACT_BUTCHER );
+    REQUIRE( restored.moves_total == original_total );
+    REQUIRE( restored.moves_left == original_total * 3 / 5 );
+    REQUIRE( restored.targets.size() == 1 );
+    REQUIRE( restored.targets.front() );
+    restored.canceled( you );
+
+    const double saved_progress = butcher_get_progress( *corpse, butcher_type::QUICK );
+    REQUIRE( saved_progress == Approx( 0.4 ).margin( 0.001 ) );
+    player_activity resumed = set_up_activity( you, ACT_BUTCHER, corpse );
+    CHECK( resumed.moves_left == resumed.moves_total -
+           static_cast<int>( resumed.moves_total * saved_progress ) );
+}
+
+TEST_CASE( "discarding corpse processing checkpoints progress",
+           "[butchery][progress][activity]" )
+{
+    avatar &you = get_avatar();
+    prepare_butcher( you );
+    item_location corpse = add_test_corpse( you.pos() );
+    player_activity act = set_up_activity( you, ACT_BUTCHER, corpse );
+    act.moves_left = act.moves_total * 3 / 5;
+
+    act.canceled( you );
+    act.set_to_null();
+
+    CHECK( act.is_null() );
+    CHECK( butcher_get_progress( *corpse, butcher_type::QUICK ) ==
+           Approx( 0.4 ).margin( 0.001 ) );
+}
+
 TEST_CASE( "interrupted butchery resumes after moving the corpse and changing tools",
            "[butchery][progress][activity]" )
 {
