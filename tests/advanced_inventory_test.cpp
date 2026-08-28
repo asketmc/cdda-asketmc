@@ -162,10 +162,15 @@ TEST_CASE( "advanced inventory filters incompatible container candidates before 
            "[advanced_inventory][capacity][container][backport]" )
 {
     clear_avatar();
+    clear_map();
     avatar &dummy = get_avatar();
-    item_location container = dummy.i_add( item( "test_tool_belt" ) );
-    item_location incompatible = dummy.i_add( item( "test_baseball" ) );
-    item_location fitting = dummy.i_add( item( "hammer_pocket_test" ) );
+    map &here = get_map();
+    item &container_item = here.add_item( dummy.pos(), item( "test_tool_belt" ) );
+    item &incompatible_item = here.add_item( dummy.pos(), item( "test_baseball" ) );
+    item &fitting_item = here.add_item( dummy.pos(), item( "hammer_pocket_test" ) );
+    item_location container( map_cursor( dummy.pos() ), &container_item );
+    item_location incompatible( map_cursor( dummy.pos() ), &incompatible_item );
+    item_location fitting( map_cursor( dummy.pos() ), &fitting_item );
 
     REQUIRE_FALSE( can_insert_item_directly( container, incompatible ).success() );
     REQUIRE( can_insert_item_directly( container, fitting ).success() );
@@ -250,12 +255,17 @@ TEST_CASE( "classic pickup and drop columns sort by total weight or volume",
     avatar &dummy = get_avatar();
     map &here = get_map();
     item &briefcase = here.add_item( dummy.pos(), item( "test_briefcase" ) );
+    briefcase.invlet = 0;
+    briefcase.is_favorite = false;
     item_location briefcase_loc( map_cursor( dummy.pos() ), &briefcase );
     std::vector<item_location> baseballs;
     for( int i = 0; i < 20; ++i ) {
         item &baseball = here.add_item( dummy.pos(), item( "test_baseball" ) );
+        baseball.invlet = 0;
+        baseball.is_favorite = false;
         baseballs.emplace_back( map_cursor( dummy.pos() ), &baseball );
     }
+    dummy.inv->assigned_invlet.clear();
     REQUIRE( baseballs.front()->weight() * baseballs.size() > briefcase.weight() );
     REQUIRE( baseballs.front()->volume() * baseballs.size() < briefcase.volume() );
 

@@ -1358,6 +1358,10 @@ bool inventory_column::sort_compare( inventory_entry const &lhs, inventory_entry
 bool inventory_column::indented_sort_compare( inventory_entry const &lhs,
         inventory_entry const &rhs )
 {
+    if( !lhs.any_item().has_parent() && !rhs.any_item().has_parent() ) {
+        return sort_compare( lhs, rhs );
+    }
+
     // place children below all parents
     parent_path_t const path_lhs = path_to_top( lhs, preset );
     parent_path_t const path_rhs = path_to_top( rhs, preset );
