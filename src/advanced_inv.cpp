@@ -112,6 +112,14 @@ void sort_advanced_inv_move_all_items( std::vector<drop_or_stash_item_info> &ite
     } );
 }
 
+void filter_advanced_inv_container_items( std::vector<drop_or_stash_item_info> &items,
+        const item_location &container )
+{
+    items.erase( std::remove_if( items.begin(), items.end(), [&]( const drop_or_stash_item_info & entry ) {
+        return !can_insert_item_directly( container, entry.loc() ).success();
+    } ), items.end() );
+}
+
 namespace io
 {
 
@@ -1080,6 +1088,14 @@ bool advanced_inventory::move_all_items()
 
     if( !skipped_items_message.empty() ) {
         add_msg( m_info, skipped_items_message );
+    }
+
+    if( dpane.get_area() == AIM_CONTAINER ) {
+        filter_advanced_inv_container_items( pane_items, dpane.container );
+        if( pane_items.empty() ) {
+            popup_getkey( _( "None of the items fit in that container." ) );
+            return false;
+        }
     }
 
     units::volume source_volume = 0_ml;

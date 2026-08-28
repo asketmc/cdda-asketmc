@@ -216,7 +216,7 @@ jobs:
             --out npc-hostility-test-results.xml "[npc][morale][hostility]"
           WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
             --user-dir=inventory-test-user --rng-seed 1 --reporter junit \
-            --out inventory-test-results.xml "[advanced_inventory][backport],[inventory][sorting][backport]"
+            --out inventory-test-results.xml "[advanced_inventory][backport],[inventory][sorting][backport],[inventory][numeric][backport]"
           python3 - <<'PY'
           import xml.etree.ElementTree as ET
 

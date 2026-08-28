@@ -15,6 +15,7 @@ class InventoryTransferInputTests(unittest.TestCase):
         cls.bindings = json.loads(
             (ROOT / "data/raw/keybindings.json").read_text(encoding="utf-8")
         )
+        cls.inventory_ui = (ROOT / "src/inventory_ui.cpp").read_text(encoding="utf-8")
 
     def entry(self, action, category=None):
         return next(
@@ -33,6 +34,7 @@ class InventoryTransferInputTests(unittest.TestCase):
         bindings = self.entry("TEXT.RIGHT")["bindings"]
         self.assertIn({"input_method": "keyboard_any", "key": "RIGHT"}, bindings)
         self.assertIn({"input_method": "keyboard_code", "key": "KEYPAD_6"}, bindings)
+        self.assertIn('query_string( "", true )', self.inventory_ui)
 
 
 if __name__ == "__main__":

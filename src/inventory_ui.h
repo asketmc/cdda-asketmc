@@ -692,7 +692,8 @@ class inventory_selector
          * @param val The default value to have set in the query prompt.
          * @return A tuple of a bool and string, bool is true if user confirmed.
          */
-        std::pair< bool, std::string > query_string( const std::string &val );
+        std::pair< bool, std::string > query_string( const std::string &val,
+                bool only_digits = false );
         /** Query the user for a filter and apply it. */
         void query_set_filter();
         void enable_sorting();

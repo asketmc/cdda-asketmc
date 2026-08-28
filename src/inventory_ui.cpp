@@ -2386,11 +2386,13 @@ void inventory_selector::refresh_window()
     wnoutrefresh( w_inv );
 }
 
-std::pair< bool, std::string > inventory_selector::query_string( const std::string &val )
+std::pair< bool, std::string > inventory_selector::query_string( const std::string &val,
+        const bool only_digits )
 {
     spopup = std::make_unique<string_input_popup>();
     spopup->max_length( 256 )
-    .text( val );
+    .text( val )
+    .only_digits( only_digits );
     spopup->identifier( "item_filter" ).hist_use_uilist( false );
 
     shared_ptr_fast<ui_adaptor> current_ui = ui.lock();
@@ -2423,7 +2425,7 @@ void inventory_selector::query_set_filter()
 
 int inventory_selector::query_count()
 {
-    std::pair< bool, std::string > query = query_string( "" );
+    std::pair< bool, std::string > query = query_string( "", true );
     int ret = -1;
     if( query.first ) {
         try {

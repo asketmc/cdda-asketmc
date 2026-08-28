@@ -39,6 +39,9 @@ void sort_advanced_inv_move_all_items( std::vector<drop_or_stash_item_info> &ite
                                        advanced_inv_capacity_limit limit,
                                        bool activity_processes_from_back );
 
+void filter_advanced_inv_container_items( std::vector<drop_or_stash_item_info> &items,
+        const item_location &container );
+
 class advanced_inventory
 {
     public:

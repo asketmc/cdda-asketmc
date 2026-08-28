@@ -158,6 +158,48 @@ TEST_CASE( "advanced inventory capacity sorting moves small fitting items first"
     }
 }
 
+TEST_CASE( "advanced inventory filters incompatible container candidates before insertion",
+           "[advanced_inventory][capacity][container][backport]" )
+{
+    clear_avatar();
+    avatar &dummy = get_avatar();
+    item_location container = dummy.i_add( item( "test_tool_belt" ) );
+    item_location incompatible = dummy.i_add( item( "test_baseball" ) );
+    item_location fitting = dummy.i_add( item( "hammer_pocket_test" ) );
+
+    REQUIRE_FALSE( can_insert_item_directly( container, incompatible ).success() );
+    REQUIRE( can_insert_item_directly( container, fitting ).success() );
+    REQUIRE( incompatible->weight() < fitting->weight() );
+
+    std::vector<drop_or_stash_item_info> candidates = {
+        { fitting, 1 }, { incompatible, 1 }
+    };
+    sort_advanced_inv_move_all_items( candidates, advanced_inv_capacity_limit::weight, false );
+    REQUIRE( candidates.front().loc() == incompatible );
+    filter_advanced_inv_container_items( candidates, container );
+    REQUIRE( candidates.size() == 1 );
+    CHECK( candidates.front().loc() == fitting );
+
+    drop_locations inserts;
+    inserts.emplace_back( fitting, 1 );
+    dummy.assign_activity( player_activity( insert_item_activity_actor( container, inserts ) ) );
+    process_activity( dummy );
+
+    CHECK( incompatible );
+    CHECK_FALSE( fitting );
+    CHECK( container->num_item_stacks() == 1 );
+}
+
+TEST_CASE( "numeric quantity input accepts right only at the end",
+           "[inventory][numeric][backport]" )
+{
+    CHECK( numeric_input_accepts_right( true, true, 2, 2 ) );
+    CHECK( numeric_input_accepts_right( true, true, 3, 2 ) );
+    CHECK_FALSE( numeric_input_accepts_right( false, true, 2, 2 ) );
+    CHECK_FALSE( numeric_input_accepts_right( true, false, 2, 2 ) );
+    CHECK_FALSE( numeric_input_accepts_right( true, true, 1, 2 ) );
+}
+
 TEST_CASE( "advanced inventory exposes amount and value-density sorts",
            "[advanced_inventory][sorting][backport]" )
 {

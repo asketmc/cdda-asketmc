@@ -19,6 +19,9 @@ class ui_adaptor;
 class utf8_wrapper;
 struct point;
 
+bool numeric_input_accepts_right( bool only_digits, bool edit_empty,
+                                  int cursor_position, size_t text_length );
+
 /**
  * Shows a window querying the user for input.
  *

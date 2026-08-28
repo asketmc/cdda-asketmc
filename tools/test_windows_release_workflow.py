@@ -107,7 +107,10 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn('"${test_bin}"', self.workflow)
         self.assertIn('"[climbing][z-level]"', self.workflow)
         self.assertIn('"[npc][morale][hostility]"', self.workflow)
-        self.assertIn('"[advanced_inventory][backport],[inventory][sorting][backport]"', self.workflow)
+        self.assertIn(
+            '"[advanced_inventory][backport],[inventory][sorting][backport],[inventory][numeric][backport]"',
+            self.workflow,
+        )
         self.assertIn("timeout 10m", self.workflow)
         self.assertIn('("climbing", "climbing-test-results.xml")', self.workflow)
         self.assertIn('("NPC hostility", "npc-hostility-test-results.xml")', self.workflow)
