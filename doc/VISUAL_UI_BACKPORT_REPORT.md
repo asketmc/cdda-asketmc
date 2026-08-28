@@ -26,6 +26,7 @@ not import unrelated combat, balance, content, or world-generation changes.
 | Current UltiCa/SurveyorsMap | CDDA-Tilesets release `2026-08-23`, `1f1988c5e144473f894fcb1e2914af51fd08b7af` | Installed with generated 0.G compatibility sheets and manifests. |
 | UltiCa high-resolution terrain pilot | Private fork PR #8, `3d528d7da570a725087ddb7c6cb6e2f915254727` | Nine reviewed 64x64 common-terrain sprites plus fifteen exact 2x pavement connectivity sprites at logical 32x32 scale. |
 | Crisp font defaults | JetBrains Mono 2.304 | Bundled under OFL; hinting control added; Terminus/Unifont retained as fallbacks. |
+| Windows per-monitor DPI | Breeze PR #1173 | Adapted for PerMonitorV2 awareness, border-aware minimum-grid fitting, and runtime font/layout refresh when a window crosses displays. |
 | Structured Sidebar/widgets | `mlange-42/cdda-structured-sidebar`, incorporated upstream before 0.G | Already present. Its complete widget-reference graph is regression-tested. |
 
 The sound changes add routing hooks, not copyrighted sound assets. Otopack and

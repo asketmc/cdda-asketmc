@@ -43,6 +43,15 @@ extern std::array<SDL_Color, color_loader<SDL_Color>::COLOR_NAMES_COUNT> windows
 extern int fontheight;
 extern int fontwidth;
 
+float fit_dpi_scale_to_client( float requested_scale, const point &base_font,
+                               const point &usable_client, int app_scale,
+                               const point &minimum_cells );
+point fit_windowed_client_size( const point &requested, const point &usable_client,
+                                const point &cell_size, const point &minimum_cells );
+point fit_windowed_client_position( const point &current, const point &client_size,
+                                    const point &usable_position, const point &usable_size,
+                                    const point &border_top_left, const point &border_bottom_right );
+
 // This function may refresh the screen, so it should not be used where tiles
 // may be displayed. Actually, this is supposed to be called from init.cpp,
 // and only from there.
