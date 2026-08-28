@@ -243,6 +243,11 @@ global behavior tree and mission scheduler are not included.
 
 ### Fonts and sound hooks
 
+- Windows builds declare PerMonitorV2 awareness and scale runtime fonts for the
+  monitor currently containing the game window. Moving between mixed-DPI
+  monitors rebuilds the fonts and layout without changing saved font options.
+- Windowed mode keeps a complete 80x24 terminal inside the usable work area by
+  fitting DPI-scaled font metrics before applying the minimum window size.
 - JetBrains Mono 2.304 is bundled under the SIL Open Font License and is now
   the first-choice sidebar, map, and overmap font. Terminus and Unifont remain
   fallbacks for glyph coverage.
