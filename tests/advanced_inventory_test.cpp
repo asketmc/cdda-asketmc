@@ -183,7 +183,9 @@ TEST_CASE( "advanced inventory filters incompatible container candidates before 
     drop_locations inserts;
     inserts.emplace_back( fitting, 1 );
     dummy.assign_activity( player_activity( insert_item_activity_actor( container, inserts ) ) );
-    process_activity( dummy );
+    dummy.activity.start_or_resume( dummy, false );
+    dummy.moves = 100000;
+    dummy.activity.do_turn( dummy );
 
     CHECK( incompatible );
     CHECK_FALSE( fitting );
