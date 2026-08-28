@@ -8044,6 +8044,11 @@ units::volume Character::free_space() const
     return volume_capacity;
 }
 
+units::mass Character::free_weight_capacity() const
+{
+    return weapon.get_remaining_weight_capacity() + worn.free_weight_capacity();
+}
+
 units::volume Character::holster_volume() const
 {
     units::volume holster_volume = 0_ml;

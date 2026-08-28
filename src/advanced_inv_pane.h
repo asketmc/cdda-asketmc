@@ -28,7 +28,10 @@ enum advanced_inv_sortby {
     SORTBY_DAMAGE,
     SORTBY_AMMO,
     SORTBY_SPOILAGE,
-    SORTBY_PRICE
+    SORTBY_PRICE,
+    SORTBY_PRICEPERVOLUME,
+    SORTBY_PRICEPERWEIGHT,
+    SORTBY_STACKS
 };
 
 /**
@@ -67,6 +70,8 @@ class advanced_inventory_pane
         aim_location load_container_settings( aim_location requested_area );
         /** Remaining volume of this pane's actual destination. */
         units::volume free_volume( const advanced_inv_area &square ) const;
+        /** Remaining pocket weight capacity of this pane's actual destination. */
+        units::mass free_weight_capacity() const;
         /**
          * Index of the selected item (index of @ref items),
          */
@@ -134,6 +139,8 @@ class advanced_inventory_pane
          * item in @ref items.
          */
         advanced_inv_listitem *get_cur_item_ptr();
+        /** Sort the current entries using @ref sortby. */
+        void sort_items();
         /**
          * Set the filter string, disables filtering when the filter string is empty.
          */

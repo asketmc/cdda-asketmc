@@ -1952,6 +1952,13 @@
   },
   {
     "type": "keybinding",
+    "id": "SORT",
+    "category": "INVENTORY",
+    "name": "Sort items",
+    "bindings": [ { "input_method": "keyboard_any", "key": "s" } ]
+  },
+  {
+    "type": "keybinding",
     "id": "EXAMINE",
     "category": "INVENTORY",
     "name": "Examine",
@@ -4331,7 +4338,7 @@
     "type": "keybinding",
     "id": "TEXT.RIGHT",
     "name": "Move cursor right",
-    "bindings": [ { "input_method": "keyboard_any", "key": "RIGHT" } ]
+    "bindings": [ { "input_method": "keyboard_any", "key": "RIGHT" }, { "input_method": "keyboard_code", "key": "KEYPAD_6" } ]
   },
   {
     "type": "keybinding",

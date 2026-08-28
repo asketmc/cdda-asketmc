@@ -485,7 +485,9 @@ const std::string &string_input_popup::query_string( const bool loop, const bool
             _position = -1;
             _canceled = true;
             return _text;
-        } else if( action == "TEXT.CONFIRM" ) {
+        } else if( action == "TEXT.CONFIRM" ||
+                   ( _only_digits && action == "TEXT.RIGHT" && edit.empty() &&
+                     _position >= static_cast<int>( ret.size() ) ) ) {
             add_to_history( ret.str() );
             _confirmed = true;
             _text = ret.str();

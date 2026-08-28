@@ -60,6 +60,12 @@ enum class toggle_mode : int {
     NON_FAVORITE_NON_WORN
 };
 
+enum class inventory_sort_mode : int {
+    name = 0,
+    weight,
+    volume
+};
+
 struct inventory_input;
 struct container_data;
 struct navigation_mode_data;
@@ -452,6 +458,11 @@ class inventory_column
             paging_is_valid = false;
         }
 
+        void set_sort_mode( inventory_sort_mode mode ) {
+            sort_mode = mode;
+            invalidate_paging();
+        }
+
         /** Toggle being able to highlight unselectable entries*/
         void toggle_skip_unselectable( bool skip );
 
@@ -506,6 +517,7 @@ class inventory_column
         bool multiselect = false;
         bool paging_is_valid = false;
         bool visibility = true;
+        inventory_sort_mode sort_mode = inventory_sort_mode::name;
 
         size_t highlighted_index = std::numeric_limits<size_t>::max();
         size_t page_offset = 0;
@@ -683,6 +695,9 @@ class inventory_selector
         std::pair< bool, std::string > query_string( const std::string &val );
         /** Query the user for a filter and apply it. */
         void query_set_filter();
+        void enable_sorting();
+        void query_sort_mode();
+        std::string sort_mode_name() const;
         /** Query the user for count and return it. */
         int query_count();
 
@@ -849,6 +864,8 @@ class inventory_selector
 
         bool is_empty = true;
         bool display_stats = true;
+        bool sorting_enabled = false;
+        inventory_sort_mode sort_mode = inventory_sort_mode::name;
         bool use_invlet = true;
         selector_invlet_type invlet_type_ = SELECTOR_INVLET_DEFAULT;
         size_t entry_generation_number = 0;

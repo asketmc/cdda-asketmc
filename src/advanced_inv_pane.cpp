@@ -113,6 +113,17 @@ units::volume advanced_inventory_pane::free_volume( const advanced_inv_area &squ
     return square.free_volume( in_vehicle() );
 }
 
+units::mass advanced_inventory_pane::free_weight_capacity() const
+{
+    if( area == AIM_CONTAINER ) {
+        return container ? container->get_remaining_weight_capacity() : 0_gram;
+    }
+    if( area == AIM_INVENTORY || area == AIM_WORN ) {
+        return get_player_character().free_weight_capacity();
+    }
+    return units::mass_max;
+}
+
 bool advanced_inventory_pane::is_filtered( const advanced_inv_listitem &it ) const
 {
     return is_filtered( *it.items.front() );
