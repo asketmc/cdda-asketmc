@@ -81,17 +81,37 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn('build_distribution "${second_prefix}" 0', self.workflow)
         self.assertIn('export SOURCE_DATE_EPOCH="${source_epoch}"', self.workflow)
 
-    def test_focused_climbing_catch_gate_executes_and_fails_closed(self) -> None:
+    def test_manual_dispatch_uploads_a_downloadable_build(self) -> None:
+        start = self.workflow.index("- name: Stage requested Windows build")
+        end = self.workflow.index("- name: Stage tagged release bundle")
+        stage = self.workflow[start:end]
+        self.assertLess(
+            self.workflow.index("- name: Build and package Windows distribution"),
+            start,
+        )
+        self.assertIn("if: github.event_name == 'workflow_dispatch'", stage)
+        self.assertIn("uses: actions/upload-artifact@", stage)
+        self.assertIn("name: windows-build-${{ github.sha }}", stage)
+        self.assertIn("release-output/cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip", stage)
+        self.assertIn("release-output/SHA256SUMS.txt", stage)
+        self.assertIn("release-output/BUILD_MANIFEST.txt", stage)
+        self.assertIn("if-no-files-found: error", stage)
+        self.assertIn("retention-days: 1", stage)
+
+    def test_focused_gameplay_catch_gates_execute_and_fail_closed(self) -> None:
         self.assertIn("sudo apt-get install --yes ccache wine64", self.workflow)
         self.assertIn(
-            'TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp player_helpers.cpp climbing_test.cpp"',
+            'TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp player_helpers.cpp climbing_test.cpp npc_hostility_test.cpp"',
             self.workflow,
         )
         self.assertIn('"${test_bin}"', self.workflow)
         self.assertIn('"[climbing][z-level]"', self.workflow)
+        self.assertIn('"[npc][morale][hostility]"', self.workflow)
         self.assertIn("timeout 10m", self.workflow)
-        self.assertIn("focused climbing gate discovered zero test cases", self.workflow)
-        self.assertIn("focused climbing gate reported", self.workflow)
+        self.assertIn('("climbing", "climbing-test-results.xml")', self.workflow)
+        self.assertIn('("NPC hostility", "npc-hostility-test-results.xml")', self.workflow)
+        self.assertIn("gate discovered zero test cases", self.workflow)
+        self.assertIn("gate reported", self.workflow)
         self.assertIn("ifdef TEST_SOURCES", self.tests_makefile)
         self.assertIn("SOURCES = $(TEST_SOURCES)", self.tests_makefile)
 

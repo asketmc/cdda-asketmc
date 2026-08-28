@@ -28,6 +28,10 @@ The matching Windows Tiles+Sound package is published under GitHub Releases.
 
 ## Crash and rotation fixes
 
+- Killing an NPC whose faction is already guaranteed hostile no longer applies
+  the innocent-kill morale penalty merely because they had not yet switched to
+  their active kill-or-flee attitude. Attacking a genuinely neutral NPC still
+  marks the death as murder.
 - EMP-damaged electronics now receive repairable faults instead of permanent
   breakage; game-style EMP rules can use temporary reboots with a small failure
   chance.
