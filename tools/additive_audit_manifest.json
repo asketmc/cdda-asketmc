@@ -5,6 +5,18 @@
   "donor_repository": "https://github.com/neonspectra/Cataclysm-2040.git",
   "allowed_core_changes": [
     {
+      "type": "keybinding",
+      "id": "SORT",
+      "target_fingerprint": "b790684f3f08f6e9faba97357880728788e34f1ce206fcf692446a2d2227ac88",
+      "reason": "Classic pickup and drop menus add an inventory-local sorting action"
+    },
+    {
+      "type": "keybinding",
+      "id": "TEXT.RIGHT",
+      "target_fingerprint": "b65378cc11e7834a5a464dd044f543027d228da5afdad14ffbd3411f8b1ad560",
+      "reason": "Numeric quantity input accepts the right arrow or keypad 6 as confirmation at the end"
+    },
+    {
       "type": "construction",
       "id": "constr_deconstruct_simple",
       "target_fingerprint": "ff20d4d5330865075e5ba20e37d5095957924cdc0969fc2918e19710f077ff57",
