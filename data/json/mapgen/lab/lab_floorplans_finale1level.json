@@ -46,7 +46,8 @@
       },
       "place_loot": [
         { "item": "anesthetic_kit", "x": 15, "y": 11, "repeat": [ 4, 9 ], "ammo": 100 },
-        { "item": "id_science", "x": 7, "y": 11, "chance": 100 }
+        { "item": "id_science", "x": 7, "y": 11, "chance": 100 },
+        { "group": "bionics_common", "x": 7, "y": 13, "chance": 100 }
       ],
       "mapping": {
         "r": {

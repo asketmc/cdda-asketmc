@@ -4947,6 +4947,9 @@ void submap::store( JsonOut &jsout ) const
         jsout.write( elem.mission_id );
         jsout.write( elem.friendly );
         jsout.write( elem.name );
+        if( !elem.data.is_default() ) {
+            jsout.write( elem.data );
+        }
         jsout.end_array();
     }
     jsout.end_array();
@@ -5211,10 +5214,14 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
             int mission_id = spawn_entry.next_int();
             bool friendly = spawn_entry.next_bool();
             std::string name = spawn_entry.next_string();
+            spawn_data data;
+            if( spawn_entry.has_more() ) {
+                data.deserialize( spawn_entry.next_object() );
+            }
             if( spawn_entry.has_more() ) {
                 spawn_entry.throw_error( "Too many values for spawn" );
             }
-            spawn_point tmp( type, count, p, faction_id, mission_id, friendly, name );
+            spawn_point tmp( type, count, p, faction_id, mission_id, friendly, name, data );
             spawns.push_back( tmp );
         }
     } else if( member_name == "vehicles" ) {

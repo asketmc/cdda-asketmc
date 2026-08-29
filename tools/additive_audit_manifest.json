@@ -1198,6 +1198,38 @@
       "id": "EBOOKSAVE",
       "target_fingerprint": "6cfbbdefb27cf48497132cdb66b7fc6055f2e8c8dc3f2404341f827633f7d4f4",
       "reason": "H5 multi-book e-reader scanning updates the existing scan action prompt"
+    },
+    {
+      "type": "vehicle_part",
+      "id": "solar_panel",
+      "target_fingerprint": "a1e71e5e3fbb18e083b3523ce3fa2ac427c15f5d12e4c0282268204593f06e65",
+      "reason": "Progression batch 1 raises the base solar panel from 50 W to 90 W while retaining irradiance-based generation"
+    },
+    {
+      "type": "overmap_special",
+      "id": "LMOE Shelter",
+      "target_fingerprint": "6d1e42a24d4e26d64db7180759986e88da4d9bd12eb6707bb3ff2bbd90acf033",
+      "reason": "Progression batch 1 restores a guaranteed ordinary LMOE attempt and broadens its wilderness placement"
+    },
+    { "type": "overmap_special", "id": "Lab", "target_fingerprint": "fa75e7e0811ae7b362f6a1e9d341d76fe5e0ec5f9f56f90fbe32a79266e536a9", "reason": "Progression batch 1 raises classic lab incidence without removing the map-special framework" },
+    { "type": "overmap_special", "id": "Central Lab", "target_fingerprint": "8ddc8d080f93f0a5f63e2c75440199528f869c0e2c5cea4cb7ab58f2b39c7eb9", "reason": "Progression batch 1 raises central lab incidence while preserving its unique map-special placement" },
+    {
+      "type": "overmap_special",
+      "id": "Ice Lab",
+      "target_fingerprint": "d4070d1a83e5c04005e03871fce0d7341d9b44d9eb2b2196e09c57b9ba1b9cd1",
+      "reason": "Progression batch 1 raises ice lab incidence while preserving its unique map-special placement"
+    },
+    {
+      "type": "palette",
+      "id": "empty_bunker_items",
+      "target_fingerprint": "eda275e4ccef4037f796702767bbac673f42ccef05d90db0c8df6d5b8be91f46",
+      "reason": "Progression batch 1 guarantees ordinary LMOE caches through a No Hope-overridable palette marker"
+    },
+    {
+      "type": "region_settings",
+      "id": "default",
+      "target_fingerprint": "abd1e30de5b9361980cc969718d65b125c40bc69e14c69b8cdafa00cda622ff7",
+      "reason": "Progression batch 1 raises only the default field and road weights for rare military map extras"
     }
   ],
   "allowed_extension_files": [],
@@ -1213,6 +1245,48 @@
       "baseline_fingerprint": "999c5e7154c6d93e962216f03dc71b9f833ed20babeaa3e191ff61a6a1e6dc0c",
       "target_fingerprint": "09ab95633cea32359929c075549df23f3368ea32cf4a0da64377e3a8d9710add",
       "reason": "H6 replaces the guaranteed zombie group at the selected farm safe start with a generic human corpse item"
+    },
+    {
+      "path": "data/json/mapgen/lmoe.json",
+      "baseline_fingerprint": "664c1be2ebc7bfb2783b51f4a8f66d400e1ddea81b501c6fcf3f7837509b6e87",
+      "target_fingerprint": "f97f048f364d1d7b58379928ba792a7cbca5163e51a10e9ccb9da98558887933",
+      "reason": "Progression batch 1 guarantees a hidden firearm cache in the two-bed ordinary LMOE layout"
+    },
+    {
+      "path": "data/json/mapgen/lmoe.json",
+      "baseline_fingerprint": "2a89fa3f849d06c9ddf4074e493c98cf52d1388086fd780672079eb30ac39a36",
+      "target_fingerprint": "e6d738d6ed7963de252fcad416551b58872ac00b9d398a22c5b765aaf6f824a0",
+      "reason": "Progression batch 1 guarantees a hidden firearm cache in the homemade ordinary LMOE layout"
+    },
+    {
+      "path": "data/json/mapgen/lmoe.json",
+      "baseline_fingerprint": "edcebe6fac186ef50c39d5278feaa47d31a50055e7ca22f84aa6c099f5fac025",
+      "target_fingerprint": "836a2bc9df3b837399bff39950a4cbaf28b9c3339d1136c4fe0d8955cdb356b6",
+      "reason": "Progression batch 1 guarantees a hidden firearm cache in the commercial ordinary LMOE parent without changing shared nested storage"
+    },
+    {
+      "path": "data/json/mapgen/irradiator_1.json",
+      "baseline_fingerprint": "3b7638aeacf3fbb2540f39af0a8776a055b9463af487a268a858403ea7120b08",
+      "target_fingerprint": "e4bf11420849ed2601129ea66aefae8d537164fe03e2a22a4596aeee844b9de6",
+      "reason": "Progression batch 1 adds one compact ASRG while preserving both irradiator backup generators"
+    },
+    {
+      "path": "data/json/mapgen/lab/lab_floorplans_finale1level.json",
+      "baseline_fingerprint": "606e9caeb6183ea65a3a7eda3201d27528dea1d9ab804b1953435abe0f617ebf",
+      "target_fingerprint": "495515803fbe1c3f16bee245e4ccfed1db2a678c62868537974f239c1886bebc",
+      "reason": "Progression batch 1 guarantees one common CBM reward in the classic lab autodoc finale"
+    },
+    {
+      "path": "data/json/mapgen/outpost.json",
+      "baseline_fingerprint": "ce0b5863df65656d9524ecc1e23ecf962c1bee407376fa81807f5acc59d670c2",
+      "target_fingerprint": "1d17077f3ddf46182a86afc98642875d00fef38e1c8e95eb452b2c02519e52e1",
+      "reason": "Progression batch 1 adds two rare damaged rifle-turret positions while preserving the regular outpost searchlights"
+    },
+    {
+      "path": "data/json/mapgen/outpost.json",
+      "baseline_fingerprint": "67ca86a93e1fed0ae4a6eaa7d8dee079ee1c7674c55bfe83ffbbb107d709ddf6",
+      "target_fingerprint": "177258b92de806ccc007638eae055f8c527b010575b5485ae82d9c2eed57e1cf",
+      "reason": "Progression batch 1 adds two rare damaged rifle-turret positions while preserving the cross outpost searchlights"
     }
   ],
   "allowed_resource_changes": [],
@@ -1244,7 +1318,8 @@
       "id": "forge_of_wonders",
       "target_fingerprint": "d3c93b70fcc1ee76550ecf324194a5907578ada43cf97dc40a7daf8f06dbfd0c",
       "reason": "The Forge of Wonders gains its Magiclysm static-camp ownership and display name"
-    }
+    },
+    { "mod_id": "no_hope", "type": "palette", "id": "empty_bunker_items", "target_fingerprint": "072d85bb0586ae54007fd482e8a84cf5e372c455e75d6e2c0064bd84f86c0028", "reason": "Progression batch 1 preserves No Hope food scarcity while suppressing the guaranteed LMOE firearm cache" }
   ],
   "allowed_builtin_mod_anonymous_changes": [],
   "allowed_builtin_mod_resource_changes": [],

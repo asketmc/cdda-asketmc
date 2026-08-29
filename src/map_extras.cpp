@@ -155,6 +155,9 @@ static const mongroup_id GROUP_TURRET_SPEAKER( "GROUP_TURRET_SPEAKER" );
 static const mongroup_id GROUP_WASP_GUARD( "GROUP_WASP_GUARD" );
 static const mongroup_id GROUP_WASP_QUEEN( "GROUP_WASP_QUEEN" );
 
+static const mtype_id mon_crows_m240( "mon_crows_m240" );
+static const mtype_id mon_turret_bmg( "mon_turret_bmg" );
+static const mtype_id mon_turret_rifle( "mon_turret_rifle" );
 static const mtype_id mon_turret_riot( "mon_turret_riot" );
 static const mtype_id mon_turret_searchlight( "mon_turret_searchlight" );
 static const mtype_id mon_wolf( "mon_wolf" );
@@ -509,6 +512,28 @@ static bool mx_helicopter( map &m, const tripoint &abs_sub )
     return true;
 }
 
+military_turret_loadout military_turret_for_roll( int roll )
+{
+    if( roll <= 70 ) {
+        return { mon_turret_rifle, 80, 240 };
+    }
+    if( roll <= 95 ) {
+        return { mon_crows_m240, 50, 150 };
+    }
+    return { mon_turret_bmg, 20, 60 };
+}
+
+void add_military_turrets( map &m, const point &riot, int z, int roll )
+{
+    m.add_spawn( mon_turret_riot, 1, { riot, z } );
+    const military_turret_loadout loadout = military_turret_for_roll( roll );
+    spawn_data data;
+    data.hp_percent = jmapgen_int( 30, 70 );
+    data.ammo_qty = jmapgen_int( loadout.ammo_min, loadout.ammo_max );
+    const point armed = riot + point( ( riot.x - 12 ) / 6, ( riot.y - 12 ) / 6 );
+    m.add_spawn( loadout.monster, 1, { armed, z }, false, -1, -1, "NONE", data );
+}
+
 static bool mx_roadblock( map &m, const tripoint &abs_sub )
 {
     // TODO: fix point types
@@ -524,7 +549,7 @@ static bool mx_roadblock( map &m, const tripoint &abs_sub )
     const bool road_at_east = east->get_type_id() == oter_type_road;
 
     const auto spawn_turret = [&]( const point & p ) {
-        m.add_spawn( mon_turret_riot, 1, { p, abs_sub.z } );
+        add_military_turrets( m, p, abs_sub.z, rng( 1, 100 ) );
     };
 
     if( one_in( 6 ) ) { //Military doesn't joke around with their barricades!
