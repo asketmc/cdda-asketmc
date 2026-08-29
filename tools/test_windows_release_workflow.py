@@ -104,7 +104,7 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
     def test_focused_gameplay_catch_gates_execute_and_fail_closed(self) -> None:
         self.assertIn("sudo apt-get install --yes ccache wine64", self.workflow)
         self.assertIn(
-            'TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp mapgen_helpers.cpp options_helpers.cpp player_helpers.cpp stringmaker.cpp advanced_inventory_test.cpp butchery_progress_test.cpp climbing_test.cpp mapgen_spawn_data_test.cpp npc_hostility_test.cpp submap_load_test.cpp throwing_test.cpp vehicle_power_test.cpp"',
+            'TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp mapgen_helpers.cpp options_helpers.cpp player_helpers.cpp stringmaker.cpp advanced_inventory_test.cpp bionics_test.cpp butchery_progress_test.cpp climbing_test.cpp mapgen_spawn_data_test.cpp npc_hostility_test.cpp submap_load_test.cpp throwing_test.cpp vehicle_power_test.cpp"',
             self.workflow,
         )
         self.assertIn('"${test_bin}"', self.workflow)
@@ -119,6 +119,7 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn('"[submap][load][spawn_data][progression]"', self.workflow)
         self.assertIn('"[throwing][bionic]"', self.workflow)
         self.assertIn('"[vehicle][power][progression]"', self.workflow)
+        self.assertIn('"[bionics][progression]"', self.workflow)
         self.assertIn("timeout 10m", self.workflow)
         self.assertIn('run_focused_catch "climbing"', self.workflow)
         self.assertIn('run_focused_catch "NPC hostility"', self.workflow)
@@ -128,6 +129,7 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn('run_focused_catch "submap spawn data"', self.workflow)
         self.assertIn('run_focused_catch "Railgun power"', self.workflow)
         self.assertIn('run_focused_catch "solar power"', self.workflow)
+        self.assertIn('run_focused_catch "CBM progression"', self.workflow)
         self.assertIn("set +e", self.workflow)
         self.assertIn("status=$?", self.workflow)
         self.assertIn("without JUnit output", self.workflow)

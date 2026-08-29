@@ -1,0 +1,11 @@
+[
+  {
+    "type": "MOD_INFO",
+    "id": "manualbionicinstall",
+    "name": "Manual Bionic Installation",
+    "authors": [ "Xhuis", "asketmc" ],
+    "description": "Enables a demanding improvised route for positive-difficulty CBMs without a dedicated installation procedure.  Requires electronics 8, health care 6, mechanics 4, sterile implants, anesthetic, surgical tools and consumables; success remains capped at 95%.",
+    "category": "rebalance",
+    "dependencies": [ "dda" ]
+  }
+]

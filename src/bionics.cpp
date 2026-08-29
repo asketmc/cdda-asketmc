@@ -179,6 +179,7 @@ static const material_id material_qt_steel( "qt_steel" );
 static const material_id material_steel( "steel" );
 
 static const requirement_id requirement_data_anesthetic( "anesthetic" );
+static const requirement_id requirement_manual_bionic_installation( "manual_cbm_installation" );
 
 static const skill_id skill_computer( "computer" );
 static const skill_id skill_electronics( "electronics" );
@@ -195,6 +196,11 @@ static const trait_id trait_PROF_AUTODOC( "PROF_AUTODOC" );
 static const trait_id trait_PROF_MED( "PROF_MED" );
 static const trait_id trait_PYROMANIA( "PYROMANIA" );
 static const trait_id trait_THRESH_MEDICAL( "THRESH_MEDICAL" );
+
+static constexpr int manual_install_electronics = 8;
+static constexpr int manual_install_firstaid = 6;
+static constexpr int manual_install_mechanics = 4;
+static constexpr int manual_install_max_success = 95;
 
 struct Character::bionic_fuels {
     std::vector<vehicle *> connected_vehicles;
@@ -1959,17 +1965,42 @@ void Character::consume_anesth_requirement( const itype &cbm, Character &patient
     invalidate_crafting_inventory();
 }
 
+ret_val<void> Character::can_use_manual_bionic_installation() const
+{
+    if( !get_option<bool>( "MANUAL_BIONIC_INSTALLATION" ) ) {
+        return ret_val<void>::make_failure( _( "You can't self-install this CBM." ) );
+    }
+    if( get_skill_level( skill_electronics ) < manual_install_electronics ||
+        get_skill_level( skill_firstaid ) < manual_install_firstaid ||
+        get_skill_level( skill_mechanics ) < manual_install_mechanics ) {
+        return ret_val<void>::make_failure(
+                   _( "Manual CBM installation requires electronics 8, health care 6, and mechanics 4." ) );
+    }
+    return ret_val<void>::make_success();
+}
+
+bool Character::apply_manual_bionic_installation_pain( int difficulty )
+{
+    const int pain_before = get_pain();
+    mod_pain( 10 + difficulty * 3 );
+    return get_pain() > pain_before;
+}
+
 bool Character::has_installation_requirement( const bionic_id &bid ) const
 {
-    if( bid->installation_requirement.is_empty() ) {
-        return false;
+    requirement_id requirement = bid->installation_requirement;
+    if( requirement.is_empty() ) {
+        if( !can_use_manual_bionic_installation().success() ) {
+            return false;
+        }
+        requirement = requirement_manual_bionic_installation;
     }
 
-    if( !bid->installation_requirement->can_make_with_inventory( crafting_inventory(),
+    if( !requirement->can_make_with_inventory( crafting_inventory(),
             is_crafting_component ) ) {
         std::string buffer = _( "You don't have the required components to perform the installation." );
         buffer += "\n";
-        buffer += bid->installation_requirement->list_missing();
+        buffer += requirement->list_missing();
         popup( buffer, PF_NONE );
         return false;
     }
@@ -1979,10 +2010,12 @@ bool Character::has_installation_requirement( const bionic_id &bid ) const
 
 void Character::consume_installation_requirement( const bionic_id &bid )
 {
-    for( const auto &e : bid->installation_requirement->get_components() ) {
+    const requirement_id requirement = bid->installation_requirement.is_empty() ?
+                                       requirement_manual_bionic_installation : bid->installation_requirement;
+    for( const auto &e : requirement->get_components() ) {
         consume_items( e, 1, is_crafting_component );
     }
-    for( const auto &e : bid->installation_requirement->get_tools() ) {
+    for( const auto &e : requirement->get_tools() ) {
         consume_tools( e );
     }
     invalidate_crafting_inventory();
@@ -2040,9 +2073,14 @@ int Character::bionics_pl_skill( bool autodoc, int skill_level ) const
     return pl_skill;
 }
 
-int bionic_success_chance( bool autodoc, int skill_level, int difficulty, const Character &target )
+int bionic_success_chance( bool autodoc, int skill_level, int difficulty, const Character &target,
+                           int maximum )
 {
-    return bionic_manip_cos( target.bionics_adjusted_skill( autodoc, skill_level ), difficulty );
+    if( difficulty <= 0 ) {
+        return maximum;
+    }
+    return std::min( maximum,
+                     bionic_manip_cos( target.bionics_adjusted_skill( autodoc, skill_level ), difficulty ) );
 }
 
 // bionic manipulation chance of success
@@ -2336,13 +2374,21 @@ bool Character::can_install_bionics( const itype &type, Character &installer, bo
     const bionic_id &bioid = type.bionic->id;
     const int difficult = type.bionic->difficulty;
 
-    // if we're doing self install
-    if( !autodoc && installer.is_avatar() ) {
-        return installer.has_enough_anesth( type ) &&
-               installer.has_installation_requirement( bioid );
+    const bool self_install = !autodoc && &installer == this;
+    if( self_install && bioid->installation_requirement.is_empty() && difficult <= 0 ) {
+        return false;
+    }
+    if( self_install && ( !installer.has_enough_anesth( type ) ||
+                          !installer.has_installation_requirement( bioid ) ) ) {
+        return false;
     }
 
-    int chance_of_success = bionic_success_chance( autodoc, skill_level, difficult, installer );
+    const bool manual_fallback = self_install && difficult > 0 &&
+                                 bioid->installation_requirement.is_empty() &&
+                                 installer.can_use_manual_bionic_installation().success() &&
+                                 !installer.has_trait( trait_DEBUG_BIONICS );
+    int chance_of_success = bionic_success_chance( autodoc, skill_level, difficult, installer,
+                            manual_fallback ? manual_install_max_success : 100 );
 
     std::vector<std::string> conflicting_muts;
     for( const trait_id &mid : bioid->canceled_mutations ) {
@@ -2414,7 +2460,12 @@ bool Character::install_bionics( const itype &type, Character &installer, bool a
     const bionic_id &upbioid = bioid->upgraded_bionic;
     const int difficulty = type.bionic->difficulty;
     int pl_skill = installer.bionics_pl_skill( autodoc, skill_level );
-    int chance_of_success = bionic_success_chance( autodoc, skill_level, difficulty, installer );
+    const bool manual_fallback = !autodoc && &installer == this && difficulty > 0 &&
+                                 bioid->installation_requirement.is_empty() &&
+                                 installer.can_use_manual_bionic_installation().success() &&
+                                 !installer.has_trait( trait_DEBUG_BIONICS );
+    int chance_of_success = bionic_success_chance( autodoc, skill_level, difficulty, installer,
+                            manual_fallback ? manual_install_max_success : 100 );
 
     // Practice skills only if conducting manual installation
     if( !autodoc ) {

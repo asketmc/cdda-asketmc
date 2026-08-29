@@ -106,6 +106,13 @@
   },
   {
     "type": "EXTERNAL_OPTION",
+    "name": "MANUAL_BIONIC_INSTALLATION",
+    "info": "Permits high-risk manual self-installation of positive-difficulty CBMs without a dedicated procedure.",
+    "stype": "bool",
+    "value": false
+  },
+  {
+    "type": "EXTERNAL_OPTION",
     "name": "SPAWN_ANIMAL_DENSITY",
     "info": "A scaling factor that determines density of wild, formerly domesticated and mutated animal spawns.",
     "stype": "float",

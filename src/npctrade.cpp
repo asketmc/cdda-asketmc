@@ -25,6 +25,7 @@
 #include "units.h"
 
 static const flag_id json_flag_NO_UNWIELD( "NO_UNWIELD" );
+static const faction_id faction_exodii( "exodii" );
 static const skill_id skill_speech( "speech" );
 
 std::list<item> npc_trading::transfer_items( trade_selector::select_t &stuff, Character &giver,
@@ -150,10 +151,15 @@ double npc_trading::net_price_adjustment( const Character &buyer, const Characte
     return seller.is_npc() ? adjust : -1 / adjust;
 }
 
+int npc_trading::bionic_install_service_multiplier( const Character &installer )
+{
+    return installer.is_npc() && installer.as_npc()->get_fac_id() == faction_exodii ? 1 : 2;
+}
+
 int npc_trading::bionic_install_price( Character &installer, Character &patient,
                                        item_location const &bionic )
 {
-    return bionic->price( true ) * 2 +
+    return bionic->price( true ) * bionic_install_service_multiplier( installer ) +
            ( bionic->is_owned_by( patient )
              ? 0
              : npc_trading::trading_price( patient, installer, { bionic, 1 } ) );

@@ -51,3 +51,30 @@ Railgun and its implant are active again beside Throwing Assist, with rare milit
 No clean direct Railgun death-drop route, generic-vault rollback, Exodii weakening, cleaning/install bypass, modular-tool migration, unrelated obsolete CBM, or non-ferric throwing change is included. `tools.test_progression_backports` locks dirty corpse salvage, exact low-weight routes, mapgen cache scope, active definitions, coexistence, qualities, and power hooks. Focused Catch2 Railgun contracts execute generic and graded-steel 10 kJ/9 kJ paths plus powered-mech suppression.
 
 The Windows workflow compiles and executes every focused Catch2 filter, prints JUnit diagnostics on failure, and rejects zero-test discovery. Validation boundary: exact-head additive audits, required Python tests, source compilation, and Windows Catch results are recorded on the PR; `--check-mods dda`, Generic Guns runtime, copied-save loading, and playable-release smoke remain required before merge unless exact-tree evidence is recorded.
+
+## Batch 3: expert manual installation and tuned Exodii progression
+
+### Provenance and adaptations
+
+| Concern | Upstream boundary | Fork adaptation |
+| --- | --- | --- |
+| Global manual-install route removed | [DDA #40360](https://github.com/CleverRaven/Cataclysm-DDA/pull/40360), head `1eefd32f08b40d4eece719b187213dc16651d778`; original optional mod `04d7f8bd7260a50a5608b199cd123363e2752edb` | Restore the option through an off-by-default bundled mod, but add explicit skill, equipment, anesthetic, sterility, pain, and failure boundaries. |
+| Dangerous surgical failures | [DDA #40874](https://github.com/CleverRaven/Cataclysm-DDA/pull/40874), head `e273237253820f4105f007cd3613f9d16e2b9408` | Retain the existing damage and faulty-install failure path; improvised success is capped at 95%. |
+| Rubik merchant and trust tiers | [DDA #51267](https://github.com/CleverRaven/Cataclysm-DDA/pull/51267), head `d00041bfcd3b219353d6393c6c0734e1027dbaf6`; [DDA #52380](https://github.com/CleverRaven/Cataclysm-DDA/pull/52380), head `19d11dc1ffa3baf59b1a764468fbe165e31e3782` | Keep Rubik's deterministic stock and installer role, including trust-gated sales. |
+| Later pacing and fee gates | [DDA #55046](https://github.com/CleverRaven/Cataclysm-DDA/pull/55046), head `859f94c8321bf531163f9c090b9b60819c3c01a6`; [DDA #57135](https://github.com/CleverRaven/Cataclysm-DDA/pull/57135), head `b1d98c70d6e5197debf1e9902dba5357697bbe75`; [DDA #58708](https://github.com/CleverRaven/Cataclysm-DDA/pull/58708), head `3bc741251e7c6d7cf80d9d8cbbf8cd22d72a5866` | Use a three-day cadence, lower tier thresholds, permit locked stock to accumulate, and halve only the Exodii service multiplier. |
+
+### Implemented behavior
+
+Core declares `MANUAL_BIONIC_INSTALLATION` false. Enabling the bundled **Manual Bionic Installation** mod changes it to true for that world. A positive-difficulty CBM with no dedicated `installation_requirement` then becomes eligible for self-installation only at electronics 8, health care 6, and mechanics 4. Zero-difficulty implants without a procedure remain ineligible instead of entering undefined failure arithmetic. Dedicated per-CBM procedures continue to use their own requirements.
+
+The generic procedure requires fine cutting and screwdriving tools, a charged soldering or repair tool, solder, disinfectant, and sterile dressings. Existing checks still reject filthy, non-sterile, and deployed/faulted implants; existing weight- and difficulty-scaled anesthetic is still consumed. Starting improvised surgery adds `10 + 3 × difficulty` pain when the installer can feel pain. Its displayed and executed success chance share a 95% ceiling, so even an expert retains failure risk and the existing dangerous-failure consequences.
+
+Rubik now restocks every three days. The tier trust thresholds are 1, 8, 16, and 30; salvage tech joins tier three at 16. Removing `strict` permits higher-tier inventory to accumulate during restocks, but `can_sell` continues to refuse it until the corresponding faction trust is reached. The long interaction timer is also three days, so continued dealings can earn trust on the same cadence.
+
+Exodii installation service uses a one-times implant-price multiplier instead of the general two-times multiplier. Non-Exodii installers retain the old multiplier, and the existing ownership/trading component of the price is unchanged. Together with Batch 2 scavenging, this keeps Rubik deterministic without making Rubik the only source of implants.
+
+### Exclusions and contracts
+
+No manual uninstallation, safe or guaranteed surgery, dirty-CBM bypass, free anesthetic, lower-skill shortcut, blanket `installation_requirement` rewrite, Exodii inventory expansion, trust bypass, instant restock, or non-Exodii price reduction is included. Existing CBM IDs, slots, upgrades, mutations, operation activity data, and saves remain unchanged.
+
+`tools.test_progression_backports` locks the disabled core option, opt-in mod, exact procedure resources, runtime guards, tier thresholds, restock cadence, and focused Windows gate. Catch2 executes the option and all three skill floors, verifies the 95% ceiling, zero-difficulty rejection, and non-interruptible surgery start, and distinguishes Exodii from ordinary installation-service pricing. The additive audit binds the modified Exodii entities and rejects accidental core replacements.

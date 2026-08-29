@@ -1268,10 +1268,34 @@
       "reason": "Progression batch 2 adds rare Railgun salvage to ranged Exodii zomborg hardware"
     },
     {
+      "type": "npc_class",
+      "id": "NC_EXODII_TYPE_1_Merchant",
+      "target_fingerprint": "eceb249d84f63865c72c2e0a3640921c776310286f4cae8e9c3181bca5604cda",
+      "reason": "Progression batch 3 shortens Exodii restocking and lowers but preserves trust-gated stock tiers"
+    },
+    {
+      "type": "talk_topic",
+      "id": "TALK_EXODII_MERCHANT",
+      "target_fingerprint": "a6412d152cf11ca58ff98bebaa9eb917166883af43e2616199fd58802af43715",
+      "reason": "Progression batch 3 aligns the recurring Exodii trust opportunity with the three-day restock cadence"
+    },
+    {
+      "type": "item_group",
+      "id": "EXODII_CBM_Store_Tier2",
+      "target_fingerprint": "71f88057c48b672c664a60aae648fd0e53c90fcb576724094a6d9776b45d17a9",
+      "reason": "Progression batch 3 documents the lowered tier-two Exodii trust gate"
+    },
+    {
       "type": "item_group",
       "id": "EXODII_CBM_Store_Tier3",
-      "target_fingerprint": "929c7869fc69aeb2b59a8fb787c6d7e83d069087a9993930b5bf0304b99acb39",
-      "reason": "Progression batch 2 keeps a deterministic tier-three Exodii route for the restored Railgun"
+      "target_fingerprint": "733ff330974382b99217a024aaa3dbc10b3ca8668f142cde620a0bd4b1eef1c5",
+      "reason": "Progression batch 3 documents the lower trust gate while retaining Batch 2's deterministic Railgun route"
+    },
+    {
+      "type": "item_group",
+      "id": "EXODII_CBM_Store_Tier4",
+      "target_fingerprint": "84f7a13b33d6921316cc4bac03706c82cdfeda28f042148a32cf542cd8f8da4b",
+      "reason": "Progression batch 3 documents the lowered tier-four Exodii trust gate"
     },
     {
       "type": "item_group",

@@ -25,12 +25,13 @@
     "shopkeeper_item_group": [
       { "group": "EXODII_basic_trade", "rigid": true },
       { "group": "EXODII_CBM_Store_tier1_extra", "rigid": true, "trust": 1 },
-      { "group": "EXODII_CBM_Store_Tier2", "rigid": true, "trust": 10 },
-      { "group": "EXODII_CBM_Store_Tier3", "rigid": true, "trust": 20, "strict": true },
-      { "group": "EXODII_Store_Salvage_Tech", "rigid": true, "trust": 20 },
-      { "group": "EXODII_CBM_Store_Tier4", "rigid": true, "trust": 40, "strict": true }
+      { "group": "EXODII_CBM_Store_Tier2", "rigid": true, "trust": 8 },
+      { "group": "EXODII_CBM_Store_Tier3", "rigid": true, "trust": 16 },
+      { "group": "EXODII_Store_Salvage_Tech", "rigid": true, "trust": 16 },
+      { "group": "EXODII_CBM_Store_Tier4", "rigid": true, "trust": 30 }
     ],
     "shopkeeper_consumption_rates": "basic_shop_rates",
+    "restock_interval": "3 days",
     "carry_override": "NC_EXODII_TYPE_1_carried",
     "worn_override": "EMPTY_GROUP",
     "skills": [
