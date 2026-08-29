@@ -196,6 +196,18 @@ jobs:
             cache_mode=0
           fi
           build_distribution "${first_prefix}" "${cache_mode}"
+          first_exe=$(sha256sum "${first_prefix}cataclysm-tiles.exe" | cut -d' ' -f1)
+          first_zip=$(sha256sum "${output_dir}/${asset}" | cut -d' ' -f1)
+
+          if [[ "${RELEASE_BUILD}" == "true" ]]; then
+            second_prefix="build-two/"
+            build_distribution "${second_prefix}" 0
+            second_exe=$(sha256sum "${second_prefix}cataclysm-tiles.exe" | cut -d' ' -f1)
+            second_zip=$(sha256sum "${output_dir}/${asset}" | cut -d' ' -f1)
+            test "${first_exe}" = "${second_exe}"
+            test "${first_zip}" = "${second_zip}"
+          fi
+
           make -j"$(nproc)" \
             "BUILD_PREFIX=${first_prefix}" \
             "JSON_FORMATTER_BIN=${first_prefix}json_formatter.exe" \
@@ -238,17 +250,6 @@ jobs:
                   raise SystemExit(f"focused {label} gate reported {len(failures)} failures")
               print(f"focused {label} gate passed {len(cases)} test cases")
           PY
-          first_exe=$(sha256sum "${first_prefix}cataclysm-tiles.exe" | cut -d' ' -f1)
-          first_zip=$(sha256sum "${output_dir}/${asset}" | cut -d' ' -f1)
-
-          if [[ "${RELEASE_BUILD}" == "true" ]]; then
-            second_prefix="build-two/"
-            build_distribution "${second_prefix}" 0
-            second_exe=$(sha256sum "${second_prefix}cataclysm-tiles.exe" | cut -d' ' -f1)
-            second_zip=$(sha256sum "${output_dir}/${asset}" | cut -d' ' -f1)
-            test "${first_exe}" = "${second_exe}"
-            test "${first_zip}" = "${second_zip}"
-          fi
 
           cp BUILD_MANIFEST.txt "${output_dir}/BUILD_MANIFEST.txt"
           if [[ "${RELEASE_BUILD}" == "true" ]]; then
