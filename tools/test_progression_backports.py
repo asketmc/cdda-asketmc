@@ -154,6 +154,9 @@ class MilitaryEncounterBackportTests(unittest.TestCase):
                 extras["road"]["chance"], extras["road"]["extras"]["mx_military"],
             ),
         )
+        source = (ROOT / "src/map_extras.cpp").read_text(encoding="utf-8")
+        self.assertIn("m.add_spawn( mon_turret_riot", source)
+        self.assertIn("{ armed_p, abs_sub.z }", source)
 
     def test_outposts_use_damaged_partially_loaded_rifle_turrets(self) -> None:
         ground = [
@@ -165,7 +168,11 @@ class MilitaryEncounterBackportTests(unittest.TestCase):
             spawns = layout["object"]["place_monster"]
             armed = [entry for entry in spawns if entry["monster"] == "mon_turret_rifle"]
             lights = [entry for entry in spawns if entry["monster"] == "mon_turret_searchlight"]
-            self.assertEqual((2, 2), (len(armed), len(lights)))
+            self.assertEqual((2, 4), (len(armed), len(lights)))
+            self.assertEqual({(1, 1), (22, 22), (1, 22), (22, 1)},
+                             {(entry["x"], entry["y"]) for entry in lights})
+            self.assertTrue({(entry["x"], entry["y"]) for entry in armed}.isdisjoint(
+                {(entry["x"], entry["y"]) for entry in lights}))
             for entry in armed:
                 self.assertEqual(40, entry["chance"])
                 self.assertEqual({"ammo_qty": [80, 240], "hp_percent": [30, 70]},
