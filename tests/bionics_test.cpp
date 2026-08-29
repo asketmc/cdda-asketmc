@@ -12,6 +12,7 @@
 #include "game.h"
 #include "item.h"
 #include "item_pocket.h"
+#include "itype.h"
 #include "iuse.h"
 #include "map_helpers.h"
 #include "npc.h"
