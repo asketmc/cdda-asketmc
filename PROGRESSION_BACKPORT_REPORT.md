@@ -13,20 +13,15 @@ This batch reopens selected classic 0.G exploration and power routes without rem
 
 ## Implemented behavior
 
-The standard solar panel produces 90 W while derived panels keep proportional modifiers and irradiance calculations. The irradiator contains one compact ASRG beside one conventional generator; outposts and shipwrecks retain conventional generators.
-
+The standard solar panel produces 90 W while derived panels keep proportional modifiers and irradiance calculations. The irradiator adds one compact ASRG without replacing either conventional generator; outposts and shipwrecks retain conventional generators.
 Ordinary `CLASSIC`/`MAN_MADE` LMOEs occur 1-3 times on suitable land at city distance 20+. `LAB`/`UNIQUE` classic, central, and ice labs use 65/100, 60/100, and 25/100 occurrence contracts; fixed layouts stay unchanged.
-
 Each ordinary LMOE parent guarantees one hidden `lmoe_guns` cache. Shared storage stays unchanged, excluding occupied and Whately LMOEs. The autodoc finale guarantees `bionics_common`; other finales retain guaranteed rewards.
-
 Default-region military-extra weights are 12 in fields and 125 on roads. Military roadblocks retain their riot turrets and add adjacent M249/M240/M2 turrets at exact 70/25/5 weights, with 30-70% hit points and 80-240/50-150/20-60 ammunition. Outposts retain four searchlights and add two distinct 40% damaged-M249 positions; police roadblocks and loot are unchanged.
-
 `spawn_data.hp_percent` accepts 1-100 or an ascending range. `ammo_qty` adjusts the loaded monster's ammunition pool without replacing IDs, preserving Generic Guns compatibility. Explicit `ammo` is mutually exclusive. All fields persist for saved pending spawns; legacy eight-field arrays load with defaults.
-
 ## Exclusions
 
 No existing-overmap migration, microlab redesign, unrelated frequency change, broad ASRG restoration, full-strength turret, turret type/stat/drop change, police branch change, modded-region military weight, or non-military extra change is included.
 
 ## Regression contracts
 
-`tools.test_progression_backports` locks energy, scoping, rewards, military encounter shape, and Generic Guns ammunition. Focused Catch2 contracts execute probability boundaries, parsing, monster state, legacy and pending-spawn loading, and solar output. The Windows workflow executes every focused filter and fails on zero discovery.
+`tools.test_progression_backports` locks energy, scoping, rewards, military encounter shape, and Generic Guns ammunition. Focused Catch2 contracts execute probability boundaries, parsing, monster state, legacy and pending-spawn loading, and solar output. The Windows workflow executes every focused filter and fails on zero discovery. Validation boundary: exact-head additive audits, required Python tests, source compilation, and Windows Catch results are recorded on the PR; `--check-mods dda`, Generic Guns runtime, copied-save loading, and playable-release smoke remain required before merge unless exact-tree evidence is recorded.

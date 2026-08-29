@@ -88,6 +88,7 @@ struct military_turret_loadout {
 };
 
 military_turret_loadout military_turret_for_roll( int roll );
+void add_military_turrets( map &m, const point &riot, int z, int roll );
 
 map_extra_pointer get_function( const map_extra_id &name );
 FunctionMap all_functions();

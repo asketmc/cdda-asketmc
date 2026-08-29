@@ -232,24 +232,32 @@ jobs:
           WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
             --user-dir=butchery-test-user --rng-seed 1 --reporter junit \
             --out butchery-test-results.xml "[butchery][progress]"
-          WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
-            --user-dir=mapgen-spawn-test-user --rng-seed 1 --reporter junit \
-            --out mapgen-spawn-test-results.xml "[mapgen][monster][progression]"
-          if ! WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
-            --user-dir=submap-spawn-test-user --rng-seed 1 --reporter junit \
-            --out submap-spawn-test-results.xml "[submap][load][spawn_data][progression]"; then
-            python3 - <<'PY'
+          run_progression_catch() {
+            local label="$1" user_dir="$2" output="$3" filter="$4" status=0
+            set +e
+            WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
+              --user-dir="${user_dir}" --rng-seed 1 --reporter junit --out "${output}" "${filter}"
+            status=$?
+            set -e
+            if (( status )); then
+              python3 - "${label}" "${output}" <<'PY'
+          import pathlib
+          import sys
           import xml.etree.ElementTree as ET
-          root = ET.parse("submap-spawn-test-results.xml").getroot()
-          for case in root.findall(".//testcase"):
-              for failure in case.findall("failure") + case.findall("error"):
-                  print(f"{case.get('name')}: {failure.get('message', '')}\n{failure.text or ''}")
+
+          label, path = sys.argv[1], pathlib.Path(sys.argv[2])
+          if not path.is_file():
+              raise SystemExit(f"focused {label} gate produced no JUnit output")
+          root = ET.parse(path).getroot()
+          for failure in root.findall(".//failure") + root.findall(".//error"):
+              print(f"focused {label}: {failure.get('message', '')}\n{failure.text or ''}")
           PY
-            exit 1
-          fi
-          WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
-            --user-dir=solar-power-test-user --rng-seed 1 --reporter junit \
-            --out solar-power-test-results.xml "[vehicle][power][progression]"
+              return "${status}"
+            fi
+          }
+          run_progression_catch "mapgen spawn data" mapgen-spawn-test-user mapgen-spawn-test-results.xml "[mapgen][monster][progression]"
+          run_progression_catch "submap spawn data" submap-spawn-test-user submap-spawn-test-results.xml "[submap][load][spawn_data][progression]"
+          run_progression_catch "solar power" solar-power-test-user solar-power-test-results.xml "[vehicle][power][progression]"
           python3 - <<'PY'
           import xml.etree.ElementTree as ET
 

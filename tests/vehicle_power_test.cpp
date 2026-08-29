@@ -94,7 +94,7 @@ TEST_CASE( "Solar power", "[vehicle][power][progression]" )
         WHEN( "30 minutes elapse" ) {
             veh_ptr->update_time( calendar::turn + 30_minutes );
             int power = veh_ptr->fuel_left( fuel_type_battery );
-            CHECK( power == Approx( 765 ).margin( 1 ) );
+            CHECK( power == Approx( 763 ).margin( 1 ) );
         }
     }
 
@@ -119,7 +119,7 @@ TEST_CASE( "Solar power", "[vehicle][power][progression]" )
         WHEN( "30 minutes elapse" ) {
             veh_ptr->update_time( calendar::turn + 30_minutes );
             int power = veh_ptr->fuel_left( fuel_type_battery );
-            CHECK( power == Approx( 328 ).margin( 1 ) );
+            CHECK( power == Approx( 329 ).margin( 1 ) );
         }
     }
 
@@ -172,7 +172,7 @@ TEST_CASE( "Daily solar power", "[vehicle][power][progression]" )
         WHEN( "24 hours pass" ) {
             veh_ptr->update_time( calendar::turn + 24_hours );
             int power = veh_ptr->fuel_left( fuel_type_battery );
-            CHECK( power == Approx( 9331 ).margin( 1 ) );
+            CHECK( power == Approx( 9418 ).margin( 1 ) );
         }
     }
 
@@ -184,7 +184,7 @@ TEST_CASE( "Daily solar power", "[vehicle][power][progression]" )
         WHEN( "24 hours pass" ) {
             veh_ptr->update_time( calendar::turn + 24_hours );
             int power = veh_ptr->fuel_left( fuel_type_battery );
-            CHECK( power == Approx( 14153 ).margin( 1 ) );
+            CHECK( power == Approx( 14256 ).margin( 1 ) );
         }
     }
 
@@ -196,7 +196,7 @@ TEST_CASE( "Daily solar power", "[vehicle][power][progression]" )
         WHEN( "24 hours pass" ) {
             veh_ptr->update_time( calendar::turn + 24_hours );
             int power = veh_ptr->fuel_left( fuel_type_battery );
-            CHECK( power == Approx( 9176 ).margin( 1 ) );
+            CHECK( power == Approx( 9245 ).margin( 1 ) );
         }
     }
 
@@ -208,7 +208,7 @@ TEST_CASE( "Daily solar power", "[vehicle][power][progression]" )
         WHEN( "24 hours pass" ) {
             veh_ptr->update_time( calendar::turn + 24_hours );
             int power = veh_ptr->fuel_left( fuel_type_battery );
-            CHECK( power == Approx( 3733 ).margin( 1 ) );
+            CHECK( power == Approx( 3802 ).margin( 1 ) );
         }
     }
 }

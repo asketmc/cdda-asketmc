@@ -873,7 +873,7 @@ ready-to-install implants.
 
 - Military field and road extras remain rare but are discoverable again.
 - Military roadblocks can field damaged, partly loaded M249, M240, or M2 CROWS
-  turrets; military outposts may replace two perimeter lights with damaged M249s.
+  turrets; military outposts may add two damaged M249s inside the retained perimeter lights.
 - Police roadblocks still use riot-control platforms.
 
 ## Optional mod: Useful Helicopters Experimental

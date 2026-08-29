@@ -523,6 +523,17 @@ military_turret_loadout military_turret_for_roll( int roll )
     return { mon_turret_bmg, 20, 60 };
 }
 
+void add_military_turrets( map &m, const point &riot, int z, int roll )
+{
+    m.add_spawn( mon_turret_riot, 1, { riot, z } );
+    const military_turret_loadout loadout = military_turret_for_roll( roll );
+    spawn_data data;
+    data.hp_percent = jmapgen_int( 30, 70 );
+    data.ammo_qty = jmapgen_int( loadout.ammo_min, loadout.ammo_max );
+    const point armed = riot + point( ( riot.x - 12 ) / 6, ( riot.y - 12 ) / 6 );
+    m.add_spawn( loadout.monster, 1, { armed, z }, false, -1, -1, "NONE", data );
+}
+
 static bool mx_roadblock( map &m, const tripoint &abs_sub )
 {
     // TODO: fix point types
@@ -538,13 +549,7 @@ static bool mx_roadblock( map &m, const tripoint &abs_sub )
     const bool road_at_east = east->get_type_id() == oter_type_road;
 
     const auto spawn_turret = [&]( const point & p ) {
-        m.add_spawn( mon_turret_riot, 1, { p, abs_sub.z } );
-        spawn_data data;
-        data.hp_percent = jmapgen_int( 30, 70 );
-        const military_turret_loadout loadout = military_turret_for_roll( rng( 1, 100 ) );
-        data.ammo_qty = jmapgen_int( loadout.ammo_min, loadout.ammo_max );
-        const point armed_p = p + point( ( p.x - 12 ) / 6, ( p.y - 12 ) / 6 );
-        m.add_spawn( loadout.monster, 1, { armed_p, abs_sub.z }, false, -1, -1, "NONE", data );
+        add_military_turrets( m, p, abs_sub.z, rng( 1, 100 ) );
     };
 
     if( one_in( 6 ) ) { //Military doesn't joke around with their barricades!
