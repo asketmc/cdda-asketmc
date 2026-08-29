@@ -190,7 +190,8 @@
         { "chunks": [ "lmoe3_storage_11x11" ], "x": 13, "y": 6 },
         { "chunks": [ "lmoe3_tankroom_11x11" ], "x": 1, "y": 18 },
         { "chunks": [ "lmoe3_crafting_11x11" ], "x": 13, "y": 18 }
-      ]
+      ],
+      "place_items": [ { "item": "lmoe_guns", "x": 13, "y": 6, "chance": 100 } ]
     }
   },
   {

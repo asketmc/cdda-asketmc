@@ -79,7 +79,7 @@
           "x": 1,
           "y": 1,
           "chance": 40,
-          "spawn_data": { "ammo": [ { "ammo_id": "556", "qty": [ 80, 240 ] } ], "hp_percent": [ 30, 70 ] }
+          "spawn_data": { "ammo_qty": [ 80, 240 ], "hp_percent": [ 30, 70 ] }
         },
         { "monster": "mon_turret_searchlight", "x": 22, "y": 22 },
         {
@@ -87,7 +87,7 @@
           "x": 1,
           "y": 22,
           "chance": 40,
-          "spawn_data": { "ammo": [ { "ammo_id": "556", "qty": [ 80, 240 ] } ], "hp_percent": [ 30, 70 ] }
+          "spawn_data": { "ammo_qty": [ 80, 240 ], "hp_percent": [ 30, 70 ] }
         },
         { "monster": "mon_turret_searchlight", "x": 22, "y": 1 }
       ],
@@ -223,7 +223,7 @@
           "x": 1,
           "y": 1,
           "chance": 40,
-          "spawn_data": { "ammo": [ { "ammo_id": "556", "qty": [ 80, 240 ] } ], "hp_percent": [ 30, 70 ] }
+          "spawn_data": { "ammo_qty": [ 80, 240 ], "hp_percent": [ 30, 70 ] }
         },
         { "monster": "mon_turret_searchlight", "x": 22, "y": 22 },
         {
@@ -231,7 +231,7 @@
           "x": 1,
           "y": 22,
           "chance": 40,
-          "spawn_data": { "ammo": [ { "ammo_id": "556", "qty": [ 80, 240 ] } ], "hp_percent": [ 30, 70 ] }
+          "spawn_data": { "ammo_qty": [ 80, 240 ], "hp_percent": [ 30, 70 ] }
         },
         { "monster": "mon_turret_searchlight", "x": 22, "y": 1 }
       ],

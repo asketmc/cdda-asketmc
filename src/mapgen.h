@@ -184,8 +184,12 @@ struct jmapgen_setmap {
 
 struct spawn_data {
     std::map<itype_id, jmapgen_int> ammo;
+    jmapgen_int ammo_qty{ -1 };
     std::vector<point> patrol_points_rel_ms;
     jmapgen_int hp_percent{ 100 };
+
+    void serialize( JsonOut &jsout ) const;
+    void deserialize( const JsonObject &jo );
 };
 
 /**

@@ -1263,10 +1263,10 @@
       "reason": "Progression batch 1 guarantees a hidden firearm cache in the homemade ordinary LMOE layout"
     },
     {
-      "path": "data/json/mapgen/nested/lmoe_nested.json",
-      "baseline_fingerprint": "506b76c2b33357d893447b2189cbf9acba34f374d70be8c0de94afd29194f8a0",
-      "target_fingerprint": "8d78fe89f1be4ae4f2e261eca61c12039682c13b7dc1a3fa78d595fa98176377",
-      "reason": "Progression batch 1 guarantees a hidden firearm cache in the commercial ordinary LMOE storage room"
+      "path": "data/json/mapgen/lmoe.json",
+      "baseline_fingerprint": "edcebe6fac186ef50c39d5278feaa47d31a50055e7ca22f84aa6c099f5fac025",
+      "target_fingerprint": "742134eee33a251ec5f2eda7005a5a3e5df1b9d89dda9241fb3a8ceefbe83247",
+      "reason": "Progression batch 1 guarantees a hidden firearm cache in the commercial ordinary LMOE parent without changing shared nested storage"
     },
     {
       "path": "data/json/mapgen/irradiator_1.json",
@@ -1283,13 +1283,13 @@
     {
       "path": "data/json/mapgen/outpost.json",
       "baseline_fingerprint": "ce0b5863df65656d9524ecc1e23ecf962c1bee407376fa81807f5acc59d670c2",
-      "target_fingerprint": "65a4712c8d096e1096d125350e98258a08f534fb64947c0104d3813ef0479d19",
+      "target_fingerprint": "7663ab975e75423eed0856129b9c61b46470ed59530bcd84749992e28c9e36cf",
       "reason": "Progression batch 1 gives the regular outpost two rare damaged and partially loaded rifle-turret positions"
     },
     {
       "path": "data/json/mapgen/outpost.json",
       "baseline_fingerprint": "67ca86a93e1fed0ae4a6eaa7d8dee079ee1c7674c55bfe83ffbbb107d709ddf6",
-      "target_fingerprint": "ee4ab0696412f1aa916b05d40cbe20c468cd56da37806c38d54e217a7b3357ae",
+      "target_fingerprint": "d500ce84d3d2057403f7667378ca01b79b237d042cd330fc6306af664ba1a43f",
       "reason": "Progression batch 1 gives the cross outpost two rare damaged and partially loaded rifle-turret positions"
     }
   ],

@@ -8499,12 +8499,17 @@ void map::spawn_monsters_submap( const tripoint &gp, bool ignore_sight )
                 tmp.friendly = -1;
                 tmp.add_effect( effect_pet, 1_turns, true );
             }
+            tmp.ammo = tmp.type->starting_ammo;
             if( !i.data.ammo.empty() ) {
+                tmp.ammo.clear();
                 for( std::pair<itype_id, jmapgen_int> ap : i.data.ammo ) {
                     tmp.ammo.emplace( ap.first, ap.second.get() );
                 }
-            } else {
-                tmp.ammo = tmp.type->starting_ammo;
+            } else if( i.data.ammo_qty.val >= 0 ) {
+                const int ammo_qty = i.data.ammo_qty.get();
+                for( std::pair<const itype_id, int> &ammo : tmp.ammo ) {
+                    ammo.second = ammo_qty;
+                }
             }
             tmp.set_hp( std::max( 1, tmp.get_hp_max() * i.data.hp_percent.get() / 100 ) );
 

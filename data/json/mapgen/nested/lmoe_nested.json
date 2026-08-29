@@ -19,8 +19,7 @@
         "u___U|#####",
         "AV_VU|#####"
       ],
-      "palettes": [ "bunker", "empty_bunker_items" ],
-      "place_items": [ { "item": "lmoe_guns", "x": 0, "y": 0, "chance": 100 } ]
+      "palettes": [ "bunker", "empty_bunker_items" ]
     }
   },
   {

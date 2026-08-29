@@ -860,32 +860,21 @@ ready-to-install implants.
 
 ## Classic exploration and practical solar power
 
-- The irradiance model remains in place, including seasonal, cloud, and time-of-day
-  effects.  Standard solar panels now produce 90 W instead of 50 W; foldable,
-  reinforced, and advanced panels retain their existing proportional tiers.
-- Compact ASRG power returns to the irradiator facility.  Existing rare ASRG
-  placements remain, while ordinary outposts and shipwrecks continue to use
-  fuel-burning backup generators.
-- Ordinary LMOE shelters again receive at least one placement attempt per
-  overmap, can occur on suitable land at a slightly shorter city distance, and
-  guarantee one hidden survival-firearm cache in every underground layout.
-- Classic, central, and ice labs are more likely to be selected, but remain
-  unique map specials.  Existing generated overmaps are not rewritten.
-- The classic autodoc lab finale now guarantees one common CBM roll in addition
-  to its anesthetic and autodoc supplies.  The nanofabricator, portal, mutagen,
-  and turret finales retain their existing guaranteed reward sources.
+- Standard solar panels produce 90 W while retaining seasonal, cloud, time-of-day,
+  and obstruction effects; derived panels keep their proportional tiers.
+- Compact ASRG power returns to the irradiator. Ordinary outposts and shipwrecks
+  retain fuel-burning backup generators.
+- Ordinary LMOEs are more discoverable and guarantee one hidden survival-firearm
+  cache per underground layout. Occupied and quest LMOEs are unchanged.
+- Classic, central, and ice labs are more likely but remain unique map specials.
+  The autodoc finale guarantees one common CBM roll; existing maps are untouched.
 
 ## Dangerous military salvage sites
 
-- Military map extras remain rare, but their field and road weights are high
-  enough to make deliberate exploration worthwhile again.
-- Military roadblocks can field damaged M249, M240, or M2 CROWS turrets.  Each
-  starts at 30–70% integrity and carries only a small fraction of its original
-  ammunition reserve.
-- Military outposts keep two searchlights and may replace either of the other
-  two perimeter lights with a similarly damaged, partially loaded M249 turret.
-- Police roadblocks still use riot-control platforms.  No military turret is
-  silently substituted into civilian police encounters.
+- Military field and road extras remain rare but are discoverable again.
+- Military roadblocks can field damaged, partly loaded M249, M240, or M2 CROWS
+  turrets; military outposts may replace two perimeter lights with damaged M249s.
+- Police roadblocks still use riot-control platforms.
 
 ## Optional mod: Useful Helicopters Experimental
 
