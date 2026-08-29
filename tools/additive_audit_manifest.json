@@ -1261,12 +1261,6 @@
     },
     {
       "type": "item_group",
-      "id": "bionics",
-      "target_fingerprint": "4d8241dbf597add5dbb9c0e3f9d6129e6124d4ed4c5bf85c91611bd50a60b6f4",
-      "reason": "Progression batch 2 gives the restored Railgun a low-weight general CBM route"
-    },
-    {
-      "type": "item_group",
       "id": "bionics_mil",
       "target_fingerprint": "038fb950ca23371a7d64d06e93af5eae696c83ca774a8728868c0201c7f17dd5",
       "reason": "Progression batch 2 gives the restored Railgun a low-weight military CBM route"
