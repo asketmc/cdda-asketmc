@@ -91,6 +91,9 @@ static const item_group_id Item_spawn_data_remains_human_generic( "remains_human
 static const item_group_id Item_spawn_data_trash_cart( "trash_cart" );
 
 static const itype_id itype_223_casing( "223_casing" );
+static const itype_id itype_50bmg( "50bmg" );
+static const itype_id itype_556( "556" );
+static const itype_id itype_762_51( "762_51" );
 static const itype_id itype_762_51_casing( "762_51_casing" );
 static const itype_id itype_9mm_casing( "9mm_casing" );
 static const itype_id itype_acoustic_guitar( "acoustic_guitar" );
@@ -155,6 +158,9 @@ static const mongroup_id GROUP_TURRET_SPEAKER( "GROUP_TURRET_SPEAKER" );
 static const mongroup_id GROUP_WASP_GUARD( "GROUP_WASP_GUARD" );
 static const mongroup_id GROUP_WASP_QUEEN( "GROUP_WASP_QUEEN" );
 
+static const mtype_id mon_crows_m240( "mon_crows_m240" );
+static const mtype_id mon_turret_bmg( "mon_turret_bmg" );
+static const mtype_id mon_turret_rifle( "mon_turret_rifle" );
 static const mtype_id mon_turret_riot( "mon_turret_riot" );
 static const mtype_id mon_turret_searchlight( "mon_turret_searchlight" );
 static const mtype_id mon_wolf( "mon_wolf" );
@@ -524,7 +530,21 @@ static bool mx_roadblock( map &m, const tripoint &abs_sub )
     const bool road_at_east = east->get_type_id() == oter_type_road;
 
     const auto spawn_turret = [&]( const point & p ) {
-        m.add_spawn( mon_turret_riot, 1, { p, abs_sub.z } );
+        spawn_data data;
+        data.hp_percent = jmapgen_int( 30, 70 );
+        mtype_id turret;
+        const int turret_roll = rng( 1, 100 );
+        if( turret_roll <= 70 ) {
+            turret = mon_turret_rifle;
+            data.ammo.emplace( itype_556, jmapgen_int( 80, 240 ) );
+        } else if( turret_roll <= 95 ) {
+            turret = mon_crows_m240;
+            data.ammo.emplace( itype_762_51, jmapgen_int( 50, 150 ) );
+        } else {
+            turret = mon_turret_bmg;
+            data.ammo.emplace( itype_50bmg, jmapgen_int( 20, 60 ) );
+        }
+        m.add_spawn( turret, 1, { p, abs_sub.z }, false, -1, -1, "NONE", data );
     };
 
     if( one_in( 6 ) ) { //Military doesn't joke around with their barricades!

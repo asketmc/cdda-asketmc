@@ -85,6 +85,22 @@
   {
     "type": "mapgen",
     "method": "json",
+    "update_mapgen_id": "test_update_place_damaged_turret",
+    "object": {
+      "set": [ { "point": "terrain", "id": "t_dirt", "x": 5, "y": 5 } ],
+      "place_monster": [
+        {
+          "monster": "mon_turret_rifle",
+          "x": 5,
+          "y": 5,
+          "spawn_data": { "ammo": [ { "ammo_id": "556", "qty": 80 } ], "hp_percent": 50 }
+        }
+      ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "method": "json",
     "update_mapgen_id": "test_update_place_npc",
     "object": {
       "set": [ { "point": "terrain", "id": "t_dirt", "x": 0, "y": 0 } ],

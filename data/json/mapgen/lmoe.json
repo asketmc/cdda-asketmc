@@ -106,7 +106,8 @@
         "########################",
         "########################"
       ],
-      "palettes": [ "bunker", "empty_bunker_items" ]
+      "palettes": [ "bunker", "empty_bunker_items" ],
+      "place_items": [ { "item": "lmoe_guns", "x": 3, "y": 3, "chance": 100 } ]
     }
   },
   {
@@ -144,7 +145,8 @@
         "########################",
         "########################"
       ],
-      "palettes": [ "bunker", "empty_bunker_items" ]
+      "palettes": [ "bunker", "empty_bunker_items" ],
+      "place_items": [ { "item": "lmoe_guns", "x": 18, "y": 7, "chance": 100 } ]
     }
   },
   {

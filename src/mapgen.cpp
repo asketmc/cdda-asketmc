@@ -2314,6 +2314,11 @@ class jmapgen_monster : public jmapgen_piece
                         data.patrol_points_rel_ms.emplace_back( ptx.get(), pty.get() );
                     }
                 }
+                data.hp_percent = jmapgen_int( sd, "hp_percent", 100, 100 );
+                if( data.hp_percent.val < 1 || data.hp_percent.valmax > 100 ||
+                    data.hp_percent.val > data.hp_percent.valmax ) {
+                    sd.throw_error_at( "hp_percent", "expected 1-100 or an ascending range within 1-100" );
+                }
             }
         }
 

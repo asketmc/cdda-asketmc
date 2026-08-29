@@ -858,6 +858,35 @@ ready-to-install implants.
 
 </details>
 
+## Classic exploration and practical solar power
+
+- The irradiance model remains in place, including seasonal, cloud, and time-of-day
+  effects.  Standard solar panels now produce 90 W instead of 50 W; foldable,
+  reinforced, and advanced panels retain their existing proportional tiers.
+- Compact ASRG power returns to the irradiator facility.  Existing rare ASRG
+  placements remain, while ordinary outposts and shipwrecks continue to use
+  fuel-burning backup generators.
+- Ordinary LMOE shelters again receive at least one placement attempt per
+  overmap, can occur on suitable land at a slightly shorter city distance, and
+  guarantee one hidden survival-firearm cache in every underground layout.
+- Classic, central, and ice labs are more likely to be selected, but remain
+  unique map specials.  Existing generated overmaps are not rewritten.
+- The classic autodoc lab finale now guarantees one common CBM roll in addition
+  to its anesthetic and autodoc supplies.  The nanofabricator, portal, mutagen,
+  and turret finales retain their existing guaranteed reward sources.
+
+## Dangerous military salvage sites
+
+- Military map extras remain rare, but their field and road weights are high
+  enough to make deliberate exploration worthwhile again.
+- Military roadblocks can field damaged M249, M240, or M2 CROWS turrets.  Each
+  starts at 30–70% integrity and carries only a small fraction of its original
+  ammunition reserve.
+- Military outposts keep two searchlights and may replace either of the other
+  two perimeter lights with a similarly damaged, partially loaded M249 turret.
+- Police roadblocks still use riot-control platforms.  No military turret is
+  silently substituted into civilian police encounters.
+
 ## Optional mod: Useful Helicopters Experimental
 
 This is installed but **not enabled by default**. Enabling the mod adds:

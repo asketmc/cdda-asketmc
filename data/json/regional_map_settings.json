@@ -716,7 +716,7 @@
           "mx_portal": 10,
           "mx_portal_in": 10,
           "mx_science": 10,
-          "mx_military": 4,
+          "mx_military": 12,
           "mx_exocrash_1": 5,
           "mx_exocrash_2": 5
         }
@@ -725,7 +725,7 @@
         "chance": 75,
         "extras": {
           "mx_helicopter": 10,
-          "mx_military": 50,
+          "mx_military": 125,
           "mx_science": 400,
           "mx_collegekids": 500,
           "mx_roadblock": 1000,
