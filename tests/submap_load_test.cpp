@@ -1245,7 +1245,7 @@ TEST_CASE( "submap_cosmetics_load", "[submap][load]" )
     REQUIRE( sm.cosmetics.size() == 5 );
 }
 
-TEST_CASE( "submap_spawns_load", "[submap][load]" )
+TEST_CASE( "submap_spawns_load", "[submap][load][spawn_data][progression]" )
 {
     submap sm;
     load_from_jsin( sm, submap_spawns );

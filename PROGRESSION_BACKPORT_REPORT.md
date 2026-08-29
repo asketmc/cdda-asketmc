@@ -1,6 +1,6 @@
 # Progression Backport Report
 
-These batches reopen selected classic 0.G progression routes without removing later systems or wholesale-merging donor branches.
+These batches reopen selected classic 0.G progression routes without removing later systems or wholesale-merging donor branches. Donor heads mark regression boundaries.
 
 ## Batch 1: energy and dangerous exploration
 
@@ -16,17 +16,17 @@ These batches reopen selected classic 0.G progression routes without removing la
 
 ### Implemented behavior
 
-The standard solar panel produces 90 W while derived panels keep proportional modifiers and irradiance calculations. The irradiator contains one compact ASRG; outposts and shipwrecks retain conventional generators.
+The standard solar panel produces 90 W while derived panels keep proportional modifiers and irradiance calculations. The irradiator contains one compact ASRG beside one conventional generator; outposts and shipwrecks retain conventional generators.
 
-Ordinary LMOEs occur 1-3 times and each parent layout guarantees one hidden `lmoe_guns` cache. Shared storage stays unchanged, excluding occupied and Aftershock Whately LMOEs. Classic, central, and ice labs use 65/100, 60/100, and 25/100 occurrence contracts. The autodoc finale guarantees `bionics_common`; other finales retain guaranteed rewards.
+Ordinary `CLASSIC`/`MAN_MADE` LMOEs occur 1-3 times on suitable land at city distance 20+. `LAB`/`UNIQUE` classic, central, and ice labs use 65/100, 60/100, and 25/100 occurrence contracts; fixed layouts stay unchanged. Each ordinary LMOE parent guarantees one hidden `lmoe_guns` cache. Shared storage stays unchanged, excluding occupied and Whately LMOEs. The autodoc finale guarantees `bionics_common`; other finales retain guaranteed rewards.
 
 Default-region military-extra weights are 12 in fields and 125 on roads. Roadblocks select M249/M240/M2 turrets at exact 70/25/5 weights, with 30-70% hit points and 80-240/50-150/20-60 ammunition. Outposts have two 40% damaged-M249 positions; police roadblocks and loot are unchanged.
 
-`spawn_data.hp_percent` accepts 1-100 or an ascending range. `ammo_qty` applies to the loaded monster type's ammunition pool, preserving Generic Guns compatibility. Explicit `ammo` is mutually exclusive. All fields persist for saved pending spawns, while legacy eight-field arrays load with defaults.
+`spawn_data.hp_percent` accepts 1-100 or an ascending range. `ammo_qty` adjusts the loaded monster's ammunition pool without replacing IDs, preserving Generic Guns compatibility. Explicit `ammo` is mutually exclusive. All fields persist for saved pending spawns; legacy eight-field arrays load with defaults.
 
 ### Exclusions and contracts
 
-No existing-overmap migration, microlab redesign, broad ASRG restoration, full-strength turret, monster-type change, police branch change, or modded-region weight change is included. `tools.test_progression_backports` locks energy, scope, rewards, encounter shape, and mod ammunition. Focused Catch2 contracts execute probability boundaries, parsing, monster state, legacy loading, and pending-spawn round trips; the Windows workflow fails on zero discovery.
+No existing-overmap migration, microlab redesign, unrelated frequency change, broad ASRG restoration, full-strength turret, turret type/stat/drop change, police branch change, modded-region military weight, or non-military extra change is included. `tools.test_progression_backports` locks energy, scoping, rewards, military encounter shape, and Generic Guns ammunition. Focused Catch2 contracts execute probability boundaries, parsing, monster state, legacy and pending-spawn loading, and solar output.
 
 ## Batch 2: independent CBM scavenging and utility
 
@@ -50,4 +50,6 @@ Railgun, its implant, and its autodoc software are active again beside Throwing 
 
 ### Exclusions and contracts
 
-No clean direct death drops, generic-vault rollback, Exodii weakening, cleaning/install bypass, modular-tool migration, unrelated obsolete CBM, or non-ferric throwing change is included. `tools.test_progression_backports` locks dirty corpse salvage, exact low-weight routes, mapgen cache scope, active definitions, coexistence, qualities, and power hooks. The focused Catch2 Railgun contract executes generic and graded-steel 10 kJ/9 kJ paths plus powered-mech suppression.
+No clean direct death drops, generic-vault rollback, Exodii weakening, cleaning/install bypass, modular-tool migration, unrelated obsolete CBM, or non-ferric throwing change is included. `tools.test_progression_backports` locks dirty corpse salvage, exact low-weight routes, mapgen cache scope, active definitions, coexistence, qualities, and power hooks. Focused Catch2 Railgun contracts execute generic and graded-steel 10 kJ/9 kJ paths plus powered-mech suppression.
+
+The Windows workflow compiles and executes every focused Catch2 filter, prints JUnit diagnostics on failure, and rejects zero-test discovery.
