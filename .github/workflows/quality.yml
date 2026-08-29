@@ -52,6 +52,7 @@ jobs:
         run: |
           python3 -m unittest \
             tools.test_pr_size_lint \
+            tools.test_patchnotes_lint \
             tools.test_package_windows_release \
             tools.test_release_changelog \
             tools.test_windows_release_workflow \
@@ -70,6 +71,8 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: python3 tools/pr_size_lint.py --base "${PR_BASE_SHA}" --head "${PR_HEAD_SHA}"
+      - name: Enforce the cumulative patch-note contract
+        run: python3 tools/patchnotes_lint.py
       - name: Validate reviewed changelog input and generated release history
         env:
           GH_TOKEN: ${{ github.token }}

@@ -21,8 +21,9 @@ Windows Tiles+Sound packages are published on the repository's Releases page.
 - Updated UltiCa/SurveyorsMap assets, multi-Z rendering, UI, and sound polish.
 - Restored CBM salvage and an optional Useful Helicopters package.
 
-See [PATCHNOTES_ADDITIVE_0G.md](PATCHNOTES_ADDITIVE_0G.md) for player-facing
-changes, [BACKPORTS.md](BACKPORTS.md) for donor provenance, and
+See [PATCHNOTES_ADDITIVE_0G.md](PATCHNOTES_ADDITIVE_0G.md) for the cumulative
+catalogue of how this fork differs from 0.G, [CHANGELOG.md](CHANGELOG.md) for
+dated per-release notes, [BACKPORTS.md](BACKPORTS.md) for donor provenance, and
 [CURRENT_STATE.md](CURRENT_STATE.md) for build and validation status.
 
 ## Development

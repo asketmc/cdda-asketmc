@@ -2,8 +2,8 @@
 
 The fork has two complementary records:
 
-- `PATCHNOTES_ADDITIVE_0G.md` is the curated, cumulative description of the fork.
-- `CHANGELOG.md` and `doc/releases/<tag>.md` are generated, strict release deltas.
+- `PATCHNOTES_ADDITIVE_0G.md` is the curated, cumulative catalogue of how the fork differs from vanilla 0.G. It is grouped by gameplay area and carries no chronology: no dates, no release tags, and no fork pull-request numbers. Its editorial rules are in `AGENTS.md`, and `python tools/patchnotes_lint.py` enforces the mechanical ones in CI.
+- `CHANGELOG.md` and `doc/releases/<tag>.md` are generated, strict release deltas. Chronology lives here.
 
 The generated history is deterministic. CI does not contact an external text generator, scrape mutable pull-request text, infer the previous release from tag names, or insert the current time. Reviewed JSON in the repository is the source of truth.
 

@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "pr": 32,
+  "entries": [
+    {
+      "id": "cumulative-patch-note-contract",
+      "category": "Infrastructure",
+      "audience": "maintainers",
+      "summary": "Restructure the cumulative patch notes into an enforced, area-grouped catalogue of differences from vanilla 0.G.",
+      "compatibility": "not-applicable",
+      "details": [
+        "PATCHNOTES_ADDITIVE_0G.md drops commit ledgers, TODO markers, validation evidence, and fixes for defects this fork introduced and never shipped, falling from 896 to 386 lines.",
+        "Every difference now opens with a New, Improved, or Fixed tag measured against vanilla 0.G, and provenance stays in BACKPORTS.md while chronology stays in the generated CHANGELOG.md.",
+        "tools/patchnotes_lint.py enforces the closed section list, the tag vocabulary, and the line, entry, and section budgets in the Portable contracts gate.",
+        "AGENTS.md gains a documentation routing table and the patch-note editorial rules that the linter cannot check."
+      ]
+    }
+  ]
+}
