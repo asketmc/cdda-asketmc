@@ -194,8 +194,11 @@ class CbmScavengingAndUtilityBackportTests(unittest.TestCase):
         self.assertIn("get_power_level() >= bio_railgun->power_trigger", character_source)
         chain_materials = ("budget_steel_chain", "ch_steel_chain", "hc_steel_chain",
                            "lc_steel_chain", "mc_steel_chain", "qt_steel_chain")
+        ferric_marker = "static const std::set<material_id> ferric = {"
+        self.assertIn(ferric_marker, character_source)
+        ferric_initializer = character_source.split(ferric_marker, 1)[1].split("};", 1)[0]
         for material in ("lc_steel", *chain_materials):
-            self.assertIn(f"material_{material}", character_source)
+            self.assertIn(f"material_{material}", ferric_initializer)
         self.assertIn("!mech_assisted", character_source)
         self.assertEqual(2, ranged_source.count("railgun_eligible_throw( thrown )"))
         self.assertNotIn("case_hardened_steel", ranged_source)
