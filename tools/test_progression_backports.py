@@ -192,8 +192,10 @@ class CbmScavengingAndUtilityBackportTests(unittest.TestCase):
         ranged_source = (ROOT / "src/ranged.cpp").read_text(encoding="utf-8")
         self.assertIn("ret *= 2", character_source)
         self.assertIn("get_power_level() >= bio_railgun->power_trigger", character_source)
-        self.assertIn("material_lc_steel", character_source)
-        self.assertIn("material_lc_steel_chain", character_source)
+        chain_materials = ("budget_steel_chain", "ch_steel_chain", "hc_steel_chain",
+                           "lc_steel_chain", "mc_steel_chain", "qt_steel_chain")
+        for material in ("lc_steel", *chain_materials):
+            self.assertIn(f"material_{material}", character_source)
         self.assertIn("!mech_assisted", character_source)
         self.assertEqual(2, ranged_source.count("railgun_eligible_throw( thrown )"))
         self.assertNotIn("case_hardened_steel", ranged_source)

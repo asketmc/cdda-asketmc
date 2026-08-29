@@ -40,7 +40,7 @@ No existing-overmap migration, microlab redesign, unrelated frequency change, br
 
 ### Implemented behavior
 
-Scientists, technicians, military zombies, bio-operators, and Exodii zomborgs retain dissection-only, skill-scaled CBM salvage. Recovered implants remain filthy, non-sterile, unpackaged, and faulted. Low-weight routes return to hospitals, mines, science loot, Robofac trade, and sparse basement, bunker, military clinic, mortuary, police, prison, and electronics caches. Exodii stock remains available.
+Scientists retain their pre-existing clean death-drop lottery, while scientists, technicians, military zombies, bio-operators, and Exodii zomborgs all retain skill-scaled dirty dissection salvage. Dissected implants remain filthy, non-sterile, unpackaged, and faulted. Low-weight routes return to hospitals, mines, science loot, Robofac trade, and sparse basement, bunker, military clinic, mortuary, police, prison, and electronics caches. Exodii stock remains available.
 
 The Integrated Multitool's stowed and extended forms regain hammering, sawing, wrenching, screwdriving, cutting, prying, nail-pulling, and drilling qualities. Save-facing IDs and the existing included-bionic structure are unchanged.
 
@@ -48,6 +48,6 @@ Railgun and its implant are active again beside Throwing Assist, with rare milit
 
 ### Exclusions and contracts
 
-No clean direct death drops, generic-vault rollback, Exodii weakening, cleaning/install bypass, modular-tool migration, unrelated obsolete CBM, or non-ferric throwing change is included. `tools.test_progression_backports` locks dirty corpse salvage, exact low-weight routes, mapgen cache scope, active definitions, coexistence, qualities, and power hooks. Focused Catch2 Railgun contracts execute generic and graded-steel 10 kJ/9 kJ paths plus powered-mech suppression.
+No clean direct Railgun death-drop route, generic-vault rollback, Exodii weakening, cleaning/install bypass, modular-tool migration, unrelated obsolete CBM, or non-ferric throwing change is included. `tools.test_progression_backports` locks dirty corpse salvage, exact low-weight routes, mapgen cache scope, active definitions, coexistence, qualities, and power hooks. Focused Catch2 Railgun contracts execute generic and graded-steel 10 kJ/9 kJ paths plus powered-mech suppression.
 
 The Windows workflow compiles and executes every focused Catch2 filter, prints JUnit diagnostics on failure, and rejects zero-test discovery. Validation boundary: exact-head additive audits, required Python tests, source compilation, and Windows Catch results are recorded on the PR; `--check-mods dda`, Generic Guns runtime, copied-save loading, and playable-release smoke remain required before merge unless exact-tree evidence is recorded.
