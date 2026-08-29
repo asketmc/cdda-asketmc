@@ -8,6 +8,7 @@
 #include "bionics.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "enums.h"
 #include "faction.h"
 #include "game.h"
 #include "item.h"
@@ -19,6 +20,7 @@
 #include "npctrade.h"
 #include "options_helpers.h"
 #include "pimpl.h"
+#include "player_activity.h"
 #include "player_helpers.h"
 #include "ret_val.h"
 #include "type_id.h"
@@ -46,6 +48,7 @@ static const itype_id itype_test_backpack( "test_backpack" );
 static const skill_id skill_electronics( "electronics" );
 static const skill_id skill_firstaid( "firstaid" );
 static const skill_id skill_mechanics( "mechanics" );
+static const activity_id ACT_OPERATION( "ACT_OPERATION" );
 
 static void clear_bionics( Character &you )
 {
@@ -682,6 +685,32 @@ TEST_CASE( "manual CBM installation is an opt-in expert route",
         const int uncapped = bionic_success_chance( false, 100, 1, installer );
         REQUIRE( uncapped > 95 );
         CHECK( bionic_success_chance( false, 100, 1, installer, 95 ) == 95 );
+    }
+
+    SECTION( "zero-difficulty implants without a procedure are rejected safely" ) {
+        override_option manual_install( "MANUAL_BIONIC_INSTALLATION", "true" );
+        item zero_difficulty_cbm( "test_bio_zero_difficulty" );
+        const use_function *zero_install_action =
+            zero_difficulty_cbm.type->get_use( "install_bionic" );
+        REQUIRE( zero_install_action != nullptr );
+        CHECK_FALSE( zero_install_action->can_call( installer, zero_difficulty_cbm, false,
+                     installer.pos() ).success() );
+        CHECK( bionic_success_chance( false, 100, 0, installer, 95 ) == 95 );
+    }
+
+    SECTION( "surgery-start pain cannot cancel the operation it just started" ) {
+        override_option manual_install( "MANUAL_BIONIC_INSTALLATION", "true" );
+        REQUIRE( installer.install_bionics( *cbm.type, installer, false ) );
+        REQUIRE( installer.activity.id() == ACT_OPERATION );
+        REQUIRE_FALSE( installer.activity.is_distraction_ignored( distraction_type::pain ) );
+        const int pain_before = installer.get_pain();
+
+        installer.apply_manual_bionic_installation_pain( cbm.type->bionic->difficulty );
+
+        CHECK( installer.activity.id() == ACT_OPERATION );
+        CHECK( installer.activity.is_distraction_ignored( distraction_type::pain ) );
+        CHECK( installer.get_pain() > pain_before );
+        installer.cancel_activity();
     }
 }
 

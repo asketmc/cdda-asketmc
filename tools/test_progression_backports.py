@@ -424,7 +424,10 @@ class ManualInstallationAndExodiiBackportTests(unittest.TestCase):
         self.assertEqual(2, bionics_source.count("&installer == this"))
         self.assertNotIn("installer.is_avatar()", bionics_source)
         self.assertIn("requirement_manual_bionic_installation", bionics_source)
-        self.assertIn("p.mod_pain( 10 + it.type->bionic->difficulty * 3 )", actor_source)
+        self.assertIn("activity.ignore_distraction( distraction_type::pain )", bionics_source)
+        self.assertIn("if( difficulty <= 0 )", bionics_source)
+        self.assertIn("p.apply_manual_bionic_installation_pain", actor_source)
+        self.assertIn("This CBM has no manual installation procedure", actor_source)
         self.assertIn("flag_FILTHY", actor_source)
         self.assertIn("flag_NO_STERILE", actor_source)
         self.assertIn("consume_anesth_requirement", actor_source)
@@ -438,6 +441,9 @@ class ManualInstallationAndExodiiBackportTests(unittest.TestCase):
         self.assertIn("install_action->can_call", runtime_test)
         self.assertIn("does not bypass implant sterility", runtime_test)
         self.assertIn("uncapped > 95", runtime_test)
+        self.assertIn("zero-difficulty implants without a procedure are rejected safely", runtime_test)
+        self.assertIn("surgery-start pain cannot cancel the operation it just started", runtime_test)
+        self.assertIn("is_distraction_ignored( distraction_type::pain )", runtime_test)
 
     def test_exodii_stock_is_faster_but_remains_trust_gated(self) -> None:
         definitions = load_json("data/json/npcs/exodii/exodii_merchant_definitions.json")

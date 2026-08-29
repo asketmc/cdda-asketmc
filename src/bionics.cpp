@@ -1979,6 +1979,12 @@ ret_val<void> Character::can_use_manual_bionic_installation() const
     return ret_val<void>::make_success();
 }
 
+void Character::apply_manual_bionic_installation_pain( int difficulty )
+{
+    activity.ignore_distraction( distraction_type::pain );
+    mod_pain( 10 + difficulty * 3 );
+}
+
 bool Character::has_installation_requirement( const bionic_id &bid ) const
 {
     requirement_id requirement = bid->installation_requirement;
@@ -2069,6 +2075,9 @@ int Character::bionics_pl_skill( bool autodoc, int skill_level ) const
 int bionic_success_chance( bool autodoc, int skill_level, int difficulty, const Character &target,
                            int maximum )
 {
+    if( difficulty <= 0 ) {
+        return maximum;
+    }
     return std::min( maximum,
                      bionic_manip_cos( target.bionics_adjusted_skill( autodoc, skill_level ), difficulty ) );
 }
@@ -2365,12 +2374,16 @@ bool Character::can_install_bionics( const itype &type, Character &installer, bo
     const int difficult = type.bionic->difficulty;
 
     const bool self_install = !autodoc && &installer == this;
+    if( self_install && bioid->installation_requirement.is_empty() && difficult <= 0 ) {
+        return false;
+    }
     if( self_install && ( !installer.has_enough_anesth( type ) ||
                           !installer.has_installation_requirement( bioid ) ) ) {
         return false;
     }
 
-    const bool manual_fallback = self_install && bioid->installation_requirement.is_empty() &&
+    const bool manual_fallback = self_install && difficult > 0 &&
+                                 bioid->installation_requirement.is_empty() &&
                                  installer.can_use_manual_bionic_installation().success() &&
                                  !installer.has_trait( trait_DEBUG_BIONICS );
     int chance_of_success = bionic_success_chance( autodoc, skill_level, difficult, installer,
@@ -2446,7 +2459,7 @@ bool Character::install_bionics( const itype &type, Character &installer, bool a
     const bionic_id &upbioid = bioid->upgraded_bionic;
     const int difficulty = type.bionic->difficulty;
     int pl_skill = installer.bionics_pl_skill( autodoc, skill_level );
-    const bool manual_fallback = !autodoc && &installer == this &&
+    const bool manual_fallback = !autodoc && &installer == this && difficulty > 0 &&
                                  bioid->installation_requirement.is_empty() &&
                                  installer.can_use_manual_bionic_installation().success() &&
                                  !installer.has_trait( trait_DEBUG_BIONICS );

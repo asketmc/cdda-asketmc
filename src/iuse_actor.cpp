@@ -4120,7 +4120,7 @@ cata::optional<int> install_bionic_actor::use( Character &p, item &it, bool,
         }
         if( p.install_bionics( *it.type, p, false ) ) {
             if( manual_fallback && !p.has_trait( trait_DEBUG_BIONICS ) ) {
-                p.mod_pain( 10 + it.type->bionic->difficulty * 3 );
+                p.apply_manual_bionic_installation_pain( it.type->bionic->difficulty );
                 p.add_msg_if_player( m_bad, _( "The improvised surgery leaves you in severe pain." ) );
             }
             return 1;
@@ -4141,6 +4141,10 @@ ret_val<void> install_bionic_actor::can_use( const Character &p, const item &it,
     }
     if( !p.has_trait( trait_DEBUG_BIONICS ) ) {
         if( bid->installation_requirement.is_empty() ) {
+            if( it.type->bionic->difficulty <= 0 ) {
+                return ret_val<void>::make_failure(
+                           _( "This CBM has no manual installation procedure." ) );
+            }
             const ret_val<void> manual_route = p.can_use_manual_bionic_installation();
             if( !manual_route.success() ) {
                 return manual_route;
