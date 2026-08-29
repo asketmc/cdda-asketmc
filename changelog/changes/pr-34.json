@@ -10,7 +10,7 @@
       "compatibility": "save-compatible",
       "details": [
         "Positive-difficulty CBMs without dedicated procedures require electronics 8, health care 6, mechanics 4, surgical tools, sterile supplies, and anesthetic.",
-        "Improvised surgery causes pain and retains at least a five-percent failure chance with the existing dangerous consequences."
+        "Improvised surgery causes pain unless the installer is pain-immune and retains at least a five-percent failure chance with the existing dangerous consequences."
       ]
     },
     {

@@ -908,8 +908,9 @@ ready-to-install implants.
   tools, a charged soldering or repair tool, solder, disinfectant, sterile
   dressings, and the normal difficulty- and body-weight-scaled anesthetic.
 - Filthy, non-sterile, and already-deployed CBMs remain unusable. Improvised
-  surgery causes pain and never exceeds 95% success, preserving the existing
-  damage and faulty-install consequences when it fails.
+  surgery causes pain unless the installer is pain-immune and never exceeds
+  95% success, preserving the existing damage and faulty-install consequences
+  when it fails.
 
 ## Faster but still gated Exodii service
 
