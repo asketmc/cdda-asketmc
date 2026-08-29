@@ -38,13 +38,16 @@ TEST_CASE( "military roadblock turret distribution", "[mapgen][monster][progress
     check_loadout( 100, mon_turret_bmg, 20, 60 );
 }
 
-TEST_CASE( "defaulted mapgen ranges reject empty arrays and preserve singletons",
+TEST_CASE( "mapgen ranges reject empty arrays without changing legacy defaulted singletons",
            "[mapgen][monster][progression]" )
 {
     const JsonObject singleton = json_loader::from_string( R"({ "value": [ 50 ] })" ).get_object();
-    const jmapgen_int fixed( singleton, "value", 100, 100 );
+    const jmapgen_int fixed( singleton, "value" );
     CHECK( fixed.val == 50 );
     CHECK( fixed.valmax == 50 );
+    const jmapgen_int legacy_defaulted( singleton, "value", 0, 1 );
+    CHECK( legacy_defaulted.val == 50 );
+    CHECK( legacy_defaulted.valmax == 1 );
 
     const JsonObject empty = json_loader::from_string( R"({ "value": [] })" ).get_object();
     CHECK_THROWS_AS( jmapgen_int( empty, "value", 100, 100 ), JsonError );
@@ -60,6 +63,7 @@ TEST_CASE( "spawn_data rejects invalid ammunition and damage ranges",
     };
     check_rejected( R"({ "ammo_qty": -1 })" );
     check_rejected( R"({ "hp_percent": [] })" );
+    check_rejected( R"({ "ammo": [], "ammo_qty": 80 })" );
     check_rejected(
         R"({ "ammo": [ { "ammo_id": "556", "qty": 80 } ], "ammo_qty": 80 })" );
 }

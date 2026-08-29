@@ -215,7 +215,7 @@ jobs:
             "CROSS=${cross}" \
             "CCACHE=${cache_mode}" RELEASE=1 TILES=1 SOUND=1 LOCALIZE=0 RUNTESTS=1 \
             LINTJSON=0 ASTYLE=0 WARNINGS=-w BACKTRACE=1 LIBBACKTRACE=1 PCH=0 \
-            TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp mapgen_helpers.cpp player_helpers.cpp stringmaker.cpp advanced_inventory_test.cpp butchery_progress_test.cpp climbing_test.cpp mapgen_spawn_data_test.cpp npc_hostility_test.cpp submap_load_test.cpp" \
+            TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp mapgen_helpers.cpp options_helpers.cpp player_helpers.cpp stringmaker.cpp advanced_inventory_test.cpp butchery_progress_test.cpp climbing_test.cpp mapgen_spawn_data_test.cpp npc_hostility_test.cpp submap_load_test.cpp vehicle_power_test.cpp" \
             tests
           test_bin="tests/${first_prefix}cata_test.exe"
           test -s "${test_bin}"
@@ -235,9 +235,21 @@ jobs:
           WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
             --user-dir=mapgen-spawn-test-user --rng-seed 1 --reporter junit \
             --out mapgen-spawn-test-results.xml "[mapgen][monster][progression]"
-          WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
+          if ! WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
             --user-dir=submap-spawn-test-user --rng-seed 1 --reporter junit \
-            --out submap-spawn-test-results.xml "[submap][load][spawn_data][progression]"
+            --out submap-spawn-test-results.xml "[submap][load][spawn_data][progression]"; then
+            python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          root = ET.parse("submap-spawn-test-results.xml").getroot()
+          for case in root.findall(".//testcase"):
+              for failure in case.findall("failure") + case.findall("error"):
+                  print(f"{case.get('name')}: {failure.get('message', '')}\n{failure.text or ''}")
+          PY
+            exit 1
+          fi
+          WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
+            --user-dir=solar-power-test-user --rng-seed 1 --reporter junit \
+            --out solar-power-test-results.xml "[vehicle][power][progression]"
           python3 - <<'PY'
           import xml.etree.ElementTree as ET
 
@@ -248,6 +260,7 @@ jobs:
               ("butchery progress", "butchery-test-results.xml"),
               ("mapgen spawn data", "mapgen-spawn-test-results.xml"),
               ("submap spawn data", "submap-spawn-test-results.xml"),
+              ("solar power", "solar-power-test-results.xml"),
           ):
               root = ET.parse(path).getroot()
               cases = root.findall(".//testcase")

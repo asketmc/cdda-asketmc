@@ -1271,8 +1271,8 @@
     {
       "path": "data/json/mapgen/irradiator_1.json",
       "baseline_fingerprint": "3b7638aeacf3fbb2540f39af0a8776a055b9463af487a268a858403ea7120b08",
-      "target_fingerprint": "dd20ccec685ad86ab63ae25789fd6cf8cd09ced5ba9bc6d40c72df69046dea1f",
-      "reason": "Progression batch 1 restores the compact ASRG only to the thematic irradiator facility"
+      "target_fingerprint": "e5494330c1fb97066c2cd22f5fbc63a6a99863c37c40637efe4e2ca0c5f26f75",
+      "reason": "Progression batch 1 restores one compact ASRG beside the irradiator's retained conventional generator"
     },
     {
       "path": "data/json/mapgen/lab/lab_floorplans_finale1level.json",

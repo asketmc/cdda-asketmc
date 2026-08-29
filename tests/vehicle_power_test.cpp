@@ -72,7 +72,7 @@ TEST_CASE( "vehicle power with reactor", "[vehicle][power]" )
     }
 }
 
-TEST_CASE( "Solar power", "[vehicle][power]" )
+TEST_CASE( "Solar power", "[vehicle][power][progression]" )
 {
     clear_vehicles();
     reset_player();
@@ -151,7 +151,7 @@ TEST_CASE( "Solar power", "[vehicle][power]" )
     }
 }
 
-TEST_CASE( "Daily solar power", "[vehicle][power]" )
+TEST_CASE( "Daily solar power", "[vehicle][power][progression]" )
 {
     clear_vehicles();
     reset_player();

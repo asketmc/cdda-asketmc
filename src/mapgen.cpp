@@ -851,8 +851,6 @@ jmapgen_int::jmapgen_int( const JsonObject &jo, const std::string &tag, const in
         val = sparray.get_int( 0 );
         if( sparray.size() == 2 ) {
             valmax = sparray.get_int( 1 );
-        } else {
-            valmax = val;
         }
     } else if( jo.has_member( tag ) ) {
         val = valmax = jo.get_int( tag );
@@ -913,7 +911,8 @@ void spawn_data::deserialize( const JsonObject &jo )
     patrol_points_rel_ms.clear();
     hp_percent = jmapgen_int( 100 );
 
-    if( jo.has_array( "ammo" ) ) {
+    const bool has_explicit_ammo = jo.has_member( "ammo" );
+    if( has_explicit_ammo ) {
         const JsonArray &ammos = jo.get_array( "ammo" );
         for( const JsonObject adata : ammos ) {
             const jmapgen_int qty( adata, "qty" );
@@ -924,7 +923,7 @@ void spawn_data::deserialize( const JsonObject &jo )
         }
     }
     if( jo.has_member( "ammo_qty" ) ) {
-        if( !ammo.empty() ) {
+        if( has_explicit_ammo ) {
             jo.throw_error_at( "ammo_qty", "ammo_qty cannot be combined with explicit ammo" );
         }
         ammo_qty = jmapgen_int( jo, "ammo_qty" );

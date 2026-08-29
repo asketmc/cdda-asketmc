@@ -1,6 +1,5 @@
 # Progression Backport Report
-This batch reopens selected classic 0.G exploration and power routes without removing later systems or importing
-unrelated donor changes. Donor heads mark regression boundaries; no donor branch was merged wholesale.
+This batch reopens selected classic 0.G exploration and power routes without removing later systems or wholesale-merging donor branches. Donor heads mark regression boundaries.
 
 ## Provenance and adaptations
 
@@ -14,39 +13,20 @@ unrelated donor changes. Donor heads mark regression boundaries; no donor branch
 
 ## Implemented behavior
 
-The standard solar panel produces 90 W while derived panels keep their proportional modifiers and irradiance calculations.
-The irradiator contains a compact ASRG; outposts and shipwrecks retain conventional generators.
+The standard solar panel produces 90 W while derived panels keep proportional modifiers and irradiance calculations. The irradiator contains one compact ASRG beside one conventional generator; outposts and shipwrecks retain conventional generators.
 
-Classic exploration uses these new-generation occurrence contracts:
+Ordinary `CLASSIC`/`MAN_MADE` LMOEs occur 1-3 times on suitable land at city distance 20+. `LAB`/`UNIQUE` classic, central, and ice labs use 65/100, 60/100, and 25/100 occurrence contracts; fixed layouts stay unchanged.
 
-| Special | Occurrences | Preserved constraints |
-| --- | ---: | --- |
-| Ordinary LMOE shelter | 1-3 | `CLASSIC`, `MAN_MADE`; suitable land; city distance 20+ |
-| Classic lab | 65/100 | `LAB`, `UNIQUE` |
-| Central lab | 60/100 | `LAB`, `UNIQUE`; fixed multi-tile layout |
-| Ice lab | 25/100 | `LAB`, `UNIQUE` |
+Each ordinary LMOE parent guarantees one hidden `lmoe_guns` cache. Shared storage stays unchanged, excluding occupied and Whately LMOEs. The autodoc finale guarantees `bionics_common`; other finales retain guaranteed rewards.
 
-Each ordinary LMOE parent layout guarantees one hidden `lmoe_guns` cache. Shared storage stays unchanged, so occupied and
-Whately LMOEs do not inherit it. The autodoc finale guarantees `bionics_common`; other finales retain guaranteed rewards.
+Default-region military-extra weights are 12 in fields and 125 on roads. Roadblocks select M249/M240/M2 turrets at exact 70/25/5 weights, with 30-70% hit points and 80-240/50-150/20-60 ammunition. Outposts have two 40% damaged-M249 positions; police roadblocks and loot are unchanged.
 
-Default-region military-extra weights are 12 in fields and 125 on roads. Roadblocks select M249/M240/M2 turrets at exact
-70/25/5 weights, with 30-70% hit points and 80-240/50-150/20-60 ammunition. Outposts have two 40% damaged-M249 positions;
-police roadblocks and loot are unchanged.
-
-`spawn_data.hp_percent` accepts 1-100 or an ascending range. `ammo_qty` applies to the loaded monster type's ammunition
-pool instead of replacing IDs, preserving Generic Guns compatibility. Explicit `ammo` is mutually exclusive. All
-fields persist for saved pending spawns, while legacy eight-field arrays load with defaults.
+`spawn_data.hp_percent` accepts 1-100 or an ascending range. `ammo_qty` adjusts the loaded monster's ammunition pool without replacing IDs, preserving Generic Guns compatibility. Explicit `ammo` is mutually exclusive. All fields persist for saved pending spawns; legacy eight-field arrays load with defaults.
 
 ## Exclusions
 
-- No existing overmap migration, microlab redesign, or unrelated frequency change.
-- No ASRG restoration to prisons, rural outposts, or shipwrecks.
-- No full-health or full-ammunition aboveground turrets.
-- No turret attack, armor, drop, maximum-hit-point, or monster-type changes.
-- No change to modded-region military weights or non-military map extras.
+No existing-overmap migration, microlab redesign, unrelated frequency change, broad ASRG restoration, full-strength turret, turret type/stat/drop change, police branch change, modded-region military weight, or non-military extra change is included.
 
 ## Regression contracts
 
-`tools.test_progression_backports` locks energy, scoping, rewards, military encounter shape, and Generic Guns ammunition.
-Focused Catch2 contracts execute 70/25/5 boundaries, parsing, monster state, legacy loading, and pending-spawn round trips.
-The Windows workflow runs both Catch2 filters and fails on zero discovery.
+`tools.test_progression_backports` locks energy, scoping, rewards, military encounter shape, and Generic Guns ammunition. Focused Catch2 contracts execute probability boundaries, parsing, monster state, legacy and pending-spawn loading, and solar output. The Windows workflow executes every focused filter and fails on zero discovery.
