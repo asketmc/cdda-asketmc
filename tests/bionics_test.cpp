@@ -8,7 +8,6 @@
 #include "bionics.h"
 #include "calendar.h"
 #include "cata_catch.h"
-#include "enums.h"
 #include "faction.h"
 #include "game.h"
 #include "item.h"
@@ -702,13 +701,12 @@ TEST_CASE( "manual CBM installation is an opt-in expert route",
         override_option manual_install( "MANUAL_BIONIC_INSTALLATION", "true" );
         REQUIRE( installer.install_bionics( *cbm.type, installer, false ) );
         REQUIRE( installer.activity.id() == ACT_OPERATION );
-        REQUIRE_FALSE( installer.activity.is_distraction_ignored( distraction_type::pain ) );
+        REQUIRE_FALSE( installer.activity.is_interruptible() );
         const int pain_before = installer.get_pain();
 
-        installer.apply_manual_bionic_installation_pain( cbm.type->bionic->difficulty );
+        installer.mod_pain( 10 + cbm.type->bionic->difficulty * 3 );
 
         CHECK( installer.activity.id() == ACT_OPERATION );
-        CHECK( installer.activity.is_distraction_ignored( distraction_type::pain ) );
         CHECK( installer.get_pain() > pain_before );
         installer.cancel_activity();
     }

@@ -65,7 +65,7 @@ The Windows workflow compiles and executes every focused Catch2 filter, prints J
 
 ### Implemented behavior
 
-Core declares `MANUAL_BIONIC_INSTALLATION` false. Enabling the bundled **Manual Bionic Installation** mod changes it to true for that world. A CBM with no dedicated `installation_requirement` then becomes eligible for self-installation only at electronics 8, health care 6, and mechanics 4. Dedicated per-CBM procedures continue to use their own requirements.
+Core declares `MANUAL_BIONIC_INSTALLATION` false. Enabling the bundled **Manual Bionic Installation** mod changes it to true for that world. A positive-difficulty CBM with no dedicated `installation_requirement` then becomes eligible for self-installation only at electronics 8, health care 6, and mechanics 4. Zero-difficulty implants without a procedure remain ineligible instead of entering undefined failure arithmetic. Dedicated per-CBM procedures continue to use their own requirements.
 
 The generic procedure requires fine cutting and screwdriving tools, a charged soldering or repair tool, solder, disinfectant, and sterile dressings. Existing checks still reject filthy, non-sterile, and deployed/faulted implants; existing weight- and difficulty-scaled anesthetic is still consumed. Starting improvised surgery adds `10 + 3 × difficulty` pain. Its displayed and executed success chance share a 95% ceiling, so even an expert retains failure risk and the existing dangerous-failure consequences.
 
@@ -77,4 +77,4 @@ Exodii installation service uses a one-times implant-price multiplier instead of
 
 No manual uninstallation, safe or guaranteed surgery, dirty-CBM bypass, free anesthetic, lower-skill shortcut, blanket `installation_requirement` rewrite, Exodii inventory expansion, trust bypass, instant restock, or non-Exodii price reduction is included. Existing CBM IDs, slots, upgrades, mutations, operation activity data, and saves remain unchanged.
 
-`tools.test_progression_backports` locks the disabled core option, opt-in mod, exact procedure resources, runtime guards, tier thresholds, restock cadence, and focused Windows gate. Catch2 executes the option and all three skill floors, verifies the 95% ceiling, and distinguishes Exodii from ordinary installation-service pricing. The additive audit binds the modified Exodii entities and rejects accidental core replacements.
+`tools.test_progression_backports` locks the disabled core option, opt-in mod, exact procedure resources, runtime guards, tier thresholds, restock cadence, and focused Windows gate. Catch2 executes the option and all three skill floors, verifies the 95% ceiling, zero-difficulty rejection, and non-interruptible surgery start, and distinguishes Exodii from ordinary installation-service pricing. The additive audit binds the modified Exodii entities and rejects accidental core replacements.

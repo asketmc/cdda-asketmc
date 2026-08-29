@@ -4120,7 +4120,7 @@ cata::optional<int> install_bionic_actor::use( Character &p, item &it, bool,
         }
         if( p.install_bionics( *it.type, p, false ) ) {
             if( manual_fallback && !p.has_trait( trait_DEBUG_BIONICS ) ) {
-                p.apply_manual_bionic_installation_pain( it.type->bionic->difficulty );
+                p.mod_pain( 10 + it.type->bionic->difficulty * 3 );
                 p.add_msg_if_player( m_bad, _( "The improvised surgery leaves you in severe pain." ) );
             }
             return 1;
