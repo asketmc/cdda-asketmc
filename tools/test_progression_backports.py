@@ -92,19 +92,21 @@ class EnergyAndExplorationBackportTests(unittest.TestCase):
         lmoe = mapgens(load_json("data/json/mapgen/lmoe.json"))
         ordinary = [obj for obj in lmoe if obj["om_terrain"] == ["lmoe_under_empty"]]
         self.assertEqual(3, len(ordinary))
-        caches = lambda layout: [entry.get("chance") for entry in layout["object"].get("place_items", [])
-                                 if entry.get("item") == "lmoe_guns"]
-        self.assertEqual([[100]] * 3, [caches(layout) for layout in ordinary])
-        nested = load_json("data/json/mapgen/nested/lmoe_nested.json")
-        storage = only(nested, lambda x: x.get("nested_mapgen_id") == "lmoe3_storage_11x11", "storage")
+        self.assertEqual([1] * 3, [sum(row.count("!") for row in layout["object"]["rows"]) for layout in ordinary])
+        expected = [[{"furn": "f_utility_shelf", "x": x, "y": y}] for x, y in ((3, 4), (12, 9), (11, 11))]
+        self.assertEqual(expected, [layout["object"]["place_furniture"] for layout in ordinary])
+        self.assertTrue(all("place_items" not in layout["object"] for layout in ordinary))
+        items = entity(load_json("data/json/mapgen_palettes/lmoe.json"), "palette", "empty_bunker_items")["items"]
+        self.assertEqual(("lmoe_guns", 100), (items["!"]["item"], items["!"]["chance"]))
+        self.assertNotIn("!", entity(load_json("data/mods/No_Hope/palettes.json"), "palette", "empty_bunker_items")["items"])
+        storage = only(load_json("data/json/mapgen/nested/lmoe_nested.json"), lambda x: x.get("nested_mapgen_id") == "lmoe3_storage_11x11", "storage")
         self.assertNotIn("place_items", storage["object"])
         consumers = [obj for obj in lmoe if uses_chunk(obj, "lmoe3_storage_11x11")]
         occupied = only(consumers, lambda x: x["om_terrain"] == ["lmoe_zombie_under_empty"], "occupied")
-        whately_maps = mapgens(load_json("data/mods/Aftershock/maps/mapgen/whately_lmoe.json"))
-        whately = only(whately_maps, lambda x: uses_chunk(x, "lmoe3_storage_11x11"), "Whately")
+        whately = only(mapgens(load_json("data/mods/Aftershock/maps/mapgen/whately_lmoe.json")),
+                       lambda x: uses_chunk(x, "lmoe3_storage_11x11"), "Whately")
         for consumer in (occupied, whately):
-            rewards = consumer["object"].get("place_items", [])
-            self.assertFalse(any(entry.get("item") == "lmoe_guns" for entry in rewards))
+            self.assertFalse(any("!" in row for row in consumer["object"]["rows"]))
     def test_each_classic_lab_finale_has_a_guaranteed_reward(self) -> None:
         finales = mapgens(load_json("data/json/mapgen/lab/lab_floorplans_finale1level.json"))
         self.assertEqual(5, len(finales))
@@ -355,7 +357,4 @@ class CbmScavengingAndUtilityBackportTests(unittest.TestCase):
         self.assertEqual({15}, {entry["chance"] for entry in electronics})
         self.assertEqual({8}, {entry["y"] for entry in electronics})
         self.assertFalse(any("repeat" in entry for entry in electronics))
-
-
-if __name__ == "__main__":
-    unittest.main()
+if __name__ == "__main__": unittest.main()

@@ -1230,6 +1230,12 @@
       "reason": "Progression batch 1 raises ice lab incidence while preserving its unique map-special placement"
     },
     {
+      "type": "palette",
+      "id": "empty_bunker_items",
+      "target_fingerprint": "d123f6939e9424e408e0451bb136a88f709fb98eb917c8fd9b4d6c797664311f",
+      "reason": "Progression batch 1 guarantees ordinary LMOE caches through a No Hope-overridable palette marker"
+    },
+    {
       "type": "region_settings",
       "id": "default",
       "target_fingerprint": "abd1e30de5b9361980cc969718d65b125c40bc69e14c69b8cdafa00cda622ff7",
@@ -1325,19 +1331,19 @@
     {
       "path": "data/json/mapgen/lmoe.json",
       "baseline_fingerprint": "664c1be2ebc7bfb2783b51f4a8f66d400e1ddea81b501c6fcf3f7837509b6e87",
-      "target_fingerprint": "8008d86be36fda2b3b382e462e6204631e5976bee602c35c2fe0252eddaca086",
+      "target_fingerprint": "f97f048f364d1d7b58379928ba792a7cbca5163e51a10e9ccb9da98558887933",
       "reason": "Progression batch 1 guarantees a hidden firearm cache in the two-bed ordinary LMOE layout"
     },
     {
       "path": "data/json/mapgen/lmoe.json",
       "baseline_fingerprint": "2a89fa3f849d06c9ddf4074e493c98cf52d1388086fd780672079eb30ac39a36",
-      "target_fingerprint": "1615a207bf95c69e9234c01e8b38adbcdce05e87e77c90a97a71c8b9facc49b6",
+      "target_fingerprint": "e6d738d6ed7963de252fcad416551b58872ac00b9d398a22c5b765aaf6f824a0",
       "reason": "Progression batch 1 guarantees a hidden firearm cache in the homemade ordinary LMOE layout"
     },
     {
       "path": "data/json/mapgen/lmoe.json",
       "baseline_fingerprint": "edcebe6fac186ef50c39d5278feaa47d31a50055e7ca22f84aa6c099f5fac025",
-      "target_fingerprint": "742134eee33a251ec5f2eda7005a5a3e5df1b9d89dda9241fb3a8ceefbe83247",
+      "target_fingerprint": "836a2bc9df3b837399bff39950a4cbaf28b9c3339d1136c4fe0d8955cdb356b6",
       "reason": "Progression batch 1 guarantees a hidden firearm cache in the commercial ordinary LMOE parent without changing shared nested storage"
     },
     {

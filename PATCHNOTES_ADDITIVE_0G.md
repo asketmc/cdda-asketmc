@@ -860,20 +860,15 @@ ready-to-install implants.
 
 ## Classic exploration and practical solar power
 
-- Standard solar panels produce 90 W while retaining seasonal, cloud, time-of-day,
-  and obstruction effects; derived panels keep their proportional tiers.
-- Compact ASRG power returns to the irradiator. Ordinary outposts and shipwrecks
-  retain fuel-burning backup generators.
-- Ordinary LMOEs are more discoverable and guarantee one hidden survival-firearm
-  cache per underground layout. Occupied and quest LMOEs are unchanged.
-- Classic, central, and ice labs are more likely but remain unique map specials.
-  The autodoc finale guarantees one common CBM roll; existing maps are untouched.
+- Standard solar panels produce 90 W while retaining seasonal, cloud, time-of-day, and obstruction effects; derived panels keep their proportional tiers.
+- Compact ASRG power returns to the irradiator. Ordinary outposts and shipwrecks retain fuel-burning backup generators.
+- Ordinary LMOEs are more discoverable and guarantee one hidden survival-firearm cache per underground layout; No Hope retains its scarcity override. Occupied and quest LMOEs are unchanged.
+- Classic, central, and ice labs are more likely but remain unique map specials. The autodoc finale guarantees one common CBM roll; existing maps are untouched.
 
 ## Dangerous military salvage sites
 
 - Military field and road extras remain rare but are discoverable again.
-- Military roadblocks can field damaged, partly loaded M249, M240, or M2 CROWS
-  turrets; military outposts may add two damaged M249s inside the retained perimeter lights.
+- Military roadblocks can field damaged, partly loaded M249, M240, or M2 CROWS turrets; military outposts may add two damaged M249s inside the retained perimeter lights.
 - Police roadblocks still use riot-control platforms.
 
 ## Independent CBM scavenging
