@@ -1283,14 +1283,14 @@
     {
       "path": "data/json/mapgen/outpost.json",
       "baseline_fingerprint": "ce0b5863df65656d9524ecc1e23ecf962c1bee407376fa81807f5acc59d670c2",
-      "target_fingerprint": "7663ab975e75423eed0856129b9c61b46470ed59530bcd84749992e28c9e36cf",
-      "reason": "Progression batch 1 gives the regular outpost two rare damaged and partially loaded rifle-turret positions"
+      "target_fingerprint": "1d17077f3ddf46182a86afc98642875d00fef38e1c8e95eb452b2c02519e52e1",
+      "reason": "Progression batch 1 adds two rare damaged rifle-turret positions while preserving the regular outpost searchlights"
     },
     {
       "path": "data/json/mapgen/outpost.json",
       "baseline_fingerprint": "67ca86a93e1fed0ae4a6eaa7d8dee079ee1c7674c55bfe83ffbbb107d709ddf6",
-      "target_fingerprint": "d500ce84d3d2057403f7667378ca01b79b237d042cd330fc6306af664ba1a43f",
-      "reason": "Progression batch 1 gives the cross outpost two rare damaged and partially loaded rifle-turret positions"
+      "target_fingerprint": "177258b92de806ccc007638eae055f8c527b010575b5485ae82d9c2eed57e1cf",
+      "reason": "Progression batch 1 adds two rare damaged rifle-turret positions while preserving the cross outpost searchlights"
     }
   ],
   "allowed_resource_changes": [],
