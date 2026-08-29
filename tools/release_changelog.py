@@ -306,7 +306,7 @@ def validate_release(value: Any, source: str) -> dict[str, Any]:
             "known_limits",
             "validation",
         },
-        set(),
+        {"supersedes_failed_release"},
         source,
     )
     if release["schema"] != 1 or type(release["schema"]) is not int:
@@ -331,6 +331,15 @@ def validate_release(value: Any, source: str) -> dict[str, Any]:
         previous = require_text(previous, f"{source}.previous_release", 80)
         if not TAG_RE.fullmatch(previous):
             raise ChangelogError(f"{source}.previous_release: unsupported release tag")
+    superseded = release.get("supersedes_failed_release")
+    if superseded is not None:
+        superseded = require_text(
+            superseded, f"{source}.supersedes_failed_release", 80
+        )
+        if baseline:
+            raise ChangelogError(f"{source}: a baseline release cannot supersede a failed release")
+        if not TAG_RE.fullmatch(superseded) or superseded == tag:
+            raise ChangelogError(f"{source}.supersedes_failed_release: unsupported release tag")
     changes = release["changes"]
     if not isinstance(changes, list):
         raise ChangelogError(f"{source}.changes: expected an array")
@@ -489,6 +498,14 @@ def render_release(release: dict[str, Any], fragments: dict[int, dict[str, Any]]
                 "",
             ]
         )
+        superseded = release.get("supersedes_failed_release")
+        if superseded:
+            lines.extend(
+                [
+                    f"Supersedes the failed unpublished release attempt `{superseded}`.",
+                    "",
+                ]
+            )
     lines.extend(
         [
             f"For the cumulative fork overview, see [PATCHNOTES_ADDITIVE_0G.md]({REPOSITORY_URL}/blob/main/PATCHNOTES_ADDITIVE_0G.md).",
@@ -700,6 +717,9 @@ def validate_tag(root: pathlib.Path, tag: str, expected_commit: str | None = Non
     if tag not in releases:
         raise ChangelogError(f"no indexed release manifest for {tag}")
     release = releases[tag]
+    superseded = release.get("supersedes_failed_release")
+    if superseded:
+        _require_unpublished_github_release(superseded)
     target = resolve_commit(root, f"refs/tags/{tag}")
     if expected_commit is not None:
         if not SHA_RE.fullmatch(expected_commit):
@@ -780,6 +800,26 @@ def _git_json(root: pathlib.Path, revision: str, path: str) -> Any:
     return parse_json_bytes(data, f"{revision}:{path}")
 
 
+def _require_unpublished_github_release(tag: str) -> None:
+    try:
+        result = subprocess.run(
+            ["gh", "api", "--method", "GET", f"repos/{REPOSITORY}/releases/tags/{tag}"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+        )
+    except OSError as error:
+        raise ChangelogError(f"cannot verify whether {tag} is unpublished: {error}") from error
+    if result.returncode == 0:
+        raise ChangelogError(f"cannot supersede {tag}: its GitHub Release is already published")
+    if "HTTP 404" not in result.stderr:
+        raise ChangelogError(
+            f"cannot verify whether {tag} is unpublished: GitHub API failed closed"
+        )
+
+
 def _name_status_diff(
     root: pathlib.Path, base: str, head: str, paths: Iterable[str]
 ) -> list[tuple[str, str]]:
@@ -826,13 +866,32 @@ def _check_release_history_diff(
         for status, path in release_records
         if status == "A" and path != INDEX_PATH.as_posix()
     ]
-    expected_release_records = {
+    manifest_deletions = [
+        path
+        for status, path in release_records
+        if status == "D" and path != INDEX_PATH.as_posix()
+    ]
+    standard_records = {
         ("M", INDEX_PATH.as_posix()),
         *(("A", path) for path in manifest_additions),
     }
-    if len(manifest_additions) != 1 or set(release_records) != expected_release_records:
+    replacement_records = standard_records | {
+        ("D", path) for path in manifest_deletions
+    }
+    is_standard = (
+        len(manifest_additions) == 1
+        and not manifest_deletions
+        and set(release_records) == standard_records
+    )
+    is_replacement = (
+        len(manifest_additions) == 1
+        and len(manifest_deletions) == 1
+        and set(release_records) == replacement_records
+    )
+    if not is_standard and not is_replacement:
         raise ChangelogError(
-            "published release manifests are immutable; a release PR may only add one manifest and update index.json"
+            "published release manifests are immutable; a release PR may only add one manifest, "
+            "or explicitly replace the latest failed unpublished release attempt"
         )
     manifest_path = manifest_additions[0]
     tag = pathlib.PurePosixPath(manifest_path).stem
@@ -842,6 +901,9 @@ def _check_release_history_diff(
         ("A", f"{RELEASE_DOC_DIR.as_posix()}/{tag}.md"),
         ("M", "CHANGELOG.md"),
     }
+    if is_replacement:
+        old_tag = pathlib.PurePosixPath(manifest_deletions[0]).stem
+        required_other.add(("D", f"{RELEASE_DOC_DIR.as_posix()}/{old_tag}.md"))
     other_records = set(records) - set(release_records)
     generated_paths = _verify_generated_checkout(root, head)
     allowed_historical_docs = {
@@ -861,12 +923,52 @@ def _check_release_history_diff(
     )
     if release["tag"] != tag:
         raise ChangelogError(f"{manifest_path}: embedded tag does not match filename")
+    if is_standard and release.get("supersedes_failed_release") is not None:
+        raise ChangelogError(
+            f"{tag}: supersedes_failed_release requires replacing the latest release manifest"
+        )
     index = require_object(
         _git_json(root, head, INDEX_PATH.as_posix()), f"{head}:{INDEX_PATH.as_posix()}"
     )
     require_keys(index, {"schema", "releases"}, set(), f"{head}:{INDEX_PATH.as_posix()}")
     if not isinstance(index["releases"], list) or not index["releases"] or index["releases"][0] != tag:
         raise ChangelogError(f"{tag}: new release must be the first index entry")
+    if is_replacement:
+        old_manifest_path = manifest_deletions[0]
+        old_tag = pathlib.PurePosixPath(old_manifest_path).stem
+        old_release = validate_release(
+            _git_json(root, base, old_manifest_path), f"{base}:{old_manifest_path}"
+        )
+        base_index = require_object(
+            _git_json(root, base, INDEX_PATH.as_posix()), f"{base}:{INDEX_PATH.as_posix()}"
+        )
+        require_keys(
+            base_index,
+            {"schema", "releases"},
+            set(),
+            f"{base}:{INDEX_PATH.as_posix()}",
+        )
+        base_tags = base_index["releases"]
+        head_tags = index["releases"]
+        if (
+            not isinstance(base_tags, list)
+            or not base_tags
+            or base_tags[0] != old_tag
+            or old_release["tag"] != old_tag
+            or head_tags[1:] != base_tags[1:]
+            or release.get("supersedes_failed_release") != old_tag
+            or release["previous_release"] != old_release["previous_release"]
+            or release["date"] < old_release["date"]
+            or release["changes"][: len(old_release["changes"])] != old_release["changes"]
+            or release["known_limits"][: len(old_release["known_limits"])]
+            != old_release["known_limits"]
+            or release["validation"][: len(old_release["validation"])]
+            != old_release["validation"]
+        ):
+            raise ChangelogError(
+                f"{tag}: replacement must supersede the latest failed release without rewriting prior history"
+            )
+        _require_unpublished_github_release(old_tag)
     expected_prs = [item["pr"] for item in release["changes"]]
     integrations = first_parent_integrations(root, release["previous_release"], base)
     actual_prs = [item["pr"] for item in integrations]
@@ -1035,6 +1137,15 @@ def release_field(root: pathlib.Path, tag: str, field: str) -> str:
     if value is None:
         raise ChangelogError(f"{tag}.{field} is null")
     return str(value)
+
+
+def verify_superseded_release_unpublished(root: pathlib.Path, tag: str) -> None:
+    _, releases, _ = lint_repository(root, check_generated=True)
+    if tag not in releases:
+        raise ChangelogError(f"unknown release: {tag}")
+    superseded = releases[tag].get("supersedes_failed_release")
+    if superseded:
+        _require_unpublished_github_release(superseded)
 
 
 def build_metadata(
@@ -1332,6 +1443,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     field.add_argument("--tag", required=True)
     field.add_argument("--field", required=True)
 
+    superseded = subparsers.add_parser("verify-superseded-release")
+    superseded.add_argument("--tag", required=True)
+
     prepare = subparsers.add_parser("prepare")
     prepare.add_argument("--tag", required=True)
     prepare.add_argument("--title", required=True)
@@ -1385,6 +1499,8 @@ def main(argv: list[str]) -> int:
             validate_tag(root, args.tag, args.expected_commit)
         elif args.command == "release-field":
             print(release_field(root, args.tag, args.field))
+        elif args.command == "verify-superseded-release":
+            verify_superseded_release_unpublished(root, args.tag)
         elif args.command == "prepare":
             prepare_release(
                 root,

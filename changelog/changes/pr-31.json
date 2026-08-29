@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "pr": 31,
+  "skip": {
+    "reason": "Release metadata only; player changes are recorded in their source pull requests."
+  }
+}

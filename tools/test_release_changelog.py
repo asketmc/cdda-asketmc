@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import unittest
 import zipfile
+from unittest import mock
 
 from tools import release_changelog
 
@@ -101,6 +102,19 @@ def write_baseline_history(
 
 
 class StrictJsonAndSchemaTest(unittest.TestCase):
+    def test_unpublished_release_check_rejects_published_and_api_failure(self) -> None:
+        published = subprocess.CompletedProcess([], 0, "", "")
+        missing = subprocess.CompletedProcess([], 1, "", "gh: Not Found (HTTP 404)\n")
+        unavailable = subprocess.CompletedProcess([], 1, "", "authentication failed\n")
+        with mock.patch.object(subprocess, "run", return_value=published):
+            with self.assertRaisesRegex(release_changelog.ChangelogError, "already published"):
+                release_changelog._require_unpublished_github_release("v0.G-additive-2026.08.27.1")
+        with mock.patch.object(subprocess, "run", return_value=missing):
+            release_changelog._require_unpublished_github_release("v0.G-additive-2026.08.27.1")
+        with mock.patch.object(subprocess, "run", return_value=unavailable):
+            with self.assertRaisesRegex(release_changelog.ChangelogError, "failed closed"):
+                release_changelog._require_unpublished_github_release("v0.G-additive-2026.08.27.1")
+
     def test_duplicate_keys_and_non_finite_numbers_are_rejected(self) -> None:
         with self.assertRaisesRegex(release_changelog.ChangelogError, "duplicate JSON key"):
             release_changelog.parse_json_bytes(b'{"schema": 1, "schema": 1}', "test")
@@ -579,6 +593,140 @@ class GitCoverageTest(unittest.TestCase):
         with self.assertRaisesRegex(release_changelog.ChangelogError, "immutable"):
             release_changelog._check_release_history_diff(
                 self.root, release_head, "HEAD", 4, False
+            )
+
+    def test_release_pr_may_replace_latest_failed_unpublished_release(self) -> None:
+        previous_tag = "v0.G-additive-2026.08.25"
+        failed_tag = "v0.G-additive-2026.08.27.1"
+        replacement_tag = "v0.G-additive-2026.08.27.2"
+        _, fragments = write_baseline_history(self.root, previous_tag)
+        run_git(self.root, "add", ".")
+        run_git(self.root, "commit", "-m", "Previous release (#1)")
+        run_git(self.root, "tag", previous_tag)
+
+        fragment = valid_fragment(2)
+        fragments[2] = fragment
+        (self.root / "changelog" / "changes" / "pr-2.json").write_bytes(
+            release_changelog.canonical_json_bytes(fragment)
+        )
+        run_git(self.root, "add", "changelog/changes/pr-2.json")
+        commit_file(self.root, "feature.txt", "feature\n", "Feature (#2)")
+        fragment = valid_fragment(3)
+        fragments[3] = fragment
+        (self.root / "changelog" / "changes" / "pr-3.json").write_bytes(
+            release_changelog.canonical_json_bytes(fragment)
+        )
+        failed_release = {
+            "schema": 1,
+            "tag": failed_tag,
+            "title": "Failed release",
+            "date": "2026-08-27",
+            "previous_release": previous_tag,
+            "baseline": False,
+            "changes": [
+                {"pr": pr, "fragment_sha256": release_changelog.object_hash(fragments[pr])}
+                for pr in (2, 3)
+            ],
+            "baseline_entries": [],
+            "known_limits": ["Keep this limit."],
+            "validation": ["Validated."],
+        }
+        release_dir = self.root / "changelog" / "releases"
+        (release_dir / "index.json").write_bytes(
+            release_changelog.canonical_json_bytes(
+                {"schema": 1, "releases": [failed_tag, previous_tag]}
+            )
+        )
+        (release_dir / f"{failed_tag}.json").write_bytes(
+            release_changelog.canonical_json_bytes(failed_release)
+        )
+        release_changelog.render_all(self.root)
+        run_git(self.root, "add", ".")
+        run_git(self.root, "commit", "-m", "Failed release attempt (#3)")
+        run_git(self.root, "tag", failed_tag)
+
+        fragment = valid_fragment(4)
+        fragments[4] = fragment
+        (self.root / "changelog" / "changes" / "pr-4.json").write_bytes(
+            release_changelog.canonical_json_bytes(fragment)
+        )
+        run_git(self.root, "add", "changelog/changes/pr-4.json")
+        commit_file(self.root, "fix.txt", "fix\n", "Fix release workflow (#4)")
+        base = run_git(self.root, "rev-parse", "HEAD")
+
+        fragment = valid_fragment(5)
+        fragments[5] = fragment
+        (self.root / "changelog" / "changes" / "pr-5.json").write_bytes(
+            release_changelog.canonical_json_bytes(fragment)
+        )
+        replacement = copy.deepcopy(failed_release)
+        replacement.update(
+            {
+                "tag": replacement_tag,
+                "title": "Replacement release",
+                "supersedes_failed_release": failed_tag,
+                "changes": [
+                    {"pr": pr, "fragment_sha256": release_changelog.object_hash(fragments[pr])}
+                    for pr in (2, 3, 4, 5)
+                ],
+            }
+        )
+        (release_dir / f"{failed_tag}.json").unlink()
+        (self.root / "doc" / "releases" / f"{failed_tag}.md").unlink()
+        (release_dir / "index.json").write_bytes(
+            release_changelog.canonical_json_bytes(
+                {"schema": 1, "releases": [replacement_tag, previous_tag]}
+            )
+        )
+        replacement_path = release_dir / f"{replacement_tag}.json"
+        replacement_path.write_bytes(release_changelog.canonical_json_bytes(replacement))
+        release_changelog.render_all(self.root)
+        run_git(self.root, "add", ".")
+        run_git(self.root, "commit", "-m", "Replacement release (#5)")
+        valid_head = run_git(self.root, "rev-parse", "HEAD")
+        with mock.patch.object(
+            release_changelog, "_require_unpublished_github_release"
+        ) as require_unpublished:
+            release_changelog.check_pr(self.root, base, valid_head, 5)
+        require_unpublished.assert_called_once_with(failed_tag)
+
+        with mock.patch.object(
+            release_changelog,
+            "_require_unpublished_github_release",
+            side_effect=release_changelog.ChangelogError("already published"),
+        ):
+            with self.assertRaisesRegex(release_changelog.ChangelogError, "already published"):
+                release_changelog.check_pr(self.root, base, valid_head, 5)
+
+        weakened_changes = copy.deepcopy(replacement["changes"])
+        weakened_changes[0]["fragment_sha256"] = "0" * 64
+        for field, weakened, error in (
+            ("known_limits", [], "without rewriting"),
+            ("validation", ["Replaced validation."], "without rewriting"),
+            ("previous_release", failed_tag, "previous_release must"),
+            ("changes", weakened_changes, "fragment hash mismatch"),
+        ):
+            preserved = copy.deepcopy(replacement[field])
+            replacement[field] = weakened
+            replacement_path.write_bytes(release_changelog.canonical_json_bytes(replacement))
+            if field in {"known_limits", "validation"}:
+                release_changelog.render_all(self.root)
+            run_git(self.root, "add", ".")
+            run_git(self.root, "commit", "-m", f"Discard prior {field} (#6)")
+            with self.assertRaisesRegex(release_changelog.ChangelogError, error):
+                release_changelog._check_release_history_diff(
+                    self.root, base, "HEAD", 5, False
+                )
+            replacement[field] = preserved
+
+        replacement["supersedes_failed_release"] = previous_tag
+        replacement_path.write_bytes(release_changelog.canonical_json_bytes(replacement))
+        release_changelog.render_all(self.root)
+        run_git(self.root, "add", ".")
+        run_git(self.root, "commit", "-m", "Invalid replacement claim (#6)")
+        with self.assertRaisesRegex(release_changelog.ChangelogError, "must supersede"):
+            release_changelog._check_release_history_diff(
+                self.root, base, "HEAD", 5, False
             )
 
 
