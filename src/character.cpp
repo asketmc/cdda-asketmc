@@ -341,14 +341,20 @@ static const limb_score_id limb_score_vision( "vision" );
 static const matec_id tec_none( "tec_none" );
 
 static const material_id material_budget_steel( "budget_steel" );
+static const material_id material_budget_steel_chain( "budget_steel_chain" );
 static const material_id material_ch_steel( "ch_steel" );
+static const material_id material_ch_steel_chain( "ch_steel_chain" );
 static const material_id material_flesh( "flesh" );
 static const material_id material_hc_steel( "hc_steel" );
+static const material_id material_hc_steel_chain( "hc_steel_chain" );
 static const material_id material_hflesh( "hflesh" );
 static const material_id material_iron( "iron" );
 static const material_id material_lc_steel( "lc_steel" );
+static const material_id material_lc_steel_chain( "lc_steel_chain" );
 static const material_id material_mc_steel( "mc_steel" );
+static const material_id material_mc_steel_chain( "mc_steel_chain" );
 static const material_id material_qt_steel( "qt_steel" );
+static const material_id material_qt_steel_chain( "qt_steel_chain" );
 static const material_id material_steel( "steel" );
 
 static const morale_type morale_nightmare( "morale_nightmare" );
@@ -487,7 +493,13 @@ static const trait_id trait_WEB_WEAVER( "WEB_WEAVER" );
 static const vitamin_id vitamin_calcium( "calcium" );
 static const vitamin_id vitamin_iron( "iron" );
 
-static const std::set<material_id> ferric = { material_iron, material_steel, material_budget_steel, material_ch_steel, material_hc_steel, material_lc_steel, material_mc_steel, material_qt_steel };
+static const std::set<material_id> ferric = { material_iron, material_steel, material_budget_steel,
+                                             material_budget_steel_chain, material_ch_steel,
+                                             material_ch_steel_chain, material_hc_steel,
+                                             material_hc_steel_chain, material_lc_steel,
+                                             material_lc_steel_chain, material_mc_steel,
+                                             material_mc_steel_chain, material_qt_steel,
+                                             material_qt_steel_chain };
 
 namespace io
 {

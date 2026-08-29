@@ -35,7 +35,7 @@ TEST_CASE( "throwing distance test", "[throwing], [balance]" )
 
 TEST_CASE( "railgun requires and consumes its trigger power", "[throwing][bionic]" )
 {
-    for( const char *item_id : { "pipe", "lc_cavalry_sabre" } ) {
+    for( const char *item_id : { "pipe", "lc_cavalry_sabre", "lc_chainmail_hands" } ) {
         DYNAMIC_SECTION( "Railgun enhances ferric item " << item_id ) {
             clear_map();
             standard_npc thrower( "Railgun thrower", tripoint( 60, 60, 0 ), {}, 4, 10, 10, 10,

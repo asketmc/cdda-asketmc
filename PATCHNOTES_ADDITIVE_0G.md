@@ -873,7 +873,7 @@ ready-to-install implants.
 
 - Military field and road extras remain rare but are discoverable again.
 - Military roadblocks can field damaged, partly loaded M249, M240, or M2 CROWS
-  turrets; military outposts may replace two perimeter lights with damaged M249s.
+  turrets; military outposts may add two damaged M249s inside the retained perimeter lights.
 - Police roadblocks still use riot-control platforms.
 
 ## Independent CBM scavenging
@@ -899,9 +899,9 @@ ready-to-install implants.
 - The Railgun returns as a separate active CBM without removing Throwing Assist.
   Ferric throws gain range, damage, and lightning only when at least 10 kJ is
   available; each enhanced throw consumes the full 10 kJ trigger cost.
-- Railgun implants and installation data can be found through rare general and
-  military pools, elite bio-operators, zomborg salvage, and tier-three Exodii
-  stock.
+- Railgun implants can be found through rare military pools, elite
+  bio-operators, zomborg salvage, and tier-three Exodii stock.  Installation
+  data remains in the autodoc installation-program pool.
 
 ## Optional mod: Useful Helicopters Experimental
 

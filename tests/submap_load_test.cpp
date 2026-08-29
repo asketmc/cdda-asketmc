@@ -1323,6 +1323,7 @@ TEST_CASE( "submap spawn_data round-trips", "[submap][load][spawn_data][progress
 
     submap original;
     original.set_all_ter( t_dirt );
+    original.spawns.emplace_back( mon_turret_rifle, 1, point( 5, 5 ), -1, -1, false, "default" );
 
     spawn_data loaded_ammo;
     loaded_ammo.ammo_qty = jmapgen_int( 80, 240 );
@@ -1344,11 +1345,17 @@ TEST_CASE( "submap spawn_data round-trips", "[submap][load][spawn_data][progress
     original.store( json );
     json.end_object();
 
+    JsonArray stored = json_loader::from_string( saved.str() ).get_object().get_array( "spawns" );
+    CHECK( stored.get_array( 0 ).size() == 8 );
+    CHECK( stored.get_array( 1 ).size() == 9 );
+    CHECK( stored.get_array( 2 ).size() == 9 );
+
     submap restored;
     load_from_jsin( restored, json_loader::from_string( saved.str() ) );
-    REQUIRE( restored.spawns.size() == 2 );
+    REQUIRE( restored.spawns.size() == 3 );
+    CHECK( restored.spawns[0].data.is_default() );
 
-    const spawn_data &restored_loaded = restored.spawns[0].data;
+    const spawn_data &restored_loaded = restored.spawns[1].data;
     CHECK( restored_loaded.ammo.empty() );
     CHECK( restored_loaded.ammo_qty.val == 80 );
     CHECK( restored_loaded.ammo_qty.valmax == 240 );
@@ -1358,7 +1365,7 @@ TEST_CASE( "submap spawn_data round-trips", "[submap][load][spawn_data][progress
     CHECK( restored_loaded.patrol_points_rel_ms[0] == point( -12, 4 ) );
     CHECK( restored_loaded.patrol_points_rel_ms[1] == point( 24, 18 ) );
 
-    const spawn_data &restored_explicit = restored.spawns[1].data;
+    const spawn_data &restored_explicit = restored.spawns[2].data;
     REQUIRE( restored_explicit.ammo.count( itype_556 ) == 1 );
     CHECK( restored_explicit.ammo.at( itype_556 ).val == 20 );
     CHECK( restored_explicit.ammo.at( itype_556 ).valmax == 60 );

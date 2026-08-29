@@ -4947,7 +4947,9 @@ void submap::store( JsonOut &jsout ) const
         jsout.write( elem.mission_id );
         jsout.write( elem.friendly );
         jsout.write( elem.name );
-        jsout.write( elem.data );
+        if( !elem.data.is_default() ) {
+            jsout.write( elem.data );
+        }
         jsout.end_array();
     }
     jsout.end_array();

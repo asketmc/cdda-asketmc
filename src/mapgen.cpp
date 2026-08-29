@@ -845,10 +845,12 @@ jmapgen_int::jmapgen_int( const JsonObject &jo, const std::string &tag, const in
 {
     if( jo.has_array( tag ) ) {
         JsonArray sparray = jo.get_array( tag );
-        if( sparray.empty() || sparray.size() > 2 ) {
+        if( sparray.size() > 2 ) {
             jo.throw_error_at( tag, "invalid data: must be an array of 1 or 2 values" );
         }
-        val = sparray.get_int( 0 );
+        if( !sparray.empty() ) {
+            val = sparray.get_int( 0 );
+        }
         if( sparray.size() == 2 ) {
             valmax = sparray.get_int( 1 );
         }
@@ -904,6 +906,12 @@ void spawn_data::serialize( JsonOut &jsout ) const
     jsout.end_object();
 }
 
+bool spawn_data::is_default() const
+{
+    return ammo.empty() && ammo_qty.val == -1 && ammo_qty.valmax == -1 &&
+           patrol_points_rel_ms.empty() && hp_percent.val == 100 && hp_percent.valmax == 100;
+}
+
 void spawn_data::deserialize( const JsonObject &jo )
 {
     ammo.clear();
@@ -916,9 +924,6 @@ void spawn_data::deserialize( const JsonObject &jo )
         const JsonArray &ammos = jo.get_array( "ammo" );
         for( const JsonObject adata : ammos ) {
             const jmapgen_int qty( adata, "qty" );
-            if( qty.val < 0 || qty.val > qty.valmax ) {
-                adata.throw_error_at( "qty", "expected a non-negative integer or ascending range" );
-            }
             ammo.emplace( itype_id( adata.get_string( "ammo_id" ) ), qty );
         }
     }

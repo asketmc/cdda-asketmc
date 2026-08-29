@@ -190,6 +190,7 @@ struct spawn_data {
 
     void serialize( JsonOut &jsout ) const;
     void deserialize( const JsonObject &jo );
+    bool is_default() const;
 };
 
 /**
