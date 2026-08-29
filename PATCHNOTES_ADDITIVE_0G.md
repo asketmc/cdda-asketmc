@@ -64,6 +64,9 @@ The matching Windows Tiles+Sound package is published under GitHub Releases.
 - NPC butchery jobs now quietly cancel when their corpse had already vanished
   before the save, while unexpected item-location resolution failures remain loud.
 - Fixed an NPC dialogue crash when closing the final categorized talk topic.
+- Lab-security corridor updates now retain existing loose items while marking
+  their concrete floor tiles, preventing mapgen debug errors without deleting
+  player-relevant loot.
 - Normalized current UltiCa and SurveyorsMap directional sprites to the 0.G
   rotation contract. This fixes east/west mirroring for vehicles, diagonal
   pavement/grass edges, connected terrain, furniture, fields, and overmap art;
