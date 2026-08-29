@@ -581,6 +581,106 @@ class GitCoverageTest(unittest.TestCase):
                 self.root, release_head, "HEAD", 4, False
             )
 
+    def test_release_pr_may_replace_latest_failed_unpublished_release(self) -> None:
+        previous_tag = "v0.G-additive-2026.08.25"
+        failed_tag = "v0.G-additive-2026.08.27.1"
+        replacement_tag = "v0.G-additive-2026.08.27.2"
+        _, fragments = write_baseline_history(self.root, previous_tag)
+        run_git(self.root, "add", ".")
+        run_git(self.root, "commit", "-m", "Previous release (#1)")
+        run_git(self.root, "tag", previous_tag)
+
+        fragment = valid_fragment(2)
+        fragments[2] = fragment
+        (self.root / "changelog" / "changes" / "pr-2.json").write_bytes(
+            release_changelog.canonical_json_bytes(fragment)
+        )
+        run_git(self.root, "add", "changelog/changes/pr-2.json")
+        commit_file(self.root, "feature.txt", "feature\n", "Feature (#2)")
+        fragment = valid_fragment(3)
+        fragments[3] = fragment
+        (self.root / "changelog" / "changes" / "pr-3.json").write_bytes(
+            release_changelog.canonical_json_bytes(fragment)
+        )
+        failed_release = {
+            "schema": 1,
+            "tag": failed_tag,
+            "title": "Failed release",
+            "date": "2026-08-27",
+            "previous_release": previous_tag,
+            "baseline": False,
+            "changes": [
+                {"pr": pr, "fragment_sha256": release_changelog.object_hash(fragments[pr])}
+                for pr in (2, 3)
+            ],
+            "baseline_entries": [],
+            "known_limits": [],
+            "validation": ["Validated."],
+        }
+        release_dir = self.root / "changelog" / "releases"
+        (release_dir / "index.json").write_bytes(
+            release_changelog.canonical_json_bytes(
+                {"schema": 1, "releases": [failed_tag, previous_tag]}
+            )
+        )
+        (release_dir / f"{failed_tag}.json").write_bytes(
+            release_changelog.canonical_json_bytes(failed_release)
+        )
+        release_changelog.render_all(self.root)
+        run_git(self.root, "add", ".")
+        run_git(self.root, "commit", "-m", "Failed release attempt (#3)")
+        run_git(self.root, "tag", failed_tag)
+
+        fragment = valid_fragment(4)
+        fragments[4] = fragment
+        (self.root / "changelog" / "changes" / "pr-4.json").write_bytes(
+            release_changelog.canonical_json_bytes(fragment)
+        )
+        run_git(self.root, "add", "changelog/changes/pr-4.json")
+        commit_file(self.root, "fix.txt", "fix\n", "Fix release workflow (#4)")
+        base = run_git(self.root, "rev-parse", "HEAD")
+
+        fragment = valid_fragment(5)
+        fragments[5] = fragment
+        (self.root / "changelog" / "changes" / "pr-5.json").write_bytes(
+            release_changelog.canonical_json_bytes(fragment)
+        )
+        replacement = copy.deepcopy(failed_release)
+        replacement.update(
+            {
+                "tag": replacement_tag,
+                "title": "Replacement release",
+                "supersedes_failed_release": failed_tag,
+                "changes": [
+                    {"pr": pr, "fragment_sha256": release_changelog.object_hash(fragments[pr])}
+                    for pr in (2, 3, 4, 5)
+                ],
+            }
+        )
+        (release_dir / f"{failed_tag}.json").unlink()
+        (self.root / "doc" / "releases" / f"{failed_tag}.md").unlink()
+        (release_dir / "index.json").write_bytes(
+            release_changelog.canonical_json_bytes(
+                {"schema": 1, "releases": [replacement_tag, previous_tag]}
+            )
+        )
+        replacement_path = release_dir / f"{replacement_tag}.json"
+        replacement_path.write_bytes(release_changelog.canonical_json_bytes(replacement))
+        release_changelog.render_all(self.root)
+        run_git(self.root, "add", ".")
+        run_git(self.root, "commit", "-m", "Replacement release (#5)")
+        release_changelog.check_pr(self.root, base, "HEAD", 5)
+
+        replacement["supersedes_failed_release"] = previous_tag
+        replacement_path.write_bytes(release_changelog.canonical_json_bytes(replacement))
+        release_changelog.render_all(self.root)
+        run_git(self.root, "add", ".")
+        run_git(self.root, "commit", "-m", "Invalid replacement claim (#6)")
+        with self.assertRaisesRegex(release_changelog.ChangelogError, "must supersede"):
+            release_changelog._check_release_history_diff(
+                self.root, base, "HEAD", 5, False
+            )
+
 
 class ReleaseAssetBindingTest(unittest.TestCase):
     def test_release_asset_manifest_binds_external_and_embedded_documents(self) -> None:

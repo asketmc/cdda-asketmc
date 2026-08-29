@@ -39,6 +39,7 @@
   "known_limits": [],
   "previous_release": "v0.G-additive-2026.08.26.2",
   "schema": 1,
+  "supersedes_failed_release": "v0.G-additive-2026.08.29.1",
   "tag": "v0.G-additive-2026.08.29.2",
   "title": "CDDA 0.G Additive 2026.08.29.2",
   "validation": [

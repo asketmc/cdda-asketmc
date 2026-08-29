@@ -12,6 +12,8 @@ Released: 2026-08-29
 
 Changes since [v0.G-additive-2026.08.26.2](https://github.com/asketmc/cdda-asketmc/releases/tag/v0.G-additive-2026.08.26.2).
 
+Supersedes the failed unpublished release attempt `v0.G-additive-2026.08.29.1`.
+
 For the cumulative fork overview, see [PATCHNOTES_ADDITIVE_0G.md](https://github.com/asketmc/cdda-asketmc/blob/main/PATCHNOTES_ADDITIVE_0G.md).
 
 ### Player changes
