@@ -91,9 +91,6 @@ static const item_group_id Item_spawn_data_remains_human_generic( "remains_human
 static const item_group_id Item_spawn_data_trash_cart( "trash_cart" );
 
 static const itype_id itype_223_casing( "223_casing" );
-static const itype_id itype_50bmg( "50bmg" );
-static const itype_id itype_556( "556" );
-static const itype_id itype_762_51( "762_51" );
 static const itype_id itype_762_51_casing( "762_51_casing" );
 static const itype_id itype_9mm_casing( "9mm_casing" );
 static const itype_id itype_acoustic_guitar( "acoustic_guitar" );
@@ -515,6 +512,17 @@ static bool mx_helicopter( map &m, const tripoint &abs_sub )
     return true;
 }
 
+military_turret_loadout military_turret_for_roll( int roll )
+{
+    if( roll <= 70 ) {
+        return { mon_turret_rifle, 80, 240 };
+    }
+    if( roll <= 95 ) {
+        return { mon_crows_m240, 50, 150 };
+    }
+    return { mon_turret_bmg, 20, 60 };
+}
+
 static bool mx_roadblock( map &m, const tripoint &abs_sub )
 {
     // TODO: fix point types
@@ -532,19 +540,9 @@ static bool mx_roadblock( map &m, const tripoint &abs_sub )
     const auto spawn_turret = [&]( const point & p ) {
         spawn_data data;
         data.hp_percent = jmapgen_int( 30, 70 );
-        mtype_id turret;
-        const int turret_roll = rng( 1, 100 );
-        if( turret_roll <= 70 ) {
-            turret = mon_turret_rifle;
-            data.ammo.emplace( itype_556, jmapgen_int( 80, 240 ) );
-        } else if( turret_roll <= 95 ) {
-            turret = mon_crows_m240;
-            data.ammo.emplace( itype_762_51, jmapgen_int( 50, 150 ) );
-        } else {
-            turret = mon_turret_bmg;
-            data.ammo.emplace( itype_50bmg, jmapgen_int( 20, 60 ) );
-        }
-        m.add_spawn( turret, 1, { p, abs_sub.z }, false, -1, -1, "NONE", data );
+        const military_turret_loadout loadout = military_turret_for_roll( rng( 1, 100 ) );
+        data.ammo_qty = jmapgen_int( loadout.ammo_min, loadout.ammo_max );
+        m.add_spawn( loadout.monster, 1, { p, abs_sub.z }, false, -1, -1, "NONE", data );
     };
 
     if( one_in( 6 ) ) { //Military doesn't joke around with their barricades!
