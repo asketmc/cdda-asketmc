@@ -1211,18 +1211,8 @@
       "target_fingerprint": "6d1e42a24d4e26d64db7180759986e88da4d9bd12eb6707bb3ff2bbd90acf033",
       "reason": "Progression batch 1 restores a guaranteed ordinary LMOE attempt and broadens its wilderness placement"
     },
-    {
-      "type": "overmap_special",
-      "id": "Lab",
-      "target_fingerprint": "fa75e7e0811ae7b362f6a1e9d341d76fe5e0ec5f9f56f90fbe32a79266e536a9",
-      "reason": "Progression batch 1 raises classic lab incidence without removing the map-special framework"
-    },
-    {
-      "type": "overmap_special",
-      "id": "Central Lab",
-      "target_fingerprint": "8ddc8d080f93f0a5f63e2c75440199528f869c0e2c5cea4cb7ab58f2b39c7eb9",
-      "reason": "Progression batch 1 raises central lab incidence while preserving its unique map-special placement"
-    },
+    { "type": "overmap_special", "id": "Lab", "target_fingerprint": "fa75e7e0811ae7b362f6a1e9d341d76fe5e0ec5f9f56f90fbe32a79266e536a9", "reason": "Progression batch 1 raises classic lab incidence without removing the map-special framework" },
+    { "type": "overmap_special", "id": "Central Lab", "target_fingerprint": "8ddc8d080f93f0a5f63e2c75440199528f869c0e2c5cea4cb7ab58f2b39c7eb9", "reason": "Progression batch 1 raises central lab incidence while preserving its unique map-special placement" },
     {
       "type": "overmap_special",
       "id": "Ice Lab",
@@ -1232,7 +1222,7 @@
     {
       "type": "palette",
       "id": "empty_bunker_items",
-      "target_fingerprint": "d123f6939e9424e408e0451bb136a88f709fb98eb917c8fd9b4d6c797664311f",
+      "target_fingerprint": "eda275e4ccef4037f796702767bbac673f42ccef05d90db0c8df6d5b8be91f46",
       "reason": "Progression batch 1 guarantees ordinary LMOE caches through a No Hope-overridable palette marker"
     },
     {
@@ -1442,7 +1432,8 @@
       "id": "forge_of_wonders",
       "target_fingerprint": "d3c93b70fcc1ee76550ecf324194a5907578ada43cf97dc40a7daf8f06dbfd0c",
       "reason": "The Forge of Wonders gains its Magiclysm static-camp ownership and display name"
-    }
+    },
+    { "mod_id": "no_hope", "type": "palette", "id": "empty_bunker_items", "target_fingerprint": "072d85bb0586ae54007fd482e8a84cf5e372c455e75d6e2c0064bd84f86c0028", "reason": "Progression batch 1 preserves No Hope food scarcity while suppressing the guaranteed LMOE firearm cache" }
   ],
   "allowed_builtin_mod_anonymous_changes": [],
   "allowed_builtin_mod_resource_changes": [],
