@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "pr": 32,
+  "entries": [
+    {
+      "id": "practical-energy-classic-exploration",
+      "category": "Features",
+      "audience": "players",
+      "summary": "Make solar power practical and restore rewarding classic lab and LMOE exploration.",
+      "compatibility": "save-compatible",
+      "details": [
+        "Solar panels retain irradiance-based output at a 90 W base rating, and the irradiator again contains a rare compact ASRG.",
+        "Classic labs and ordinary LMOEs are more discoverable on newly generated overmaps, with targeted guaranteed rewards."
+      ]
+    },
+    {
+      "id": "dangerous-military-salvage",
+      "category": "Features",
+      "audience": "players",
+      "summary": "Restore rare military turret sites as dangerous, damaged, partially loaded salvage encounters.",
+      "compatibility": "save-compatible",
+      "details": [
+        "Military roadblocks and outposts can field damaged rifle or heavy-weapon turrets with sharply limited ammunition.",
+        "Police encounters and turret combat statistics remain unchanged."
+      ]
+    }
+  ]
+}
