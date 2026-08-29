@@ -1250,6 +1250,7 @@
     "//": "Charges will exceed max charges since they're always equal to the player's bionic power, but this has no adverse effects.",
     "charges_per_use": 1,
     "use_action": [
+      "HAMMER",
       "CROWBAR",
       {
         "type": "repair_item",
@@ -1285,16 +1286,20 @@
       }
     ],
     "qualities": [
+      [ "HAMMER", 3 ],
+      [ "HAMMER_FINE", 1 ],
       [ "SAW_W", 1 ],
-      [ "SAW_M", 1 ],
+      [ "SAW_M", 2 ],
       [ "SAW_M_FINE", 1 ],
-      [ "WRENCH", 1 ],
+      [ "WRENCH", 2 ],
       [ "WRENCH_FINE", 1 ],
+      [ "WHEEL_FAST", 1 ],
       [ "SCREW", 1 ],
       [ "SCREW_FINE", 1 ],
       [ "CUT", 2 ],
       [ "PRY", 1 ],
       [ "PRYING_NAIL", 1 ],
+      [ "DRILL", 3 ],
       [ "BUTCHER", -55 ]
     ]
   },

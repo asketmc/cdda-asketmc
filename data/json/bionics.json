@@ -1782,6 +1782,18 @@
     "flags": [ "BIONIC_POWER_SOURCE", "BIONIC_NPC_USABLE", "BIONIC_SHOCKPROOF" ]
   },
   {
+    "id": "bio_railgun",
+    "type": "bionic",
+    "name": { "str": "Railgun" },
+    "description": "EM field generators in your arms double the range and damage of thrown iron and steel objects at a cost of 10 kJ of bionic power per throw, causing them to leave a trail of electricity that can cause additional damage.",
+    "occupied_bodyparts": [ [ "arm_l", 5 ], [ "arm_r", 5 ], [ "hand_l", 1 ], [ "hand_r", 1 ] ],
+    "flags": [ "BIONIC_TOGGLED" ],
+    "act_cost": "1 kJ",
+    "react_cost": "100 J",
+    "trigger_cost": "10 kJ",
+    "time": "1 s"
+  },
+  {
     "id": "bio_pitch_perfect",
     "type": "bionic",
     "name": { "str": "Throwing Assist" },

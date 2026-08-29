@@ -438,8 +438,8 @@
     {
       "type": "TOOL",
       "id": "toolset_extended",
-      "target_fingerprint": "b4c7e6fd196fb2621c3d9a72629252d20e91209ce8d53fb2c1269c2f713d3d32",
-      "reason": "Thermoplastic repair support lets plastic-capable workshop tools repair riot armor using thermoplastic resin chunks"
+      "target_fingerprint": "53adbdd39a7cefb5e8ef4d15d7062f680615e42b33433298bffe255941a7a235",
+      "reason": "Thermoplastic repair support remains while progression batch 2 restores the extended multitool's classic work qualities"
     },
     {
       "type": "AMMO",
@@ -1234,6 +1234,84 @@
       "id": "default",
       "target_fingerprint": "abd1e30de5b9361980cc969718d65b125c40bc69e14c69b8cdafa00cda622ff7",
       "reason": "Progression batch 1 raises only the default field and road weights for rare military map extras"
+    },
+    {
+      "type": "bionic",
+      "id": "bio_railgun",
+      "target_fingerprint": "702280ee367c4207a5de6d9ea6fb89a69759d09836e524e742f889e502df59f2",
+      "reason": "Progression batch 2 reactivates the Railgun CBM with an explicit 10 kJ trigger cost"
+    },
+    {
+      "type": "BIONIC_ITEM",
+      "id": "bio_railgun",
+      "target_fingerprint": "b7f30ac66ca618cbbd904d06c4a7d16f6172e9491be225e92e8d1351cb9e1292",
+      "reason": "Progression batch 2 moves the Railgun implant into the active CBM catalog"
+    },
+    {
+      "type": "BIONIC_ITEM",
+      "id": "bio_tools",
+      "target_fingerprint": "174f57334525f9a23b220050b8764825ee8a6eeb858377338022d04406a2efb7",
+      "reason": "Progression batch 2 describes the Integrated Multitool's restored classic functions"
+    },
+    {
+      "type": "TOOL",
+      "id": "toolset",
+      "target_fingerprint": "da53cfa11acf0de3045d0c5a9e713211de75d4b2bf30ef79b468016cb5cad32e",
+      "reason": "Progression batch 2 restores classic work qualities to the stowed Integrated Multitool pseudo-tool"
+    },
+    {
+      "type": "item_group",
+      "id": "bionics",
+      "target_fingerprint": "4d8241dbf597add5dbb9c0e3f9d6129e6124d4ed4c5bf85c91611bd50a60b6f4",
+      "reason": "Progression batch 2 gives the restored Railgun a low-weight general CBM route"
+    },
+    {
+      "type": "item_group",
+      "id": "bionics_mil",
+      "target_fingerprint": "038fb950ca23371a7d64d06e93af5eae696c83ca774a8728868c0201c7f17dd5",
+      "reason": "Progression batch 2 gives the restored Railgun a low-weight military CBM route"
+    },
+    {
+      "type": "item_group",
+      "id": "Zomborg_CBM_harvest_ranged_weapons",
+      "target_fingerprint": "74e46630070dac62ebc4c6322dfcdf9acf7db7ba3a0a92833d36c73c54d6c60a",
+      "reason": "Progression batch 2 adds rare Railgun salvage to ranged Exodii zomborg hardware"
+    },
+    {
+      "type": "item_group",
+      "id": "EXODII_CBM_Store_Tier3",
+      "target_fingerprint": "929c7869fc69aeb2b59a8fb787c6d7e83d069087a9993930b5bf0304b99acb39",
+      "reason": "Progression batch 2 keeps a deterministic tier-three Exodii route for the restored Railgun"
+    },
+    {
+      "type": "item_group",
+      "id": "autodoc_installation_programs",
+      "target_fingerprint": "4a240b6f69352fe9fb5720407fbf7f4fe3072cb899f51b6a8e8aabfb01eff098",
+      "reason": "Progression batch 2 distributes installation data for the restored Railgun"
+    },
+    {
+      "type": "item_group",
+      "id": "hospital_medical_items",
+      "target_fingerprint": "cc11e8f1bd36093bf04b7c05974013f1f4192683bb4138745456d4e1c391a396",
+      "reason": "Progression batch 2 restores a low-weight common CBM route to hospital medical supplies"
+    },
+    {
+      "type": "item_group",
+      "id": "mine_equipment",
+      "target_fingerprint": "288dbb49147ceb48acb2035c5ee374711083394d25ac969ac77243ff09da342b",
+      "reason": "Progression batch 2 restores low-weight utility CBM salvage to mine equipment"
+    },
+    {
+      "type": "item_group",
+      "id": "robofac_basic_trade",
+      "target_fingerprint": "9ac47208cfbcb112d9c6633c3a727eee4c39307b24afa1b205f853c119e276fd",
+      "reason": "Progression batch 2 restores a sparse common CBM entry to basic Robofac trade"
+    },
+    {
+      "type": "item_group",
+      "id": "science",
+      "target_fingerprint": "e0ca11c120304a1b7ac35b5d827142f5764a4210d5adb6b3af0475047820f431",
+      "reason": "Progression batch 2 restores selected utility and medical CBMs to science loot"
     }
   ],
   "allowed_extension_files": [],
@@ -1291,6 +1369,48 @@
       "baseline_fingerprint": "67ca86a93e1fed0ae4a6eaa7d8dee079ee1c7674c55bfe83ffbbb107d709ddf6",
       "target_fingerprint": "ee4ab0696412f1aa916b05d40cbe20c468cd56da37806c38d54e217a7b3357ae",
       "reason": "Progression batch 1 gives the cross outpost two rare damaged and partially loaded rifle-turret positions"
+    },
+    {
+      "path": "data/json/mapgen/basement/basement_bionic.json",
+      "baseline_fingerprint": "ab366ee1a54ea6d3e5b7994de4a56c613cc9888add7048d35de231832305e5c5",
+      "target_fingerprint": "8079ed5b9907abfc01a4e1fe471154e1745c545aead5ca4f79929ccdeec7b293",
+      "reason": "Progression batch 2 guarantees one common CBM cache in the bionic basement surgery room"
+    },
+    {
+      "path": "data/json/mapgen/bunker.json",
+      "baseline_fingerprint": "d78e6bfe94df37b4d49834c0f46b9e5ab22e2e7e07b6d99f568cdcded071082c",
+      "target_fingerprint": "4633079eb12e808dd5b29ee19178fc10a465f2d56c997e93bbe623a68eeeaa78",
+      "reason": "Progression batch 2 restores a rare military CBM cache to the bunker basement"
+    },
+    {
+      "path": "data/json/mapgen/military/mil_base/mil_base_z0.json",
+      "baseline_fingerprint": "c36882d1f1f6f09287cc0b3ad17617ca260478ed4bbd30991fc0458e4cb36f1f",
+      "target_fingerprint": "361425dd4decf99e6825f6b2f2a2de870cef5ad2f4e0f3e306858e83313c2d26",
+      "reason": "Progression batch 2 restores one rare military CBM cache to the military base clinic storage"
+    },
+    {
+      "path": "data/json/mapgen/mortuary.json",
+      "baseline_fingerprint": "421f8b42ac3f3b415d24e609adb8da0fe3ee6c092f85736293529fb715a930bd",
+      "target_fingerprint": "281b228fff0391d369c661f239323ef3586f389f7ab379c07137d9f9c843078e",
+      "reason": "Progression batch 2 restores a sparse common CBM cache beside the mortuary dissection station"
+    },
+    {
+      "path": "data/json/mapgen/police_station.json",
+      "baseline_fingerprint": "e659a2293465280b18b972325ebb9139b7709c9502a314c9bf04c6bf4b008175",
+      "target_fingerprint": "46cbe84dc0529f1329e9323afda61112621d1b7a86252ad00457abac0a2e443c",
+      "reason": "Progression batch 2 restores a very rare common CBM cache to police evidence storage"
+    },
+    {
+      "path": "data/json/mapgen/prison/prison.json",
+      "baseline_fingerprint": "db779f640d5297a2a810b9d417653a9014bd308793d6354b16ec71c75f9d61c0",
+      "target_fingerprint": "62d421960155181bf48fe3816b0df6336015e6948fc70c03e923dc1edb977083",
+      "reason": "Progression batch 2 restores a sparse common CBM cache to the prison autodoc room"
+    },
+    {
+      "path": "data/json/mapgen/s_electronics.json",
+      "baseline_fingerprint": "95337869ea86d1e2b6cbc41c4412f4d8242e10629b151440664cb1bbd0867e6b",
+      "target_fingerprint": "20105ff89370bb75b464dec7cf7062d9272802a1a2180a4eddaa67cb59178920",
+      "reason": "Progression batch 2 adds two independent low-rate common CBM displays to the electronics store"
     }
   ],
   "allowed_resource_changes": [],

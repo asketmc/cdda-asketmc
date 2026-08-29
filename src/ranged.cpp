@@ -1157,8 +1157,9 @@ static int throwing_skill_adjusted( const Character &guy )
 int Character::thrown_item_adjusted_damage( const item &thrown ) const
 {
     const cata::optional<int> throw_assist = character_throw_assist( *this );
-    const bool do_railgun = has_active_bionic( bio_railgun ) && thrown.made_of_any( ferric ) &&
-                            !throw_assist;
+    const bool do_railgun = has_active_bionic( bio_railgun ) &&
+                            get_power_level() >= bio_railgun->power_trigger &&
+                            thrown.made_of_any( ferric ) && !throw_assist;
 
     // The damage dealt due to item's weight, player's strength, and skill level
     // Up to str/2 or weight/100g (lower), so 10 str is 5 damage before multipliers
@@ -1235,8 +1236,9 @@ dealt_projectile_attack Character::throw_item( const tripoint &target, const ite
     damage_instance &impact = proj.impact;
     std::set<std::string> &proj_effects = proj.proj_effects;
 
-    const bool do_railgun = has_active_bionic( bio_railgun ) && thrown.made_of_any( ferric ) &&
-                            !throw_assist;
+    const bool do_railgun = has_active_bionic( bio_railgun ) &&
+                            get_power_level() >= bio_railgun->power_trigger &&
+                            thrown.made_of_any( ferric ) && !throw_assist;
 
     impact.add_damage( damage_type::BASH, std::min( weight / 100.0_gram,
                        static_cast<double>( thrown_item_adjusted_damage( thrown ) ) ) );

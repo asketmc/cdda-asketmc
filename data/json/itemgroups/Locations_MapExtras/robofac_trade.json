@@ -18,6 +18,7 @@
     "id": "robofac_basic_trade",
     "subtype": "distribution",
     "entries": [
+      { "group": "bionics_common", "prob": 25 },
       { "group": "textbooks", "prob": 100 },
       { "group": "electronics", "prob": 100 },
       { "group": "science", "prob": 100 },

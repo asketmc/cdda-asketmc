@@ -22,6 +22,8 @@
 #include "type_id.h"
 
 static const skill_id skill_throw( "throw" );
+static const bionic_id bio_power_storage( "bio_power_storage" );
+static const bionic_id bio_railgun( "bio_railgun" );
 
 TEST_CASE( "throwing distance test", "[throwing], [balance]" )
 {
@@ -29,6 +31,34 @@ TEST_CASE( "throwing distance test", "[throwing], [balance]" )
     item grenade( "grenade" );
     CHECK( thrower.throw_range( grenade ) >= 30 );
     CHECK( thrower.throw_range( grenade ) <= 35 );
+}
+
+TEST_CASE( "railgun requires and consumes its trigger power", "[throwing][bionic]" )
+{
+    standard_npc thrower( "Railgun thrower", tripoint( 60, 60, 0 ), {}, 4, 10, 10, 10, 10 );
+    const item pipe( "pipe" );
+    const int unassisted_range = thrower.throw_range( pipe );
+    const int unassisted_damage = thrower.thrown_item_adjusted_damage( pipe );
+
+    thrower.add_bionic( bio_power_storage );
+    thrower.set_power_level( 11_kJ );
+    give_and_activate_bionic( thrower, bio_railgun );
+    REQUIRE( thrower.get_power_level() == 10_kJ );
+
+    CHECK( thrower.throw_range( pipe ) == unassisted_range * 2 );
+    CHECK( thrower.thrown_item_adjusted_damage( pipe ) > unassisted_damage );
+    const dealt_projectile_attack powered_throw =
+        thrower.throw_item( tripoint( 61, 60, 0 ), pipe );
+    CHECK( powered_throw.proj.proj_effects.count( "LIGHTNING" ) == 1 );
+    CHECK( thrower.get_power_level() == 0_kJ );
+
+    thrower.set_power_level( 9_kJ );
+    CHECK( thrower.throw_range( pipe ) == unassisted_range );
+    CHECK( thrower.thrown_item_adjusted_damage( pipe ) == unassisted_damage );
+    const dealt_projectile_attack unpowered_throw =
+        thrower.throw_item( tripoint( 61, 60, 0 ), pipe );
+    CHECK( unpowered_throw.proj.proj_effects.count( "LIGHTNING" ) == 0 );
+    CHECK( thrower.get_power_level() == 9_kJ );
 }
 
 struct throw_test_data {

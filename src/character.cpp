@@ -5499,7 +5499,8 @@ int Character::throw_range( const item &it ) const
                                static_cast<int>(
                                    tmp.weight() / 15_gram ) );
     ret -= tmp.volume() / 1_liter;
-    if( has_active_bionic( bio_railgun ) && tmp.made_of_any( ferric ) ) {
+    if( has_active_bionic( bio_railgun ) && get_power_level() >= bio_railgun->power_trigger &&
+        tmp.made_of_any( ferric ) ) {
         ret *= 2;
     }
     if( ret < 1 ) {

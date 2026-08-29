@@ -115,3 +115,110 @@ shape, ammunition ranges, damage range, and roadblock weapon tiers.  The Catch2
 test `mapgen monster spawn_data sets ammunition and damage` constructs a turret
 through update mapgen, spawns it, and verifies both 50% hit points and exactly
 80 rounds of 5.56 mm ammunition.
+
+## Batch 2: independent CBM scavenging routes
+
+### Donor and regression provenance
+
+| Concern | Upstream change used as regression boundary | Fork adaptation |
+| --- | --- | --- |
+| Ordinary zombie CBM removal | [DDA #49892](https://github.com/CleverRaven/Cataclysm-DDA/pull/49892), head `b6da28650d025ca47a99ab7db9e066b378c8e49e` | Preserve the fork's skill-scaled dissection route for scientists, technicians, soldiers, bio-operators, and Exodii zomborgs. |
+| Mine and high-value vault removals | [DDA #55329](https://github.com/CleverRaven/Cataclysm-DDA/pull/55329), commit `190ebd75663a51bff9846493c32e8cbe3294e222`; [DDA #55999](https://github.com/CleverRaven/Cataclysm-DDA/pull/55999), commits `4c789b3ea7` and `37bedfb48a` | Restore low-weight utility salvage in mines, but leave generic vaults, random loot, and survivor lairs unchanged. |
+| Location-wide CBM cleanup | [DDA #56552](https://github.com/CleverRaven/Cataclysm-DDA/pull/56552), commits `cf376f`, `8aab`, `8ec` | Restore selected caches at medical, scientific, electronic, military, and robotic sites at lower rates than the removed placements. |
+
+The donor changes define what disappeared; they are not merge bases.  The fork
+does not revert the Exodii or map-special systems and does not import unrelated
+late-game loot tables.
+
+### Implemented behavior
+
+The existing corpse-dissection route remains the primary renewable scavenging
+path.  Scientists, technicians, military zombies, bio-operators, elite
+bio-operators, and Exodii zomborgs can yield CBMs only through dissection.  Each
+recovered implant remains filthy, non-sterile, unpackaged, and affected by the
+salvaged-bionic fault.  The number recovered scales with dissection skill and is
+capped at five.  This preserves the dangerous field-surgery loop without
+restoring clean CBMs as ordinary death drops.
+
+Low-rate environmental routes now complement that loop:
+
+| Route | Restored contract |
+| --- | --- |
+| Hospital medical supplies | Common CBM group at weight 5. |
+| Mine equipment | Integrated tools, light, fire, magnet, resonator, hydraulics, and weight CBMs at weights 2–3. |
+| Science and technology loot | Thirteen thematic utility or medical CBMs at weights 2–4. |
+| Robofac basic trade | Common CBM group at weight 25 alongside the existing trade stock. |
+| Bionic basement | One guaranteed common CBM group in the surgery room. |
+| Bunker basement | One 35% military-CBM cache. |
+| Military base clinic | One 25% military-CBM cache in the existing secure storage mapping. |
+| Mortuary, police evidence, prison autodoc | One common-CBM cache at 15%, 5%, and 10% respectively. |
+| Electronics store | Two independent 15% common-CBM display caches, with no repeated rolls. |
+
+These are independent discovery opportunities, not guaranteed full progression
+trees.  Exodii stock and zomborg salvage remain available and are not displaced.
+
+### Explicit exclusions
+
+- No clean direct CBM death drops and no bypass of dissection skill.
+- No CBM restoration to banks, generic vaults, random-main loot, survivor
+  lairs, storage units, or the fire tower.
+- No broad hospital, military, or laboratory loot rollback.
+- No removal or weakening of Exodii zomborg harvest tables.
+- No change to CBM cleaning, sterilization, packing, fault repair, or install
+  requirements in this batch.
+
+### Regression contracts
+
+`tools.test_progression_backports` checks the full dirty-salvage contract for
+ordinary and Exodii corpses, exact restored item-group weights, exact mapgen
+cache rates and coordinates, and the absence of repeat rolls in the electronics
+store.  The additive audit separately binds every modified core entity or
+anonymous mapgen object to an explicit target fingerprint.
+
+## Batch 2: classic CBM utility
+
+### Donor and regression provenance
+
+| Concern | Upstream change used as regression boundary | Fork adaptation |
+| --- | --- | --- |
+| Integrated Toolset reduction | [DDA #52889](https://github.com/CleverRaven/Cataclysm-DDA/pull/52889), merge `661b2fdd8861a767b3960c75cb780a3a08840ebe` | Keep the fork's integrated multitool structure and restore the classic work qualities to both pseudo-tools. |
+| Railgun replacement | [DDA #61176](https://github.com/CleverRaven/Cataclysm-DDA/pull/61176), commits `50dc6b5ece497cb39604675c7a45cc2e2b719b69` and `bbcd9a98a95e` | Reactivate the Railgun as a distinct CBM while retaining Throwing Assist. |
+
+### Implemented behavior
+
+The Integrated Multitool's stowed pseudo-tool and its extended hand-held form
+both provide the classic hammering, fine hammering, metal and wood sawing,
+wrenching, wheel fastening, screwdriving, cutting, prying, nail pulling, and
+drilling qualities.  The extended form retains its existing welding, soldering,
+and repair actions.  The existing included-bionic structure is unchanged, so
+old characters with `bio_tools` continue to receive the extended mode.
+
+The Railgun CBM, its implant item, and its autodoc installation data move out of
+the obsolete catalog into their normal active files.  It is a rare entry in the
+general and military CBM pools, remains available from elite bio-operators, and
+has low-weight routes through ranged zomborg salvage and tier-three Exodii
+stock.  The passive Throwing Assist CBM remains active under its existing ID;
+neither CBM replaces the other.
+
+An active Railgun doubles range and improves damage only for ferric thrown
+items.  A powered throw adds the existing lightning projectile effect and
+consumes 10 kJ.  The restored implementation now checks that the full trigger
+cost is available before granting range, damage, or lightning, preventing an
+active but empty implant from providing free throws.
+
+### Explicit exclusions
+
+- No removal or renaming of Throwing Assist.
+- No new modular tool CBM tree, slot migration, or save conversion.
+- No change to ordinary throwing balance, non-ferric items, mech-assisted
+  throws, bionic power storage, or bionic installation difficulty.
+- No restoration of unrelated obsolete CBMs or obsolete item groups.
+
+### Regression contracts
+
+`tools.test_progression_backports` verifies active Railgun definitions,
+installation data, all selected distribution routes, coexistence with Throwing
+Assist, both multitool quality sets, and the power-safety hooks.  The Catch2
+test `railgun requires and consumes its trigger power` checks doubled range and
+increased damage at 10 kJ, the lightning effect and exact 10 kJ consumption,
+and ordinary behavior with only 9 kJ available.

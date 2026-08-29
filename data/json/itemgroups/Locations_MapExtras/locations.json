@@ -149,6 +149,7 @@
       { "group": "surgery", "prob": 80 },
       { "group": "drugs_emergency", "prob": 40 },
       { "group": "softdrugs", "prob": 20 },
+      { "group": "bionics_common", "prob": 5 },
       { "group": "harddrugs", "prob": 5 }
     ]
   },
@@ -1357,6 +1358,13 @@
       { "item": "elec_jackhammer", "prob": 1, "charges": [ 0, 7000 ] },
       [ "dynamite", 5 ],
       { "item": "UPS_off", "prob": 5, "charges": [ 0, 1000 ] },
+      [ "bio_tools", 3 ],
+      [ "bio_flashlight", 3 ],
+      [ "bio_lighter", 3 ],
+      [ "bio_magnet", 3 ],
+      [ "bio_resonator", 2 ],
+      [ "bio_hydraulics", 2 ],
+      [ "bio_weight", 2 ],
       [ "jerrycan", 10 ],
       [ "jerrycan_big", 10 ],
       { "item": "gasoline_lantern", "prob": 5, "charges": [ 0, 500 ] },

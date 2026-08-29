@@ -39,6 +39,33 @@ def main_mapgens(objects: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
+def all_dicts(value: Any) -> list[dict[str, Any]]:
+    """Return every dictionary nested below a loaded JSON value."""
+    found: list[dict[str, Any]] = []
+    if isinstance(value, dict):
+        found.append(value)
+        for child in value.values():
+            found.extend(all_dicts(child))
+    elif isinstance(value, list):
+        for child in value:
+            found.extend(all_dicts(child))
+    return found
+
+
+def weighted_entries(group: dict[str, Any]) -> dict[str, int]:
+    """Normalize simple item/group entries to their distribution weights."""
+    entries = group.get("items", group.get("entries", []))
+    result: dict[str, int] = {}
+    for entry in entries:
+        if isinstance(entry, list):
+            result[entry[0]] = entry[1]
+        elif "item" in entry:
+            result[entry["item"]] = entry.get("prob", 100)
+        elif "group" in entry:
+            result[f"group:{entry['group']}"] = entry.get("prob", 100)
+    return result
+
+
 class EnergyAndExplorationBackportTests(unittest.TestCase):
     def test_solar_panel_keeps_irradiance_model_with_1_8x_output(self) -> None:
         parts = load_json("data/json/vehicleparts/vehicle_parts.json")
@@ -220,6 +247,201 @@ class MilitaryEncounterBackportTests(unittest.TestCase):
         )
         self.assertIn("turret->get_hp_max() / 2", runtime_test)
         self.assertIn("turret->ammo.at( itype_556 ) == 80", runtime_test)
+
+
+class CbmScavengingAndUtilityBackportTests(unittest.TestCase):
+    def test_railgun_is_active_alongside_throwing_assist(self) -> None:
+        bionics = load_json("data/json/bionics.json")
+        railgun = entity(bionics, "bionic", "bio_railgun")
+        self.assertEqual("10 kJ", railgun["trigger_cost"])
+        self.assertIn("BIONIC_TOGGLED", railgun["flags"])
+
+        items = load_json("data/json/items/bionics.json")
+        railgun_item = entity(items, "BIONIC_ITEM", "bio_railgun")
+        self.assertEqual("AID_bio_railgun", railgun_item["installation_data"])
+        self.assertIn("10 kJ", railgun_item["description"])
+
+        software = load_json("data/json/items/software.json")
+        entity(software, "GENERIC", "AID_bio_railgun")
+
+        obsolete = load_json("data/json/obsolete.json")
+        obsolete_railgun = [obj for obj in obsolete if obj.get("id") == "bio_railgun"]
+        self.assertEqual([], obsolete_railgun)
+        self.assertFalse(any(obj.get("id") == "AID_bio_railgun" for obj in obsolete))
+
+        throwing_assist = entity(bionics, "bionic", "bio_pitch_perfect")
+        throwing_assist_item = entity(items, "BIONIC_ITEM", "bio_pitch_perfect")
+        self.assertEqual("Throwing Assist", throwing_assist["name"]["str"])
+        self.assertEqual("Throwing Assist CBM", throwing_assist_item["name"]["str"])
+
+    def test_railgun_has_power_safe_runtime_hooks_and_salvage_routes(self) -> None:
+        character_source = (ROOT / "src/character.cpp").read_text(encoding="utf-8")
+        ranged_source = (ROOT / "src/ranged.cpp").read_text(encoding="utf-8")
+        self.assertIn("ret *= 2", character_source)
+        self.assertIn("get_power_level() >= bio_railgun->power_trigger", character_source)
+        self.assertEqual(
+            2,
+            ranged_source.count("get_power_level() >= bio_railgun->power_trigger"),
+        )
+        self.assertIn('proj_effects.insert( "LIGHTNING" )', ranged_source)
+        self.assertIn("mod_power_level( -trigger_cost )", ranged_source)
+
+        groups = load_json("data/json/itemgroups/bionics.json")
+        self.assertEqual(5, weighted_entries(entity(groups, "item_group", "bionics"))["bio_railgun"])
+        self.assertEqual(5, weighted_entries(entity(groups, "item_group", "bionics_mil"))["bio_railgun"])
+        self.assertEqual(10, weighted_entries(entity(groups, "item_group", "bionics_op2_off"))["bio_railgun"])
+
+        harvest = load_json("data/json/itemgroups/Monsters_Animals_Lairs/harvest_cbm.json")
+        ranged_harvest = entity(
+            harvest, "item_group", "Zomborg_CBM_harvest_ranged_weapons"
+        )
+        self.assertEqual(3, weighted_entries(ranged_harvest)["bio_railgun"])
+
+        exodii = load_json("data/json/npcs/exodii/exodii_merchant_itemlist.json")
+        tier_three = entity(exodii, "item_group", "EXODII_CBM_Store_Tier3")
+        self.assertEqual(5, weighted_entries(tier_three)["bio_railgun"])
+
+        electronics = load_json("data/json/itemgroups/electronics.json")
+        programs = entity(electronics, "item_group", "autodoc_installation_programs")
+        self.assertIn("AID_bio_railgun", weighted_entries(programs))
+
+        runtime_test = (ROOT / "tests/throwing_test.cpp").read_text(encoding="utf-8")
+        self.assertIn("railgun requires and consumes its trigger power", runtime_test)
+        self.assertIn('proj.proj_effects.count( "LIGHTNING" ) == 1', runtime_test)
+        self.assertIn("thrower.get_power_level() == 0_kJ", runtime_test)
+
+    def test_integrated_multitool_restores_classic_work_qualities(self) -> None:
+        expected = {
+            "HAMMER": 3,
+            "HAMMER_FINE": 1,
+            "SAW_W": 1,
+            "SAW_M": 2,
+            "SAW_M_FINE": 1,
+            "WRENCH": 2,
+            "WRENCH_FINE": 1,
+            "WHEEL_FAST": 1,
+            "SCREW": 1,
+            "SCREW_FINE": 1,
+            "CUT": 2,
+            "PRY": 1,
+            "PRYING_NAIL": 1,
+            "DRILL": 3,
+        }
+        sources = (
+            ("data/json/items/fake.json", "toolset"),
+            ("data/json/items/tool/workshop.json", "toolset_extended"),
+        )
+        for path, item_id in sources:
+            tool = entity(load_json(path), "TOOL", item_id)
+            qualities = dict(tool["qualities"])
+            for quality, level in expected.items():
+                self.assertEqual(level, qualities[quality], f"{item_id}: {quality}")
+            string_actions = {action for action in tool["use_action"] if isinstance(action, str)}
+            self.assertGreaterEqual(string_actions, {"HAMMER", "CROWBAR"})
+
+    def test_ordinary_and_exodii_corpse_salvage_remains_dirty_and_skill_scaled(self) -> None:
+        harvests = load_json("data/json/harvest_dissect.json")
+        ids = (
+            "dissect_mon_zombie_scientist",
+            "dissect_mon_zombie_technician",
+            "dissect_bionics_mil",
+            "dissect_mon_zombie_bio_op",
+            "dissect_mon_zombie_bio_op2",
+            "dissect_mon_zomborg",
+        )
+        for harvest_id in ids:
+            harvest = entity(harvests, "harvest", harvest_id)
+            bionic_entries = [
+                entry
+                for entry in harvest["entries"]
+                if entry["type"] in {"bionic", "bionic_group"}
+            ]
+            self.assertGreater(len(bionic_entries), 0, harvest_id)
+            for entry in bionic_entries:
+                self.assertEqual(
+                    {"FILTHY", "NO_STERILE", "NO_PACKED"},
+                    set(entry["flags"]),
+                    harvest_id,
+                )
+                self.assertEqual(["fault_bionic_salvaged"], entry["faults"])
+                self.assertEqual([0, 2], entry["base_num"])
+                self.assertEqual([0.1, 0.6], entry["scale_num"])
+                self.assertEqual(5, entry["max"])
+
+    def test_thematic_location_groups_restore_low_rate_cbm_scavenging(self) -> None:
+        locations = load_json("data/json/itemgroups/Locations_MapExtras/locations.json")
+        hospital = weighted_entries(entity(locations, "item_group", "hospital_medical_items"))
+        self.assertEqual(5, hospital["group:bionics_common"])
+
+        mine = weighted_entries(entity(locations, "item_group", "mine_equipment"))
+        self.assertEqual(
+            {
+                "bio_tools": 3,
+                "bio_flashlight": 3,
+                "bio_lighter": 3,
+                "bio_magnet": 3,
+                "bio_resonator": 2,
+                "bio_hydraulics": 2,
+                "bio_weight": 2,
+            },
+            {item_id: mine[item_id] for item_id in (
+                "bio_tools", "bio_flashlight", "bio_lighter", "bio_magnet",
+                "bio_resonator", "bio_hydraulics", "bio_weight"
+            )},
+        )
+
+        robofac = load_json("data/json/itemgroups/Locations_MapExtras/robofac_trade.json")
+        trade = weighted_entries(entity(robofac, "item_group", "robofac_basic_trade"))
+        self.assertEqual(25, trade["group:bionics_common"])
+
+        science = load_json("data/json/itemgroups/science_and_tech.json")
+        tech = weighted_entries(entity(science, "item_group", "science"))
+        expected = {
+            "bio_purifier": 4,
+            "bio_sunglasses": 4,
+            "bio_eye_optic": 4,
+            "bio_climate": 4,
+            "bio_heatsink": 4,
+            "bio_blood_filter": 4,
+            "bio_watch": 4,
+            "bio_leukocyte": 3,
+            "bio_faraday": 2,
+            "bio_remote": 3,
+            "bio_soporific": 2,
+            "bio_surgical_razor": 2,
+            "bio_syringe": 3,
+        }
+        self.assertEqual(expected, {item_id: tech[item_id] for item_id in expected})
+
+    def test_selected_mapgens_restore_sparse_thematic_cbm_caches(self) -> None:
+        cases = (
+            ("data/json/mapgen/basement/basement_bionic.json", "group", None, 7, 9),
+            ("data/json/mapgen/bunker.json", "group", 35, 16, 4),
+            ("data/json/mapgen/military/mil_base/mil_base_z0.json", "item", 25, None, None),
+            ("data/json/mapgen/mortuary.json", "item", 15, 8, 19),
+            ("data/json/mapgen/police_station.json", "item", 5, None, None),
+            ("data/json/mapgen/prison/prison.json", "item", 10, None, None),
+        )
+        for path, kind, chance, x, y in cases:
+            group_id = "bionics_mil" if "bunker" in path or "mil_base" in path else "bionics_common"
+            matches = [entry for entry in all_dicts(load_json(path)) if entry.get(kind) == group_id]
+            self.assertEqual(1, len(matches), path)
+            entry = matches[0]
+            self.assertEqual(chance, entry.get("chance"), path)
+            if x is not None:
+                self.assertEqual(x, entry["x"], path)
+            if y is not None:
+                self.assertEqual(y, entry["y"], path)
+
+        electronics = [
+            entry
+            for entry in all_dicts(load_json("data/json/mapgen/s_electronics.json"))
+            if entry.get("item") == "bionics_common"
+        ]
+        self.assertEqual(2, len(electronics))
+        self.assertEqual({15}, {entry["chance"] for entry in electronics})
+        self.assertEqual({8}, {entry["y"] for entry in electronics})
+        self.assertFalse(any("repeat" in entry for entry in electronics))
 
 
 if __name__ == "__main__":
