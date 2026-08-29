@@ -392,6 +392,8 @@ jobs:
             --directory release-output \
             --expected-tag "${GITHUB_REF_NAME}" \
             --expected-commit "${GITHUB_SHA}"
+          python3 tools/release_changelog.py verify-superseded-release \
+            --tag "${GITHUB_REF_NAME}"
           cd release-output
           mapfile -t assets < <(find . -maxdepth 1 -name 'cdda-0g-additive-asketmc-*-windows-x64-tiles-sound.zip' -print)
           test "${#assets[@]}" -eq 1

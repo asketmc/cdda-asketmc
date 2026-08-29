@@ -25,14 +25,23 @@
     {
       "fragment_sha256": "e9384b4ebe95d84af63e592bb6bdecc9edc5307b21d6fd4a734859678d503acc",
       "pr": 28
+    },
+    {
+      "fragment_sha256": "b066a64b96f20a2ca64224af3264d348558e448e50c8dc17a323b55949100706",
+      "pr": 30
+    },
+    {
+      "fragment_sha256": "5d81ebdb6462e180e7bfbe7e372f03bd78efafb129954f1bebaae0b13ddb87ec",
+      "pr": 31
     }
   ],
   "date": "2026-08-29",
   "known_limits": [],
   "previous_release": "v0.G-additive-2026.08.26.2",
   "schema": 1,
-  "tag": "v0.G-additive-2026.08.29.1",
-  "title": "CDDA 0.G Additive 2026.08.29.1",
+  "supersedes_failed_release": "v0.G-additive-2026.08.29.1",
+  "tag": "v0.G-additive-2026.08.29.2",
+  "title": "CDDA 0.G Additive 2026.08.29.2",
   "validation": [
     "The tag workflow must reproduce identical executable and ZIP hashes from two clean release builds.",
     "The exact staged archive must pass checksum, metadata, extraction, and --check-mods dda validation before publication."
