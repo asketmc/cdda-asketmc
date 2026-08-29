@@ -65,6 +65,7 @@
     "type": "palette",
     "id": "empty_bunker_items",
     "items": {
+      "!": { "item": "lmoe_guns", "chance": 100 },
       "b": [ { "item": "manuals", "chance": 60 }, { "item": "textbooks", "chance": 40 } ],
       "B": { "item": "bed", "chance": 70, "repeat": [ 1, 2 ] },
       "c": { "item": "hardware", "chance": 50 },
