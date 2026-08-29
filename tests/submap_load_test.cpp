@@ -1340,6 +1340,7 @@ TEST_CASE( "submap spawn_data round-trips", "[submap][load][spawn_data][progress
     std::ostringstream saved;
     JsonOut json( saved );
     json.start_object();
+    json.member( "version", savegame_version );
     original.store( json );
     json.end_object();
 
