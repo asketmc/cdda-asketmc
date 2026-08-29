@@ -93,7 +93,7 @@ TEST_CASE( "powered mech throw assist suppresses Railgun consistently", "[throwi
         thrower.throw_item( thrower.pos() + tripoint_east, thrown );
     CHECK( assisted_throw.proj.proj_effects.count( "LIGHTNING" ) == 0 );
     CHECK( thrower.get_power_level() == 10_kJ );
-    thrower.dismount();
+    thrower.forced_dismount();
 }
 
 struct throw_test_data {
