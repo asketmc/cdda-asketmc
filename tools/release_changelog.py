@@ -1139,6 +1139,15 @@ def release_field(root: pathlib.Path, tag: str, field: str) -> str:
     return str(value)
 
 
+def verify_superseded_release_unpublished(root: pathlib.Path, tag: str) -> None:
+    _, releases, _ = lint_repository(root, check_generated=True)
+    if tag not in releases:
+        raise ChangelogError(f"unknown release: {tag}")
+    superseded = releases[tag].get("supersedes_failed_release")
+    if superseded:
+        _require_unpublished_github_release(superseded)
+
+
 def build_metadata(
     root: pathlib.Path, tag: str, commit: str, notes: pathlib.Path, output: pathlib.Path
 ) -> None:
@@ -1434,6 +1443,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     field.add_argument("--tag", required=True)
     field.add_argument("--field", required=True)
 
+    superseded = subparsers.add_parser("verify-superseded-release")
+    superseded.add_argument("--tag", required=True)
+
     prepare = subparsers.add_parser("prepare")
     prepare.add_argument("--tag", required=True)
     prepare.add_argument("--title", required=True)
@@ -1487,6 +1499,8 @@ def main(argv: list[str]) -> int:
             validate_tag(root, args.tag, args.expected_commit)
         elif args.command == "release-field":
             print(release_field(root, args.tag, args.field))
+        elif args.command == "verify-superseded-release":
+            verify_superseded_release_unpublished(root, args.tag)
         elif args.command == "prepare":
             prepare_release(
                 root,

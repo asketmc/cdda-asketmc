@@ -211,8 +211,10 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
 
     def test_new_and_existing_releases_share_exact_remote_readback(self) -> None:
         build = self.workflow[self.workflow.index("  publish-release:") :]
+        superseded = build.index("release_changelog.py verify-superseded-release")
         create = build.index('gh release create "${GITHUB_REF_NAME}"')
         readback = build.index('mkdir existing')
+        self.assertLess(superseded, create)
         self.assertLess(create, readback)
         self.assertEqual(build.count("mkdir existing"), 1)
         self.assertEqual(build.count("cmp RELEASE_NOTES.md existing/RELEASE_NOTES.md"), 1)
