@@ -12,6 +12,7 @@
 #include "game.h"
 #include "item.h"
 #include "item_pocket.h"
+#include "iuse.h"
 #include "map_helpers.h"
 #include "npc.h"
 #include "npctrade.h"
@@ -36,6 +37,8 @@ static const bionic_id bio_surgical_razor( "bio_surgical_razor" );
 static const faction_id faction_exodii( "exodii" );
 static const faction_id faction_free_merchants( "free_merchants" );
 // Any item that can be wielded
+static const flag_id json_flag_FILTHY( "FILTHY" );
+static const flag_id json_flag_NO_STERILE( "NO_STERILE" );
 static const flag_id json_flag_PSEUDO( "PSEUDO" );
 static const itype_id itype_solarpack_on( "solarpack_on" );
 static const itype_id itype_test_backpack( "test_backpack" );
@@ -620,6 +623,9 @@ TEST_CASE( "manual CBM installation is an opt-in expert route",
 {
     avatar &installer = get_avatar();
     clear_avatar();
+    item cbm( "bio_adrenaline" );
+    const use_function *install_action = cbm.type->get_use( "install_bionic" );
+    REQUIRE( install_action != nullptr );
 
     installer.set_skill_level( skill_electronics, 8 );
     installer.set_skill_level( skill_firstaid, 6 );
@@ -628,25 +634,45 @@ TEST_CASE( "manual CBM installation is an opt-in expert route",
     SECTION( "the route is unavailable by default" ) {
         override_option manual_install( "MANUAL_BIONIC_INSTALLATION", "false" );
         CHECK_FALSE( installer.can_use_manual_bionic_installation().success() );
+        CHECK_FALSE( install_action->can_call( installer, cbm, false, installer.pos() ).success() );
     }
 
     SECTION( "every skill floor is mandatory" ) {
         override_option manual_install( "MANUAL_BIONIC_INSTALLATION", "true" );
         REQUIRE( installer.can_use_manual_bionic_installation().success() );
+        REQUIRE( install_action->can_call( installer, cbm, false, installer.pos() ).success() );
 
         SECTION( "electronics below 8" ) {
             installer.set_skill_level( skill_electronics, 7 );
             CHECK_FALSE( installer.can_use_manual_bionic_installation().success() );
+            CHECK_FALSE( install_action->can_call( installer, cbm, false, installer.pos() ).success() );
         }
 
         SECTION( "health care below 6" ) {
             installer.set_skill_level( skill_firstaid, 5 );
             CHECK_FALSE( installer.can_use_manual_bionic_installation().success() );
+            CHECK_FALSE( install_action->can_call( installer, cbm, false, installer.pos() ).success() );
         }
 
         SECTION( "mechanics below 4" ) {
             installer.set_skill_level( skill_mechanics, 3 );
             CHECK_FALSE( installer.can_use_manual_bionic_installation().success() );
+            CHECK_FALSE( install_action->can_call( installer, cbm, false, installer.pos() ).success() );
+        }
+    }
+
+    SECTION( "the opt-in route does not bypass implant sterility" ) {
+        override_option manual_install( "MANUAL_BIONIC_INSTALLATION", "true" );
+        REQUIRE( install_action->can_call( installer, cbm, false, installer.pos() ).success() );
+
+        SECTION( "filthy implant" ) {
+            cbm.set_flag( json_flag_FILTHY );
+            CHECK_FALSE( install_action->can_call( installer, cbm, false, installer.pos() ).success() );
+        }
+
+        SECTION( "non-sterile implant" ) {
+            cbm.set_flag( json_flag_NO_STERILE );
+            CHECK_FALSE( install_action->can_call( installer, cbm, false, installer.pos() ).success() );
         }
     }
 

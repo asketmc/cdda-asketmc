@@ -435,6 +435,8 @@ class ManualInstallationAndExodiiBackportTests(unittest.TestCase):
         self.assertIn("electronics below 8", runtime_test)
         self.assertIn("health care below 6", runtime_test)
         self.assertIn("mechanics below 4", runtime_test)
+        self.assertIn("install_action->can_call", runtime_test)
+        self.assertIn("does not bypass implant sterility", runtime_test)
         self.assertIn("uncapped > 95", runtime_test)
 
     def test_exodii_stock_is_faster_but_remains_trust_gated(self) -> None:
