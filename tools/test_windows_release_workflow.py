@@ -80,6 +80,9 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn('test "${first_zip}" = "${second_zip}"', self.workflow)
         self.assertIn('build_distribution "${second_prefix}" 0', self.workflow)
         self.assertIn('export SOURCE_DATE_EPOCH="${source_epoch}"', self.workflow)
+        compare_archives = self.workflow.index('test "${first_zip}" = "${second_zip}"')
+        build_tests = self.workflow.index('TEST_SOURCES="test_main.cpp')
+        self.assertLess(compare_archives, build_tests)
 
     def test_manual_dispatch_uploads_a_downloadable_build(self) -> None:
         start = self.workflow.index("- name: Stage requested Windows build")
