@@ -165,6 +165,7 @@
       [ "bio_laser", 10 ],
       [ "bio_emp", 10 ],
       [ "bio_emp_armgun", 10 ],
+      [ "bio_railgun", 5 ],
       [ "bio_flashbang", 10 ],
       [ "bio_chain_lightning", 10 ],
       [ "bio_time_freeze", 10 ],

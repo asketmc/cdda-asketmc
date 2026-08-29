@@ -871,6 +871,33 @@ ready-to-install implants.
 - Military roadblocks can field damaged, partly loaded M249, M240, or M2 CROWS turrets; military outposts may add two damaged M249s inside the retained perimeter lights.
 - Police roadblocks still use riot-control platforms.
 
+## Independent CBM scavenging
+
+- Scientists, technicians, military zombies, bio-operators, and Exodii
+  zomborgs retain the fork's skill-scaled dissection route.  Recovered implants
+  are filthy, non-sterile, unpackaged, and salvaged.  Each dissection salvage
+  entry is capped at five CBMs.
+- Hospitals, mines, science loot, and Robofac trade again have low-weight
+  thematic CBM entries.  These complement corpse salvage and Exodii stock
+  instead of replacing either route.
+- Bionic basements guarantee one common CBM cache.  Bunkers and military bases
+  have rare military caches; mortuaries, police evidence rooms, prison autodocs,
+  and electronics stores have sparse common-CBM caches.
+- Banks, generic vaults, random loot, survivor lairs, storage units, and fire
+  towers do not receive broad CBM restoration.
+
+## Classic CBM utility
+
+- The Integrated Multitool again supplies hammer, saw, wrench, wheel-fastening,
+  screwdriver, cutting, prying, nail-pulling, and drilling qualities in both its
+  stowed and extended forms.  Its existing welding and repair actions remain.
+- The Railgun returns as a separate active CBM without removing Throwing Assist.
+  Ferric throws gain range, damage, and lightning only when at least 10 kJ is
+  available; each enhanced throw consumes the full 10 kJ trigger cost.
+- Railgun implants can be found through rare military pools, elite
+  bio-operators, zomborg salvage, and tier-three Exodii stock.  Installation
+  data remains in the autodoc installation-program pool.
+
 ## Optional mod: Useful Helicopters Experimental
 
 This is installed but **not enabled by default**. Enabling the mod adds:

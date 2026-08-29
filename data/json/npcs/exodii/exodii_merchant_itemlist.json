@@ -200,6 +200,7 @@
       [ "bio_membrane", 10 ],
       [ "bio_painkiller", 10 ],
       [ "bio_radscrubber", 10 ],
+      [ "bio_railgun", 5 ],
       [ "bio_weight", 10 ]
     ]
   },

@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "pr": 33,
+  "entries": [
+    {
+      "id": "independent-cbm-scavenging",
+      "category": "Features",
+      "audience": "players",
+      "summary": "Preserve dirty corpse salvage and restore sparse thematic caches as independent CBM scavenging routes.",
+      "compatibility": "save-compatible",
+      "details": [
+        "Scientists, technicians, military zombies, and bio-operators retain skill-scaled dissection salvage alongside Exodii zomborgs.",
+        "Hospitals, mines, science sites, Robofac, and selected secure locations again offer low-rate CBM discoveries."
+      ]
+    },
+    {
+      "id": "classic-cbm-utility",
+      "category": "Features",
+      "audience": "players",
+      "summary": "Restore the Railgun and the Integrated Multitool's classic utility without removing later CBMs.",
+      "compatibility": "save-compatible",
+      "details": [
+        "Railgun returns beside Throwing Assist and consumes 10 kJ only when enhancing a ferric throw.",
+        "Both Integrated Multitool forms again provide the classic hammering, sawing, wrenching, prying, and drilling qualities."
+      ]
+    }
+  ]
+}
