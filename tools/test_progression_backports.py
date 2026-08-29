@@ -300,10 +300,10 @@ class CbmScavengingAndUtilityBackportTests(unittest.TestCase):
         ranged_source = (ROOT / "src/ranged.cpp").read_text(encoding="utf-8")
         self.assertIn("ret *= 2", character_source)
         self.assertIn("get_power_level() >= bio_railgun->power_trigger", character_source)
-        self.assertEqual(
-            2,
-            ranged_source.count("get_power_level() >= bio_railgun->power_trigger"),
-        )
+        self.assertIn("material_lc_steel", character_source)
+        self.assertIn("!mech_assisted", character_source)
+        self.assertEqual(2, ranged_source.count("railgun_eligible_throw( thrown )"))
+        self.assertNotIn("case_hardened_steel", ranged_source)
         self.assertIn('proj_effects.insert( "LIGHTNING" )', ranged_source)
         self.assertIn("mod_power_level( -trigger_cost )", ranged_source)
 
@@ -328,6 +328,8 @@ class CbmScavengingAndUtilityBackportTests(unittest.TestCase):
 
         runtime_test = (ROOT / "tests/throwing_test.cpp").read_text(encoding="utf-8")
         self.assertIn("railgun requires and consumes its trigger power", runtime_test)
+        self.assertIn('"lc_cavalry_sabre"', runtime_test)
+        self.assertIn("powered mech throw assist suppresses Railgun consistently", runtime_test)
         self.assertIn('proj.proj_effects.count( "LIGHTNING" ) == 1', runtime_test)
         self.assertIn("thrower.get_power_level() == 0_kJ", runtime_test)
 

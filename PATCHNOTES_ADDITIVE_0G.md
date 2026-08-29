@@ -880,7 +880,8 @@ ready-to-install implants.
 
 - Scientists, technicians, military zombies, bio-operators, and Exodii
   zomborgs retain the fork's skill-scaled dissection route.  Recovered implants
-  are filthy, non-sterile, unpackaged, salvaged, and capped at five per corpse.
+  are filthy, non-sterile, unpackaged, and salvaged.  Each dissection salvage
+  entry is capped at five CBMs.
 - Hospitals, mines, science loot, and Robofac trade again have low-weight
   thematic CBM entries.  These complement corpse salvage and Exodii stock
   instead of replacing either route.

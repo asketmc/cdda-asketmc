@@ -5471,6 +5471,14 @@ bool Character::is_rad_immune() const
     return ( is_wearing_power_armor( &has_helmet ) && has_helmet ) || worn_with_flag( flag_RAD_PROOF );
 }
 
+bool Character::railgun_eligible_throw( const item &thrown ) const
+{
+    const bool mech_assisted = is_mounted() && mounted_creature->mech_str_addition() != 0;
+    return has_active_bionic( bio_railgun ) &&
+           get_power_level() >= bio_railgun->power_trigger &&
+           thrown.made_of_any( ferric ) && !mech_assisted;
+}
+
 int Character::throw_range( const item &it ) const
 {
     if( it.is_null() ) {
@@ -5499,8 +5507,7 @@ int Character::throw_range( const item &it ) const
                                static_cast<int>(
                                    tmp.weight() / 15_gram ) );
     ret -= tmp.volume() / 1_liter;
-    if( has_active_bionic( bio_railgun ) && get_power_level() >= bio_railgun->power_trigger &&
-        tmp.made_of_any( ferric ) ) {
+    if( railgun_eligible_throw( tmp ) ) {
         ret *= 2;
     }
     if( ret < 1 ) {

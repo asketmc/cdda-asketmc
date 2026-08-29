@@ -1951,6 +1951,8 @@ class Character : public Creature, public visitable
         int thrown_item_adjusted_damage( const item &thrown ) const;
         // calculates the total damage possible from a thrown item, without resistances and such.
         int thrown_item_total_damage_raw( const item &thrown ) const;
+        /** Whether this throw can receive the Railgun range, damage, and projectile effects. */
+        bool railgun_eligible_throw( const item &thrown ) const;
         /** Maximum thrown range with a given item, taking all active effects into account. */
         int throw_range( const item & ) const;
         /** Dispersion of a thrown item, against a given target, taking into account whether or not the throw was blind. */

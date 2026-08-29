@@ -46,8 +46,8 @@ Scientists, technicians, military zombies, bio-operators, and Exodii zomborgs re
 
 The Integrated Multitool's stowed and extended forms regain hammering, sawing, wrenching, screwdriving, cutting, prying, nail-pulling, and drilling qualities. Save-facing IDs and the existing included-bionic structure are unchanged.
 
-Railgun, its implant, and its autodoc software are active again beside Throwing Assist. It has rare general, military, bio-operator, zomborg, Exodii tier-three, and installation-program routes. An active Railgun doubles range and improves damage only for ferric items when the full 10 kJ trigger cost is available; a powered throw adds lightning and consumes exactly 10 kJ.
+Railgun, its implant, and its autodoc software are active again beside Throwing Assist. It has rare general, military, bio-operator, zomborg, Exodii tier-three, and installation-program routes. An active Railgun doubles uncapped range and improves damage only for ferric items when the full 10 kJ trigger cost is available; a powered throw adds lightning and consumes exactly 10 kJ. Powered mech throw assist takes precedence and suppresses all Railgun effects consistently.
 
 ### Exclusions and contracts
 
-No clean direct death drops, generic-vault rollback, Exodii weakening, cleaning/install bypass, modular-tool migration, unrelated obsolete CBM, or non-ferric throwing change is included. `tools.test_progression_backports` locks dirty corpse salvage, exact low-weight routes, mapgen cache scope, active definitions, coexistence, qualities, and power hooks. The focused Catch2 Railgun contract executes both the 10 kJ and 9 kJ paths.
+No clean direct death drops, generic-vault rollback, Exodii weakening, cleaning/install bypass, modular-tool migration, unrelated obsolete CBM, or non-ferric throwing change is included. `tools.test_progression_backports` locks dirty corpse salvage, exact low-weight routes, mapgen cache scope, active definitions, coexistence, qualities, and power hooks. The focused Catch2 Railgun contract executes generic and graded-steel 10 kJ/9 kJ paths plus powered-mech suppression.

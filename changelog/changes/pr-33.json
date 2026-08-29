@@ -6,7 +6,7 @@
       "id": "independent-cbm-scavenging",
       "category": "Features",
       "audience": "players",
-      "summary": "Restore dirty corpse salvage and sparse thematic caches as independent CBM scavenging routes.",
+      "summary": "Preserve dirty corpse salvage and restore sparse thematic caches as independent CBM scavenging routes.",
       "compatibility": "save-compatible",
       "details": [
         "Scientists, technicians, military zombies, and bio-operators retain skill-scaled dissection salvage alongside Exodii zomborgs.",
