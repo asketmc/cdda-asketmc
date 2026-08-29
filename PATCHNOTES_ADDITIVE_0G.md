@@ -898,6 +898,28 @@ ready-to-install implants.
   bio-operators, zomborg salvage, and tier-three Exodii stock.  Installation
   data remains in the autodoc installation-program pool.
 
+## Optional expert CBM self-installation
+
+- The bundled **Manual Bionic Installation** mod is disabled by default. When
+  selected for a world, it opens an improvised route for CBMs that lack a
+  dedicated manual procedure; existing dedicated procedures remain unchanged.
+- The route requires electronics 8, health care 6, mechanics 4, fine surgical
+  tools, a charged soldering or repair tool, solder, disinfectant, sterile
+  dressings, and the normal difficulty- and body-weight-scaled anesthetic.
+- Filthy, non-sterile, and already-deployed CBMs remain unusable. Improvised
+  surgery causes pain and never exceeds 95% success, preserving the existing
+  damage and faulty-install consequences when it fails.
+
+## Faster but still gated Exodii service
+
+- Rubik restocks and can award the recurring interaction trust point every
+  three days. CBM stock tiers unlock at Exodii trust 1, 8, 16, and 30.
+- Locked higher-tier stock can accumulate before access, but Rubik still
+  refuses to sell it until the matching trust threshold is reached.
+- Exodii installation uses a one-times implant-price service multiplier; other
+  installers retain the two-times multiplier. Item ownership and trading costs
+  still apply, and independent scavenging remains available.
+
 ## Optional mod: Useful Helicopters Experimental
 
 This is installed but **not enabled by default**. Enabling the mod adds:

@@ -4112,12 +4112,17 @@ void molle_detach_actor::load( const JsonObject &jo )
 cata::optional<int> install_bionic_actor::use( Character &p, item &it, bool,
         const tripoint & ) const
 {
+    const bool manual_fallback = it.type->bionic->id->installation_requirement.is_empty();
     if( p.can_install_bionics( *it.type, p, false ) ) {
         if( !p.has_trait( trait_DEBUG_BIONICS ) ) {
             p.consume_installation_requirement( it.type->bionic->id );
             p.consume_anesth_requirement( *it.type, p );
         }
         if( p.install_bionics( *it.type, p, false ) ) {
+            if( manual_fallback && !p.has_trait( trait_DEBUG_BIONICS ) ) {
+                p.mod_pain( 10 + it.type->bionic->difficulty * 3 );
+                p.add_msg_if_player( m_bad, _( "The improvised surgery leaves you in severe pain." ) );
+            }
             return 1;
         }
     }
@@ -4136,8 +4141,12 @@ ret_val<void> install_bionic_actor::can_use( const Character &p, const item &it,
     }
     if( !p.has_trait( trait_DEBUG_BIONICS ) ) {
         if( bid->installation_requirement.is_empty() ) {
-            return ret_val<void>::make_failure( _( "You can't self-install this CBM." ) );
-        } else  if( it.has_flag( flag_FILTHY ) ) {
+            const ret_val<void> manual_route = p.can_use_manual_bionic_installation();
+            if( !manual_route.success() ) {
+                return manual_route;
+            }
+        }
+        if( it.has_flag( flag_FILTHY ) ) {
             return ret_val<void>::make_failure( _( "You can't install a filthy CBM!" ) );
         } else if( it.has_flag( flag_NO_STERILE ) ) {
             return ret_val<void>::make_failure( _( "This CBM is not sterile, you can't install it." ) );

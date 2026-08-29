@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "pr": 34,
+  "entries": [
+    {
+      "id": "optional-expert-manual-cbm-installation",
+      "category": "Features",
+      "audience": "players",
+      "summary": "Restore expert manual CBM installation as an off-by-default world mod with meaningful surgical risk.",
+      "compatibility": "save-compatible",
+      "details": [
+        "CBMs without dedicated procedures require electronics 8, health care 6, mechanics 4, surgical tools, sterile supplies, and anesthetic.",
+        "Improvised surgery causes pain and retains at least a five-percent failure chance with the existing dangerous consequences."
+      ]
+    },
+    {
+      "id": "tuned-exodii-cbm-progression",
+      "category": "Balance",
+      "audience": "players",
+      "summary": "Shorten Rubik's restock and trust cadence while keeping tiered sales deterministic and gated.",
+      "compatibility": "save-compatible",
+      "details": [
+        "Rubik restocks every three days and unlocks CBM tiers at Exodii trust 1, 8, 16, and 30.",
+        "Exodii installation has a lower service multiplier; other installers and ownership or trading costs remain unchanged."
+      ]
+    }
+  ]
+}

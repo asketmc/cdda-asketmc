@@ -12,7 +12,7 @@ evidence remain in the linked reports and player patch notes.
 | H5 interface and ASCII-art QoL | Integrated selected behavior | [H5 report](H5_INTERFACE_QOL_BACKPORT_REPORT.md) |
 | H6 anti-grind QoL | Integrated selected behavior | [H6 report](H6_ANTIGRIND_BACKPORT_REPORT.md) |
 | Backup generator | Integrated | [Generator report](H6_BACKUP_GENERATOR_BACKPORT_REPORT.md) |
-| Progression restorations | Batches 1–2 integrated | [Progression report](PROGRESSION_BACKPORT_REPORT.md) |
+| Progression restorations | Batches 1–3 integrated | [Progression report](PROGRESSION_BACKPORT_REPORT.md) |
 | Crafting, inventory, and repair performance | Integrated selected behavior | [BN #917](https://github.com/cataclysmbnteam/Cataclysm-BN/pull/917), [BN #1117](https://github.com/cataclysmbnteam/Cataclysm-BN/pull/1117), [BN #8221](https://github.com/cataclysmbnteam/Cataclysm-BN/pull/8221) |
 | Inventory transfer QoL | Adapted for 0.G | [DDA #75104](https://github.com/CleverRaven/Cataclysm-DDA/pull/75104), selected [DDA #68226](https://github.com/CleverRaven/Cataclysm-DDA/pull/68226), [TLG #1201](https://github.com/Cataclysm-TLG/Cataclysm-TLG/pull/1201), and [BN #9020](https://github.com/cataclysmbnteam/Cataclysm-BN/pull/9020); bucket/container rewrites are excluded, and classic pickup/drop sorting is a local 0.G adaptation |
 | Corpse-processing progress | Adapted for 0.G | [DDA #73610](https://github.com/CleverRaven/Cataclysm-DDA/pull/73610), commit `0485e42da7ced3442ec1dcaeeb59de55a25d1c2f`, with [TLG #329](https://github.com/Cataclysm-TLG/Cataclysm-TLG/pull/329), commit `77658a2aaa63801a2f7e2ea0c731593ccdd004f2`, as the compatibility reference; cruder/finer restrictions and unrelated activity rewrites are excluded |
