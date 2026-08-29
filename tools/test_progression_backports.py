@@ -425,7 +425,7 @@ class ManualInstallationAndExodiiBackportTests(unittest.TestCase):
         self.assertNotIn("installer.is_avatar()", bionics_source)
         self.assertIn("requirement_manual_bionic_installation", bionics_source)
         self.assertIn("if( difficulty <= 0 )", bionics_source)
-        self.assertIn("p.mod_pain( 10 + it.type->bionic->difficulty * 3 )", actor_source)
+        self.assertIn("p.apply_manual_bionic_installation_pain", actor_source)
         self.assertIn("This CBM has no manual installation procedure", actor_source)
         self.assertIn("flag_FILTHY", actor_source)
         self.assertIn("flag_NO_STERILE", actor_source)
@@ -442,6 +442,7 @@ class ManualInstallationAndExodiiBackportTests(unittest.TestCase):
         self.assertIn("uncapped > 95", runtime_test)
         self.assertIn("zero-difficulty implants without a procedure are rejected safely", runtime_test)
         self.assertIn("surgery-start pain cannot cancel the operation it just started", runtime_test)
+        self.assertIn("pain-immune installers do not gain pain", runtime_test)
         self.assertIn("activity.is_interruptible()", runtime_test)
 
     def test_exodii_stock_is_faster_but_remains_trust_gated(self) -> None:

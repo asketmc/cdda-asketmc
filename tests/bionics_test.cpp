@@ -48,6 +48,7 @@ static const skill_id skill_electronics( "electronics" );
 static const skill_id skill_firstaid( "firstaid" );
 static const skill_id skill_mechanics( "mechanics" );
 static const activity_id ACT_OPERATION( "ACT_OPERATION" );
+static const trait_id trait_NOPAIN( "NOPAIN" );
 
 static void clear_bionics( Character &you )
 {
@@ -704,10 +705,24 @@ TEST_CASE( "manual CBM installation is an opt-in expert route",
         REQUIRE_FALSE( installer.activity.is_interruptible() );
         const int pain_before = installer.get_pain();
 
-        installer.mod_pain( 10 + cbm.type->bionic->difficulty * 3 );
+        CHECK( installer.apply_manual_bionic_installation_pain( cbm.type->bionic->difficulty ) );
 
         CHECK( installer.activity.id() == ACT_OPERATION );
         CHECK( installer.get_pain() > pain_before );
+        installer.cancel_activity();
+    }
+
+    SECTION( "pain-immune installers do not gain pain or report a painful start" ) {
+        override_option manual_install( "MANUAL_BIONIC_INSTALLATION", "true" );
+        installer.set_mutation( trait_NOPAIN );
+        REQUIRE( installer.install_bionics( *cbm.type, installer, false ) );
+        REQUIRE( installer.activity.id() == ACT_OPERATION );
+        const int pain_before = installer.get_pain();
+
+        CHECK_FALSE( installer.apply_manual_bionic_installation_pain( cbm.type->bionic->difficulty ) );
+
+        CHECK( installer.activity.id() == ACT_OPERATION );
+        CHECK( installer.get_pain() == pain_before );
         installer.cancel_activity();
     }
 }

@@ -1979,6 +1979,13 @@ ret_val<void> Character::can_use_manual_bionic_installation() const
     return ret_val<void>::make_success();
 }
 
+bool Character::apply_manual_bionic_installation_pain( int difficulty )
+{
+    const int pain_before = get_pain();
+    mod_pain( 10 + difficulty * 3 );
+    return get_pain() > pain_before;
+}
+
 bool Character::has_installation_requirement( const bionic_id &bid ) const
 {
     requirement_id requirement = bid->installation_requirement;

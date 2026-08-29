@@ -1496,6 +1496,8 @@ class Character : public Creature, public visitable
         void consume_anesth_requirement( const itype &cbm, Character &patient );
         /** Whether the opt-in generic manual route is enabled and the skill floor is met. */
         ret_val<void> can_use_manual_bionic_installation() const;
+        /** Apply improvised-surgery pain and report whether the character actually gained pain. */
+        bool apply_manual_bionic_installation_pain( int difficulty );
         /**Has the required equipment for manual installation*/
         bool has_installation_requirement( const bionic_id &bid ) const;
         void consume_installation_requirement( const bionic_id &bid );
