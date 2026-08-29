@@ -70,8 +70,10 @@ class EnergyAndExplorationBackportTests(unittest.TestCase):
         self.assertEqual(expected, [layout["object"]["place_furniture"] for layout in ordinary])
         self.assertTrue(all("place_items" not in layout["object"] for layout in ordinary))
         items = entity(load_json("data/json/mapgen_palettes/lmoe.json"), "palette", "empty_bunker_items")["items"]
-        self.assertEqual(("lmoe_guns", 100), (items["!"]["item"], items["!"]["chance"]))
-        self.assertNotIn("!", entity(load_json("data/mods/No_Hope/palettes.json"), "palette", "empty_bunker_items")["items"])
+        no_hope = entity(load_json("data/mods/No_Hope/palettes.json"), "palette", "empty_bunker_items")["items"]
+        self.assertEqual(items["u"], items["!"][:-1])
+        self.assertEqual({"item": "lmoe_guns", "chance": 100}, items["!"][-1])
+        self.assertEqual(no_hope["u"], no_hope["!"])
         storage = only(load_json("data/json/mapgen/nested/lmoe_nested.json"), lambda x: x.get("nested_mapgen_id") == "lmoe3_storage_11x11", "storage")
         self.assertNotIn("place_items", storage["object"])
         consumers = [obj for obj in lmoe if uses_chunk(obj, "lmoe3_storage_11x11")]
