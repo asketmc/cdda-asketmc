@@ -1139,16 +1139,14 @@
         "$": [ { "item": "SUS_office_filing_cabinet", "chance": 50, "repeat": [ 1, 5 ] } ],
         "O": [ { "item": "mil_base_books", "chance": 30, "repeat": [ 1, 5 ] } ],
         "Y": [ { "item": "mil_base_coats", "chance": 25, "repeat": [ 1, 2 ] } ],
-        "E": [
-          { "item": "SUS_office_filing_cabinet", "chance": 50, "repeat": [ 1, 10 ] },
-          { "item": "bionics_mil", "chance": 25 }
-        ],
+        "E": [ { "item": "SUS_office_filing_cabinet", "chance": 50, "repeat": [ 1, 10 ] } ],
         "W": [ { "item": "mil_base_iv", "chance": 70 } ],
         "^": [ { "item": "mil_base_iv", "chance": 70 } ]
       },
       "gaspumps": { "p": { "fuel": "jp8", "amount": [ 200000, 1000000 ] } },
       "place_loot": [
         { "group": "mil_base_hmg", "x": 65, "y": 46, "chance": 10, "magazine": 100 },
+        { "group": "bionics_mil", "x": 26, "y": 15, "chance": 25 },
         { "group": "SUS_janitors_closet", "x": 22, "y": 26, "chance": 90, "repeat": [ 1, 2 ] },
         { "item": "morphine", "x": 28, "y": 25, "chance": 50, "repeat": [ 20, 60 ] },
         { "item": "tramadol", "x": 28, "y": 25, "chance": 50, "repeat": [ 20, 60 ] },

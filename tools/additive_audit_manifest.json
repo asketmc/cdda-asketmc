@@ -1385,7 +1385,7 @@
     {
       "path": "data/json/mapgen/military/mil_base/mil_base_z0.json",
       "baseline_fingerprint": "c36882d1f1f6f09287cc0b3ad17617ca260478ed4bbd30991fc0458e4cb36f1f",
-      "target_fingerprint": "361425dd4decf99e6825f6b2f2a2de870cef5ad2f4e0f3e306858e83313c2d26",
+      "target_fingerprint": "b2a07de58db3c6de063e9175b5edc0aae376853fb3b41226c39db03c3f11118c",
       "reason": "Progression batch 2 restores one rare military CBM cache to the military base clinic storage"
     },
     {

@@ -438,7 +438,7 @@ class CbmScavengingAndUtilityBackportTests(unittest.TestCase):
         cases = (
             ("data/json/mapgen/basement/basement_bionic.json", "group", None, 7, 9),
             ("data/json/mapgen/bunker.json", "group", 35, 16, 4),
-            ("data/json/mapgen/military/mil_base/mil_base_z0.json", "item", 25, None, None),
+            ("data/json/mapgen/military/mil_base/mil_base_z0.json", "group", 25, 26, 15),
             ("data/json/mapgen/mortuary.json", "item", 15, 8, 19),
             ("data/json/mapgen/police_station.json", "item", 5, None, None),
             ("data/json/mapgen/prison/prison.json", "item", 10, None, None),

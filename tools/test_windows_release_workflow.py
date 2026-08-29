@@ -104,7 +104,7 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
     def test_focused_gameplay_catch_gates_execute_and_fail_closed(self) -> None:
         self.assertIn("sudo apt-get install --yes ccache wine64", self.workflow)
         self.assertIn(
-            'TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp mapgen_helpers.cpp player_helpers.cpp stringmaker.cpp advanced_inventory_test.cpp butchery_progress_test.cpp climbing_test.cpp mapgen_spawn_data_test.cpp npc_hostility_test.cpp submap_load_test.cpp"',
+            'TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp mapgen_helpers.cpp player_helpers.cpp stringmaker.cpp advanced_inventory_test.cpp butchery_progress_test.cpp climbing_test.cpp mapgen_spawn_data_test.cpp npc_hostility_test.cpp submap_load_test.cpp throwing_test.cpp"',
             self.workflow,
         )
         self.assertIn('"${test_bin}"', self.workflow)
@@ -117,6 +117,7 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn('"[butchery][progress]"', self.workflow)
         self.assertIn('"[mapgen][monster][progression]"', self.workflow)
         self.assertIn('"[submap][load][spawn_data][progression]"', self.workflow)
+        self.assertIn('"[throwing][bionic]"', self.workflow)
         self.assertIn("timeout 10m", self.workflow)
         self.assertIn('("climbing", "climbing-test-results.xml")', self.workflow)
         self.assertIn('("NPC hostility", "npc-hostility-test-results.xml")', self.workflow)
@@ -124,6 +125,7 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn('("butchery progress", "butchery-test-results.xml")', self.workflow)
         self.assertIn('("mapgen spawn data", "mapgen-spawn-test-results.xml")', self.workflow)
         self.assertIn('("submap spawn data", "submap-spawn-test-results.xml")', self.workflow)
+        self.assertIn('("Railgun power", "railgun-test-results.xml")', self.workflow)
         self.assertIn("gate discovered zero test cases", self.workflow)
         self.assertIn("gate reported", self.workflow)
         self.assertIn("ifdef TEST_SOURCES", self.tests_makefile)
