@@ -2,7 +2,7 @@
   {
     "type": "EXTERNAL_OPTION",
     "name": "MANUAL_BIONIC_INSTALLATION",
-    "info": "Permits high-risk manual self-installation of CBMs without a dedicated procedure.",
+    "info": "Permits high-risk manual self-installation of positive-difficulty CBMs without a dedicated procedure.",
     "stype": "bool",
     "value": true
   }

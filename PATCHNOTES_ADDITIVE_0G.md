@@ -901,8 +901,9 @@ ready-to-install implants.
 ## Optional expert CBM self-installation
 
 - The bundled **Manual Bionic Installation** mod is disabled by default. When
-  selected for a world, it opens an improvised route for CBMs that lack a
-  dedicated manual procedure; existing dedicated procedures remain unchanged.
+  selected for a world, it opens an improvised route for positive-difficulty
+  CBMs that lack a dedicated manual procedure; existing dedicated procedures
+  and zero-difficulty implants remain unchanged.
 - The route requires electronics 8, health care 6, mechanics 4, fine surgical
   tools, a charged soldering or repair tool, solder, disinfectant, sterile
   dressings, and the normal difficulty- and body-weight-scaled anesthetic.
