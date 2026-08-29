@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import unittest
 import zipfile
+from unittest import mock
 
 from tools import release_changelog
 
@@ -101,6 +102,19 @@ def write_baseline_history(
 
 
 class StrictJsonAndSchemaTest(unittest.TestCase):
+    def test_unpublished_release_check_rejects_published_and_api_failure(self) -> None:
+        published = subprocess.CompletedProcess([], 0, "", "")
+        missing = subprocess.CompletedProcess([], 1, "", "gh: Not Found (HTTP 404)\n")
+        unavailable = subprocess.CompletedProcess([], 1, "", "authentication failed\n")
+        with mock.patch.object(subprocess, "run", return_value=published):
+            with self.assertRaisesRegex(release_changelog.ChangelogError, "already published"):
+                release_changelog._require_unpublished_github_release("v0.G-additive-2026.08.27.1")
+        with mock.patch.object(subprocess, "run", return_value=missing):
+            release_changelog._require_unpublished_github_release("v0.G-additive-2026.08.27.1")
+        with mock.patch.object(subprocess, "run", return_value=unavailable):
+            with self.assertRaisesRegex(release_changelog.ChangelogError, "failed closed"):
+                release_changelog._require_unpublished_github_release("v0.G-additive-2026.08.27.1")
+
     def test_duplicate_keys_and_non_finite_numbers_are_rejected(self) -> None:
         with self.assertRaisesRegex(release_changelog.ChangelogError, "duplicate JSON key"):
             release_changelog.parse_json_bytes(b'{"schema": 1, "schema": 1}', "test")
@@ -614,7 +628,7 @@ class GitCoverageTest(unittest.TestCase):
                 for pr in (2, 3)
             ],
             "baseline_entries": [],
-            "known_limits": [],
+            "known_limits": ["Keep this limit."],
             "validation": ["Validated."],
         }
         release_dir = self.root / "changelog" / "releases"
@@ -669,7 +683,41 @@ class GitCoverageTest(unittest.TestCase):
         release_changelog.render_all(self.root)
         run_git(self.root, "add", ".")
         run_git(self.root, "commit", "-m", "Replacement release (#5)")
-        release_changelog.check_pr(self.root, base, "HEAD", 5)
+        valid_head = run_git(self.root, "rev-parse", "HEAD")
+        with mock.patch.object(
+            release_changelog, "_require_unpublished_github_release"
+        ) as require_unpublished:
+            release_changelog.check_pr(self.root, base, valid_head, 5)
+        require_unpublished.assert_called_once_with(failed_tag)
+
+        with mock.patch.object(
+            release_changelog,
+            "_require_unpublished_github_release",
+            side_effect=release_changelog.ChangelogError("already published"),
+        ):
+            with self.assertRaisesRegex(release_changelog.ChangelogError, "already published"):
+                release_changelog.check_pr(self.root, base, valid_head, 5)
+
+        weakened_changes = copy.deepcopy(replacement["changes"])
+        weakened_changes[0]["fragment_sha256"] = "0" * 64
+        for field, weakened, error in (
+            ("known_limits", [], "without rewriting"),
+            ("validation", ["Replaced validation."], "without rewriting"),
+            ("previous_release", failed_tag, "previous_release must"),
+            ("changes", weakened_changes, "fragment hash mismatch"),
+        ):
+            preserved = copy.deepcopy(replacement[field])
+            replacement[field] = weakened
+            replacement_path.write_bytes(release_changelog.canonical_json_bytes(replacement))
+            if field in {"known_limits", "validation"}:
+                release_changelog.render_all(self.root)
+            run_git(self.root, "add", ".")
+            run_git(self.root, "commit", "-m", f"Discard prior {field} (#6)")
+            with self.assertRaisesRegex(release_changelog.ChangelogError, error):
+                release_changelog._check_release_history_diff(
+                    self.root, base, "HEAD", 5, False
+                )
+            replacement[field] = preserved
 
         replacement["supersedes_failed_release"] = previous_tag
         replacement_path.write_bytes(release_changelog.canonical_json_bytes(replacement))

@@ -717,6 +717,9 @@ def validate_tag(root: pathlib.Path, tag: str, expected_commit: str | None = Non
     if tag not in releases:
         raise ChangelogError(f"no indexed release manifest for {tag}")
     release = releases[tag]
+    superseded = release.get("supersedes_failed_release")
+    if superseded:
+        _require_unpublished_github_release(superseded)
     target = resolve_commit(root, f"refs/tags/{tag}")
     if expected_commit is not None:
         if not SHA_RE.fullmatch(expected_commit):
@@ -795,6 +798,26 @@ def _git_path_exists(root: pathlib.Path, revision: str, path: str) -> bool:
 def _git_json(root: pathlib.Path, revision: str, path: str) -> Any:
     data = git(root, ["show", f"{revision}:{path}"]).encode("utf-8")
     return parse_json_bytes(data, f"{revision}:{path}")
+
+
+def _require_unpublished_github_release(tag: str) -> None:
+    try:
+        result = subprocess.run(
+            ["gh", "api", "--method", "GET", f"repos/{REPOSITORY}/releases/tags/{tag}"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+        )
+    except OSError as error:
+        raise ChangelogError(f"cannot verify whether {tag} is unpublished: {error}") from error
+    if result.returncode == 0:
+        raise ChangelogError(f"cannot supersede {tag}: its GitHub Release is already published")
+    if "HTTP 404" not in result.stderr:
+        raise ChangelogError(
+            f"cannot verify whether {tag} is unpublished: GitHub API failed closed"
+        )
 
 
 def _name_status_diff(
@@ -937,10 +960,15 @@ def _check_release_history_diff(
             or release["previous_release"] != old_release["previous_release"]
             or release["date"] < old_release["date"]
             or release["changes"][: len(old_release["changes"])] != old_release["changes"]
+            or release["known_limits"][: len(old_release["known_limits"])]
+            != old_release["known_limits"]
+            or release["validation"][: len(old_release["validation"])]
+            != old_release["validation"]
         ):
             raise ChangelogError(
                 f"{tag}: replacement must supersede the latest failed release without rewriting prior history"
             )
+        _require_unpublished_github_release(old_tag)
     expected_prs = [item["pr"] for item in release["changes"]]
     integrations = first_parent_integrations(root, release["previous_release"], base)
     actual_prs = [item["pr"] for item in integrations]
