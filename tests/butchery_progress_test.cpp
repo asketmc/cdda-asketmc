@@ -28,8 +28,12 @@ static const activity_id ACT_QUARTER( "ACT_QUARTER" );
 static const activity_id ACT_SKIN( "ACT_SKIN" );
 
 static const itype_id itype_knife_butcher( "knife_butcher" );
+static const itype_id itype_knife_steak( "knife_steak" );
+static const itype_id itype_misc_repairkit( "misc_repairkit" );
 static const itype_id itype_scalpel( "scalpel" );
 static const mtype_id mon_test_bovine( "mon_test_bovine" );
+static const mtype_id mon_zombie( "mon_zombie" );
+static const skill_id skill_firstaid( "firstaid" );
 static const skill_id skill_survival( "survival" );
 
 static item_location add_test_corpse( const tripoint &pos )
@@ -58,6 +62,43 @@ static player_activity set_up_activity( avatar &you, const activity_id &id,
     REQUIRE_FALSE( act.index );
     REQUIRE( act.moves_total > 0 );
     return act;
+}
+
+TEST_CASE( "dissection speed uses medical skill stats and fine cutting quality",
+           "[butchery][dissection][speed]" )
+{
+    avatar &you = get_avatar();
+    item corpse = item::make_corpse( mon_zombie );
+
+    SECTION( "First Aid 8 and a scalpel reduce a medium dissection to about 23 minutes" ) {
+        prepare_butcher( you );
+        you.set_skill_level( skill_firstaid, 8 );
+
+        CHECK( you.get_per() == 8 );
+        CHECK( you.get_dex() == 8 );
+        CHECK( butcher_time_to_cut( you, corpse, butcher_type::DISSECT ) == 142586 );
+    }
+
+    SECTION( "fine cutting quality follows the BN speed curve" ) {
+        prepare_butcher( you, itype_knife_steak );
+        CHECK( butcher_time_to_cut( you, corpse, butcher_type::DISSECT ) == 281250 );
+
+        prepare_butcher( you, itype_misc_repairkit );
+        CHECK( butcher_time_to_cut( you, corpse, butcher_type::DISSECT ) == 225000 );
+
+        prepare_butcher( you, itype_scalpel );
+        CHECK( butcher_time_to_cut( you, corpse, butcher_type::DISSECT ) == 180000 );
+    }
+
+    SECTION( "perception dexterity and quartering remain multiplicative" ) {
+        prepare_butcher( you );
+        you.per_max = 10;
+        you.dex_max = 10;
+        CHECK( butcher_time_to_cut( you, corpse, butcher_type::DISSECT ) == 173010 );
+
+        corpse.set_flag( flag_QUARTERED );
+        CHECK( butcher_time_to_cut( you, corpse, butcher_type::DISSECT ) == 43253 );
+    }
 }
 
 TEST_CASE( "corpse processing activities save independent progress",

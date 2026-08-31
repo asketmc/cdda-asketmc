@@ -187,6 +187,17 @@
     "auto_needs": true
   },
   {
+    "id": "ACT_MULTIPLE_DISSECT",
+    "type": "activity_type",
+    "activity_level": "MODERATE_EXERCISE",
+    "verb": "dissecting",
+    "based_on": "neither",
+    "suspendable": false,
+    "no_resume": true,
+    "multi_activity": true,
+    "auto_needs": true
+  },
+  {
     "id": "ACT_MULTIPLE_CHOP_TREES",
     "type": "activity_type",
     "activity_level": "EXTRA_EXERCISE",

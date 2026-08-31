@@ -25,8 +25,8 @@
     {
       "type": "talk_topic",
       "id": "TALK_ACTIVITIES",
-      "target_fingerprint": "ccbb117d93a00eeda4802d45b91c473bc83ecf6d434b527b55acc0fc45b93bf5",
-      "reason": "NPC activity menu additions used by the additive NPC and camp backports"
+      "target_fingerprint": "b42a36eccf5ff0d2d76ad1050c168ee9b0d7d2ce7441654e4025703d38025fd7",
+      "reason": "NPC activity menu additions include bulk follower dissection alongside the additive NPC and camp backports"
     },
     {
       "type": "item_group",

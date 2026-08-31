@@ -5095,6 +5095,7 @@ void talk_effect_t<T>::parse_string_effect( const std::string &effect_id, const 
             WRAP( do_eread ),
             WRAP( do_craft ),
             WRAP( do_butcher ),
+            WRAP( do_dissect ),
             WRAP( do_farming ),
             WRAP( assign_guard ),
             WRAP( assign_camp ),

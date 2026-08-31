@@ -103,6 +103,7 @@
 static const activity_id ACT_FERTILIZE_PLOT( "ACT_FERTILIZE_PLOT" );
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 static const activity_id ACT_MULTIPLE_BUTCHER( "ACT_MULTIPLE_BUTCHER" );
+static const activity_id ACT_MULTIPLE_DISSECT( "ACT_MULTIPLE_DISSECT" );
 static const activity_id ACT_MULTIPLE_CHOP_PLANKS( "ACT_MULTIPLE_CHOP_PLANKS" );
 static const activity_id ACT_MULTIPLE_CHOP_TREES( "ACT_MULTIPLE_CHOP_TREES" );
 static const activity_id ACT_MULTIPLE_CONSTRUCTION( "ACT_MULTIPLE_CONSTRUCTION" );
@@ -1282,7 +1283,8 @@ static void loot()
         MultiMining = 8192,
         MultiDis = 16384,
         MultiMopping = 32768,
-        UnloadLoot = 65536
+        UnloadLoot = 65536,
+        MultiDissect = 131072
     };
 
     Character &player_character = get_player_character();
@@ -1324,6 +1326,8 @@ static void loot()
                                  player_character.pos() ) ? Multirepairvehicle : 0;
     flags |= g->check_near_zone( zone_type_LOOT_CORPSE,
                                  player_character.pos() ) ? MultiButchery : 0;
+    flags |= g->check_near_zone( zone_type_LOOT_CORPSE,
+                                 player_character.pos() ) ? MultiDissect : 0;
     flags |= g->check_near_zone( zone_type_MINING, player_character.pos() ) ? MultiMining : 0;
     flags |= g->check_near_zone( zone_type_zone_disassemble,
                                  player_character.pos() ) ? MultiDis : 0;
@@ -1393,6 +1397,10 @@ static void loot()
     if( flags & MultiButchery ) {
         menu.addentry_desc( MultiButchery, true, 'B', _( "Butcher corpses" ),
                             _( "Auto-butcher anything in corpse loot zones - auto-fetch tools." ) );
+    }
+    if( flags & MultiDissect ) {
+        menu.addentry_desc( MultiDissect, true, 'd', _( "Dissect corpses" ),
+                            _( "Auto-dissect anything in corpse loot zones - auto-fetch tools." ) );
     }
     if( flags & MultiMining ) {
         menu.addentry_desc( MultiMining, true, 'M', _( "Mine Area" ),
@@ -1475,6 +1483,9 @@ static void loot()
             break;
         case MultiButchery:
             player_character.assign_activity( ACT_MULTIPLE_BUTCHER );
+            break;
+        case MultiDissect:
+            player_character.assign_activity( ACT_MULTIPLE_DISSECT );
             break;
         case MultiMining:
             player_character.assign_activity( ACT_MULTIPLE_MINE );
