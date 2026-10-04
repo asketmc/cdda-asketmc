@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "pr": 36,
+  "entries": [
+    {
+      "id": "faster-bulk-dissection",
+      "category": "Features",
+      "audience": "players",
+      "summary": "Dissect faster with medical skill, fine-cutting tools, and helpers, and dissect every eligible corpse in corpse-loot zones.",
+      "compatibility": "save-compatible",
+      "details": [
+        "Dissection time now depends on First Aid, perception, dexterity, fine-cutting quality, and up to three nearby crafting helpers.",
+        "The zone activity menu gains Dissect corpses with automatic fine-cutting tool fetching, and followers can be ordered to dissect through dialogue without claiming the same corpse."
+      ],
+      "known_limits": [
+        "The activity-specific reality-bubble shrink from the donor is not included because 0.G keeps fixed-size map caches."
+      ]
+    }
+  ]
+}
