@@ -388,3 +388,46 @@ TEST_CASE( "time_to_throw_independent_of_number_of_projectiles", "[throwing],[ba
         thrown.charges--;
     }
 }
+
+TEST_CASE( "railgun ignores inactive bionics and non-ferric throws", "[throwing][bionic]" )
+{
+    clear_map();
+    standard_npc thrower( "Unenhanced Railgun thrower", tripoint( 60, 60, 0 ), {}, 4, 10, 10, 10,
+                          10 );
+    thrower.add_bionic( bio_power_storage );
+    thrower.set_power_level( 11_kJ );
+    REQUIRE( thrower.get_power_level() == 11_kJ );
+
+    SECTION( "an installed but inactive Railgun" ) {
+        const item thrown( "pipe" );
+        const int unassisted_range = thrower.throw_range( thrown );
+        const int unassisted_damage = thrower.thrown_item_adjusted_damage( thrown );
+
+        thrower.add_bionic( bio_railgun );
+        REQUIRE( thrower.has_bionic( bio_railgun ) );
+        REQUIRE_FALSE( thrower.has_active_bionic( bio_railgun ) );
+
+        CHECK( thrower.throw_range( thrown ) == unassisted_range );
+        CHECK( thrower.thrown_item_adjusted_damage( thrown ) == unassisted_damage );
+        const dealt_projectile_attack inactive_throw =
+            thrower.throw_item( tripoint( 61, 60, 0 ), thrown );
+        CHECK( inactive_throw.proj.proj_effects.count( "LIGHTNING" ) == 0 );
+        CHECK( thrower.get_power_level() == 11_kJ );
+    }
+
+    SECTION( "an active Railgun with a non-ferric item" ) {
+        const item thrown( "2x4" );
+        const int unassisted_range = thrower.throw_range( thrown );
+        const int unassisted_damage = thrower.thrown_item_adjusted_damage( thrown );
+
+        give_and_activate_bionic( thrower, bio_railgun );
+        REQUIRE( thrower.get_power_level() == 10_kJ );
+
+        CHECK( thrower.throw_range( thrown ) == unassisted_range );
+        CHECK( thrower.thrown_item_adjusted_damage( thrown ) == unassisted_damage );
+        const dealt_projectile_attack wooden_throw =
+            thrower.throw_item( tripoint( 61, 60, 0 ), thrown );
+        CHECK( wooden_throw.proj.proj_effects.count( "LIGHTNING" ) == 0 );
+        CHECK( thrower.get_power_level() == 10_kJ );
+    }
+}

@@ -365,6 +365,60 @@ class CbmScavengingAndUtilityBackportTests(unittest.TestCase):
         self.assertEqual({8}, {entry["y"] for entry in electronics})
         self.assertFalse(any("repeat" in entry for entry in electronics))
 
+    def test_ferric_set_names_real_materials_and_covers_every_core_steel(self) -> None:
+        import re
+
+        source = (ROOT / "src/character.cpp").read_text(encoding="utf-8")
+        declared = dict(re.findall(r'static const material_id (material_\w+)\( "(\w+)" \);', source))
+        marker = "static const std::set<material_id> ferric = {"
+        self.assertIn(marker, source)
+        members = re.findall(r"\bmaterial_\w+", source.split(marker, 1)[1].split("};", 1)[0])
+        self.assertGreater(len(members), 0)
+        ferric = {declared[member] for member in members}
+
+        materials = {
+            obj["id"]
+            for _, obj in data_objects('"type": "material"')
+            if obj.get("type") == "material" and "id" in obj
+        }
+        self.assertEqual(set(), ferric - materials, "ferric ids that are not core materials")
+        core_steels = {
+            material
+            for material in materials
+            if material in {"iron", "steel"} or material.endswith(("_steel", "_steel_chain"))
+        }
+        self.assertGreater(len(core_steels), 0)
+        self.assertEqual(set(), core_steels - ferric, "core steels the Railgun ignores")
+
+    def test_railgun_has_one_live_definition_and_no_item_migration(self) -> None:
+        wanted = {"bio_railgun", "AID_bio_railgun"}
+        counts: dict[tuple[Any, Any], int] = {}
+        for path, obj in data_objects("bio_railgun"):
+            if obj.get("id") in wanted:
+                key = (obj.get("type"), obj.get("id"))
+                counts[key] = counts.get(key, 0) + 1
+            if "MIGRATION" in str(obj.get("type", "")).upper():
+                self.assertNotIn("bio_railgun", json.dumps(obj), path.name)
+        self.assertEqual(
+            {("bionic", "bio_railgun"): 1, ("BIONIC_ITEM", "bio_railgun"): 1,
+             ("GENERIC", "AID_bio_railgun"): 1},
+            counts,
+        )
+
+
+def data_objects(needle: str) -> list[tuple[pathlib.Path, dict[str, Any]]]:
+    """Return top-level core data objects from the JSON files whose text contains needle."""
+    found: list[tuple[pathlib.Path, dict[str, Any]]] = []
+    for path in sorted((ROOT / "data/json").rglob("*.json")):
+        text = path.read_text(encoding="utf-8")
+        if needle not in text:
+            continue
+        loaded = json.loads(text)
+        for obj in loaded if isinstance(loaded, list) else [loaded]:
+            if isinstance(obj, dict):
+                found.append((path, obj))
+    return found
+
 
 class ManualInstallationAndExodiiBackportTests(unittest.TestCase):
     def test_manual_installation_is_disabled_in_core_and_enabled_only_by_mod(self) -> None:
@@ -413,6 +467,58 @@ class ManualInstallationAndExodiiBackportTests(unittest.TestCase):
             ],
             procedure["components"],
         )
+
+    def test_every_shipped_cbm_has_a_positive_difficulty_for_the_manual_route(self) -> None:
+        cbms = [
+            obj
+            for _, obj in data_objects('"BIONIC_ITEM"')
+            if obj.get("type") == "BIONIC_ITEM" and "id" in obj
+        ]
+        self.assertGreater(len(cbms), 50)
+        invalid = sorted(
+            obj["id"]
+            for obj in cbms
+            if ("difficulty" in obj and not obj["difficulty"] > 0)
+            or ("difficulty" not in obj and "copy-from" not in obj)
+        )
+        self.assertEqual([], invalid)
+
+    def test_runtime_progression_cases_carry_tags_run_by_the_windows_gate(self) -> None:
+        import re
+
+        workflow = (ROOT / ".github/workflows/windows-release.yml").read_text(encoding="utf-8")
+        gates = (
+            (
+                "[throwing][bionic]",
+                "tests/throwing_test.cpp",
+                (
+                    "railgun requires and consumes its trigger power",
+                    "powered mech throw assist suppresses Railgun consistently",
+                    "railgun ignores inactive bionics and non-ferric throws",
+                ),
+            ),
+            (
+                "[bionics][progression]",
+                "tests/bionics_test.cpp",
+                (
+                    "manual CBM installation is an opt-in expert route",
+                    "Exodii retain the least expensive deterministic CBM service",
+                    "manual CBM installation refuses ineligible implants",
+                    "manual CBM installation helpers stay closed outside the opt-in route",
+                ),
+            ),
+        )
+        for gate, path, names in gates:
+            self.assertIn(f'"{gate}"', workflow)
+            required = set(re.findall(r"\[([^\]]+)\]", gate))
+            source = (ROOT / path).read_text(encoding="utf-8")
+            tags_by_name = {
+                name: set(re.findall(r"\[([^\]]+)\]", tags))
+                for name, tags in re.findall(r'TEST_CASE\(\s*"([^"]+)",\s*"([^"]*)"', source)
+            }
+            for name in names:
+                self.assertIn(name, tags_by_name, f"{path}: {name}")
+                self.assertGreaterEqual(tags_by_name[name], required, f"{path}: {name}")
 
     def test_manual_runtime_keeps_skill_sterility_pain_and_failure_boundaries(self) -> None:
         bionics_source = (ROOT / "src/bionics.cpp").read_text(encoding="utf-8")
