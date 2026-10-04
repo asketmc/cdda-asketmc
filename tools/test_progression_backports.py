@@ -98,6 +98,88 @@ class EnergyAndExplorationBackportTests(unittest.TestCase):
         self.assertEqual("lab_finale_4x4", finales[4]["object"]["place_nested"][0]["chunks"][0])
 
 
+class SpawnDataContentContractTests(unittest.TestCase):
+    """Shipped data must satisfy the loader contract in spawn_data::deserialize."""
+
+    @staticmethod
+    def json_files(directory: str) -> list[pathlib.Path]:
+        return sorted((ROOT / directory).rglob("*.json"))
+
+    @staticmethod
+    def mapgen_spawn_data() -> list[tuple[str, dict[str, Any]]]:
+        found: list[tuple[str, dict[str, Any]]] = []
+
+        def walk(node: Any, label: str) -> None:
+            if isinstance(node, dict):
+                data = node.get("spawn_data")
+                if isinstance(data, dict) and {"monster", "x", "y"} <= node.keys():
+                    found.append((label, data))
+                for value in node.values():
+                    walk(value, label)
+            elif isinstance(node, list):
+                for value in node:
+                    walk(value, label)
+
+        for path in SpawnDataContentContractTests.json_files("data"):
+            text = path.read_text(encoding="utf-8")
+            if '"spawn_data"' in text:
+                walk(json.loads(text), path.relative_to(ROOT).as_posix())
+        return found
+
+    def int_range(self, label: str, value: Any) -> tuple[int, int]:
+        values = value if isinstance(value, list) else [value]
+        self.assertIn(len(values), (1, 2), label)
+        for number in values:
+            self.assertIsInstance(number, int, label)
+            self.assertNotIsInstance(number, bool, label)
+        return values[0], values[-1]
+
+    def test_shipped_mapgen_spawn_data_is_loader_valid(self) -> None:
+        supported = {"ammo", "ammo_qty", "hp_percent", "patrol"}
+        seen: set[str] = set()
+        for path, data in self.mapgen_spawn_data():
+            label = f"{path}: {data}"
+            self.assertLessEqual(set(data), supported, label)
+            seen |= set(data)
+            if "ammo_qty" in data:
+                self.assertNotIn("ammo", data, label)
+                low, high = self.int_range(label, data["ammo_qty"])
+                self.assertTrue(0 <= low <= high, label)
+            if "hp_percent" in data:
+                low, high = self.int_range(label, data["hp_percent"])
+                self.assertTrue(1 <= low <= high <= 100, label)
+            for ammo in data.get("ammo", []):
+                self.assertLessEqual({"ammo_id", "qty"}, set(ammo), label)
+                self.int_range(label, ammo["qty"])
+            for patrol_point in data.get("patrol", []):
+                self.int_range(label, patrol_point["x"])
+                self.int_range(label, patrol_point["y"])
+        self.assertLessEqual({"ammo_qty", "hp_percent"}, seen)
+
+    def test_new_reward_and_turret_references_resolve(self) -> None:
+        def defined(directory: str, kind: str) -> set[str]:
+            ids: set[str] = set()
+            for path in self.json_files(directory):
+                objects = json.loads(path.read_text(encoding="utf-8"))
+                ids |= {obj["id"] for obj in objects
+                        if isinstance(obj, dict) and obj.get("type") == kind and "id" in obj}
+            return ids
+
+        groups = defined("data/json/itemgroups", "item_group")
+        for path in ("data/json/mapgen_palettes/lmoe.json", "data/mods/No_Hope/palettes.json"):
+            palette = entity(load_json(path), "palette", "empty_bunker_items")
+            referenced = {entry["item"] for entry in palette["items"]["!"]}
+            self.assertTrue(referenced, path)
+            self.assertLessEqual(referenced, groups, path)
+        monsters = defined("data/json/monsters", "MONSTER")
+        for monster_id in ("mon_turret_rifle", "mon_crows_m240", "mon_turret_bmg",
+                           "mon_turret_riot", "mon_turret_searchlight"):
+            self.assertIn(monster_id, monsters)
+        for layout in mapgens(load_json("data/json/mapgen/outpost.json")):
+            for entry in layout["object"].get("place_monster", []):
+                self.assertIn(entry["monster"], monsters)
+
+
 class MilitaryEncounterBackportTests(unittest.TestCase):
     def test_military_map_extras_are_rare_but_discoverable(self) -> None:
         regions = load_json("data/json/regional_map_settings.json")
