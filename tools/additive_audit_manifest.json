@@ -1213,6 +1213,30 @@
       "baseline_fingerprint": "999c5e7154c6d93e962216f03dc71b9f833ed20babeaa3e191ff61a6a1e6dc0c",
       "target_fingerprint": "09ab95633cea32359929c075549df23f3368ea32cf4a0da64377e3a8d9710add",
       "reason": "H6 replaces the guaranteed zombie group at the selected farm safe start with a generic human corpse item"
+    },
+    {
+      "path": "data/json/monsters/lab_security_drones.json",
+      "baseline_fingerprint": "be0c5e726271a35b65d3cd8b5893621321dba0cbdb5929f5fb525fccdab7cbec",
+      "target_fingerprint": "ab5d89a32e29f82f4f8a31201f848babb5fa047eb5439ef7980a64da84a8e651",
+      "reason": "Lab-security floor-marking update lab_security_corridor_c preserves existing items while recoloring its terrain"
+    },
+    {
+      "path": "data/json/monsters/lab_security_drones.json",
+      "baseline_fingerprint": "b9424b38e05a657701ecdad11383c3f5f2ff449e033e9f3dc14731e9565f784a",
+      "target_fingerprint": "8e7f0ff02db5cb0ac90f2d2182953608808832d9ad17cdeb2d46d85f2fce07b9",
+      "reason": "Lab-security floor-marking update lab_security_corridor_d preserves existing items while recoloring its terrain"
+    },
+    {
+      "path": "data/json/monsters/lab_security_drones.json",
+      "baseline_fingerprint": "8082ca412ecf8243c5f73041b305a96d438c36797523130f4847a17c882bab0f",
+      "target_fingerprint": "a1242ea2dcfe60f13ff2ad47bb329e7893f4b033914c8ebbf2f24b4d5b8295ee",
+      "reason": "Lab-security floor-marking update lab_security_corridor_e preserves existing items while recoloring its terrain"
+    },
+    {
+      "path": "data/json/monsters/lab_security_drones.json",
+      "baseline_fingerprint": "107f8186efb75520bf9540f033ba71ca470e06c9d136c01d88274e8ae54d8ea2",
+      "target_fingerprint": "cc1d4abbb67ad72a78d3ec56b96f0ba26152e926e31f8af1cec89661b28fbc7f",
+      "reason": "Lab-security floor-marking update lab_security_corridor_f preserves existing items while recoloring its terrain"
     }
   ],
   "allowed_resource_changes": [],
