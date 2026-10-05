@@ -206,6 +206,18 @@
     "tools": [ [ [ "anesthetic_kit", 6 ] ] ]
   },
   {
+    "id": "manual_cbm_installation",
+    "type": "requirement",
+    "//": "Sterile improvised surgery for positive-difficulty CBMs without a dedicated installation procedure.",
+    "qualities": [ { "id": "CUT_FINE", "level": 1 }, { "id": "SCREW_FINE", "level": 1 } ],
+    "tools": [ [ [ "soldering_iron", 50 ], [ "toolset", 50 ], [ "small_repairkit", 50 ], [ "large_repairkit", 50 ] ] ],
+    "components": [
+      [ [ "solder_wire", 20 ] ],
+      [ [ "disinfectant", 10 ], [ "disinfectant_makeshift", 20 ] ],
+      [ [ "bandages", 2 ], [ "bandages_makeshift_bleached", 4 ], [ "bandages_makeshift_boiled", 4 ] ]
+    ]
+  },
+  {
     "id": "cutting_wire_standard",
     "type": "requirement",
     "//": "Cutting wires",

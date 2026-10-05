@@ -446,4 +446,233 @@ class CbmScavengingAndUtilityBackportTests(unittest.TestCase):
         self.assertEqual({15}, {entry["chance"] for entry in electronics})
         self.assertEqual({8}, {entry["y"] for entry in electronics})
         self.assertFalse(any("repeat" in entry for entry in electronics))
+
+    def test_ferric_set_names_real_materials_and_covers_every_core_steel(self) -> None:
+        import re
+
+        source = (ROOT / "src/character.cpp").read_text(encoding="utf-8")
+        declared = dict(re.findall(r'static const material_id (material_\w+)\( "(\w+)" \);', source))
+        marker = "static const std::set<material_id> ferric = {"
+        self.assertIn(marker, source)
+        members = re.findall(r"\bmaterial_\w+", source.split(marker, 1)[1].split("};", 1)[0])
+        self.assertGreater(len(members), 0)
+        ferric = {declared[member] for member in members}
+
+        materials = {
+            obj["id"]
+            for _, obj in data_objects('"type": "material"')
+            if obj.get("type") == "material" and "id" in obj
+        }
+        self.assertEqual(set(), ferric - materials, "ferric ids that are not core materials")
+        core_steels = {
+            material
+            for material in materials
+            if material in {"iron", "steel"} or material.endswith(("_steel", "_steel_chain"))
+        }
+        self.assertGreater(len(core_steels), 0)
+        self.assertEqual(set(), core_steels - ferric, "core steels the Railgun ignores")
+
+    def test_railgun_has_one_live_definition_and_no_item_migration(self) -> None:
+        wanted = {"bio_railgun", "AID_bio_railgun"}
+        counts: dict[tuple[Any, Any], int] = {}
+        for path, obj in data_objects("bio_railgun"):
+            if obj.get("id") in wanted:
+                key = (obj.get("type"), obj.get("id"))
+                counts[key] = counts.get(key, 0) + 1
+            if "MIGRATION" in str(obj.get("type", "")).upper():
+                self.assertNotIn("bio_railgun", json.dumps(obj), path.name)
+        self.assertEqual(
+            {("bionic", "bio_railgun"): 1, ("BIONIC_ITEM", "bio_railgun"): 1,
+             ("GENERIC", "AID_bio_railgun"): 1},
+            counts,
+        )
+
+
+def data_objects(needle: str) -> list[tuple[pathlib.Path, dict[str, Any]]]:
+    """Return top-level core data objects from the JSON files whose text contains needle."""
+    found: list[tuple[pathlib.Path, dict[str, Any]]] = []
+    for path in sorted((ROOT / "data/json").rglob("*.json")):
+        text = path.read_text(encoding="utf-8")
+        if needle not in text:
+            continue
+        loaded = json.loads(text)
+        for obj in loaded if isinstance(loaded, list) else [loaded]:
+            if isinstance(obj, dict):
+                found.append((path, obj))
+    return found
+
+
+class ManualInstallationAndExodiiBackportTests(unittest.TestCase):
+    def test_manual_installation_is_disabled_in_core_and_enabled_only_by_mod(self) -> None:
+        core_options = load_json("data/core/game_balance.json")
+        manual_core = only(
+            core_options,
+            lambda obj: obj.get("type") == "EXTERNAL_OPTION"
+            and obj.get("name") == "MANUAL_BIONIC_INSTALLATION",
+            "core manual-install option",
+        )
+        self.assertEqual(("bool", False), (manual_core["stype"], manual_core["value"]))
+
+        modinfo = entity(
+            load_json("data/mods/ManualBionicInstall/modinfo.json"),
+            "MOD_INFO",
+            "manualbionicinstall",
+        )
+        self.assertEqual(["dda"], modinfo["dependencies"])
+        mod_options = load_json("data/mods/ManualBionicInstall/game_balance.json")
+        manual_mod = only(
+            mod_options,
+            lambda obj: obj.get("type") == "EXTERNAL_OPTION"
+            and obj.get("name") == "MANUAL_BIONIC_INSTALLATION",
+            "mod manual-install option",
+        )
+        self.assertEqual(("bool", True), (manual_mod["stype"], manual_mod["value"]))
+
+    def test_generic_manual_procedure_requires_tools_and_sterile_consumables(self) -> None:
+        requirements = load_json("data/json/requirements/toolsets.json")
+        procedure = entity(requirements, "requirement", "manual_cbm_installation")
+        self.assertEqual(
+            [{"id": "CUT_FINE", "level": 1}, {"id": "SCREW_FINE", "level": 1}],
+            procedure["qualities"],
+        )
+        self.assertEqual(
+            [["soldering_iron", 50], ["toolset", 50], ["small_repairkit", 50],
+             ["large_repairkit", 50]],
+            procedure["tools"][0],
+        )
+        self.assertEqual(
+            [
+                [["solder_wire", 20]],
+                [["disinfectant", 10], ["disinfectant_makeshift", 20]],
+                [["bandages", 2], ["bandages_makeshift_bleached", 4],
+                 ["bandages_makeshift_boiled", 4]],
+            ],
+            procedure["components"],
+        )
+
+    def test_every_shipped_cbm_has_a_positive_difficulty_for_the_manual_route(self) -> None:
+        cbms = [
+            obj
+            for _, obj in data_objects('"BIONIC_ITEM"')
+            if obj.get("type") == "BIONIC_ITEM" and "id" in obj
+        ]
+        self.assertGreater(len(cbms), 50)
+        invalid = sorted(
+            obj["id"]
+            for obj in cbms
+            if ("difficulty" in obj and not obj["difficulty"] > 0)
+            or ("difficulty" not in obj and "copy-from" not in obj)
+        )
+        self.assertEqual([], invalid)
+
+    def test_runtime_progression_cases_carry_tags_run_by_the_windows_gate(self) -> None:
+        import re
+
+        workflow = (ROOT / ".github/workflows/windows-release.yml").read_text(encoding="utf-8")
+        gates = (
+            (
+                "[throwing][bionic]",
+                "tests/throwing_test.cpp",
+                (
+                    "railgun requires and consumes its trigger power",
+                    "powered mech throw assist suppresses Railgun consistently",
+                    "railgun ignores inactive bionics and non-ferric throws",
+                ),
+            ),
+            (
+                "[bionics][progression]",
+                "tests/bionics_test.cpp",
+                (
+                    "manual CBM installation is an opt-in expert route",
+                    "Exodii retain the least expensive deterministic CBM service",
+                    "manual CBM installation refuses ineligible implants",
+                    "manual CBM installation helpers stay closed outside the opt-in route",
+                ),
+            ),
+        )
+        for gate, path, names in gates:
+            self.assertIn(f'"{gate}"', workflow)
+            required = set(re.findall(r"\[([^\]]+)\]", gate))
+            source = (ROOT / path).read_text(encoding="utf-8")
+            tags_by_name = {
+                name: set(re.findall(r"\[([^\]]+)\]", tags))
+                for name, tags in re.findall(r'TEST_CASE\(\s*"([^"]+)",\s*"([^"]*)"', source)
+            }
+            for name in names:
+                self.assertIn(name, tags_by_name, f"{path}: {name}")
+                self.assertGreaterEqual(tags_by_name[name], required, f"{path}: {name}")
+
+    def test_manual_runtime_keeps_skill_sterility_pain_and_failure_boundaries(self) -> None:
+        bionics_source = (ROOT / "src/bionics.cpp").read_text(encoding="utf-8")
+        actor_source = (ROOT / "src/iuse_actor.cpp").read_text(encoding="utf-8")
+        self.assertIn("manual_install_electronics = 8", bionics_source)
+        self.assertIn("manual_install_firstaid = 6", bionics_source)
+        self.assertIn("manual_install_mechanics = 4", bionics_source)
+        self.assertIn("manual_install_max_success = 95", bionics_source)
+        self.assertEqual(2, bionics_source.count("&installer == this"))
+        self.assertNotIn("installer.is_avatar()", bionics_source)
+        self.assertIn("requirement_manual_bionic_installation", bionics_source)
+        self.assertIn("if( difficulty <= 0 )", bionics_source)
+        self.assertIn("p.apply_manual_bionic_installation_pain", actor_source)
+        self.assertIn("This CBM has no manual installation procedure", actor_source)
+        self.assertIn("flag_FILTHY", actor_source)
+        self.assertIn("flag_NO_STERILE", actor_source)
+        self.assertIn("consume_anesth_requirement", actor_source)
+
+        runtime_test = (ROOT / "tests/bionics_test.cpp").read_text(encoding="utf-8")
+        self.assertIn("manual CBM installation is an opt-in expert route", runtime_test)
+        self.assertIn('override_option manual_install( "MANUAL_BIONIC_INSTALLATION"', runtime_test)
+        self.assertIn("electronics below 8", runtime_test)
+        self.assertIn("health care below 6", runtime_test)
+        self.assertIn("mechanics below 4", runtime_test)
+        self.assertIn("install_action->can_call", runtime_test)
+        self.assertIn("does not bypass implant sterility", runtime_test)
+        self.assertIn("uncapped > 95", runtime_test)
+        self.assertIn("zero-difficulty implants without a procedure are rejected safely", runtime_test)
+        self.assertIn("surgery-start pain cannot cancel the operation it just started", runtime_test)
+        self.assertIn("pain-immune installers do not gain pain", runtime_test)
+        self.assertIn("activity.is_interruptible()", runtime_test)
+
+    def test_exodii_stock_is_faster_but_remains_trust_gated(self) -> None:
+        definitions = load_json("data/json/npcs/exodii/exodii_merchant_definitions.json")
+        merchant = entity(definitions, "npc_class", "NC_EXODII_TYPE_1_Merchant")
+        self.assertEqual("3 days", merchant["restock_interval"])
+        groups = merchant["shopkeeper_item_group"]
+        self.assertEqual(
+            {
+                "EXODII_basic_trade": None,
+                "EXODII_CBM_Store_tier1_extra": 1,
+                "EXODII_CBM_Store_Tier2": 8,
+                "EXODII_CBM_Store_Tier3": 16,
+                "EXODII_Store_Salvage_Tech": 16,
+                "EXODII_CBM_Store_Tier4": 30,
+            },
+            {entry["group"]: entry.get("trust") for entry in groups},
+        )
+        self.assertTrue(all(entry.get("rigid") is True for entry in groups))
+        self.assertTrue(all("strict" not in entry for entry in groups))
+
+        talk = load_json("data/json/npcs/exodii/exodii_merchant_talk.json")
+        timers = [
+            obj
+            for obj in all_dicts(talk)
+            if obj.get("u_add_effect") == "u_exodii_interaction_timer_long"
+        ]
+        self.assertEqual(["3 days"], [timer["duration"] for timer in timers])
+
+    def test_exodii_discount_has_a_focused_runtime_gate(self) -> None:
+        trade_source = (ROOT / "src/npctrade.cpp").read_text(encoding="utf-8")
+        self.assertIn('faction_exodii( "exodii" )', trade_source)
+        self.assertIn("bionic_install_service_multiplier( installer )", trade_source)
+
+        runtime_test = (ROOT / "tests/bionics_test.cpp").read_text(encoding="utf-8")
+        self.assertIn("Exodii retain the least expensive deterministic CBM service", runtime_test)
+        self.assertIn("bionic_install_service_multiplier( rubik ) == 1", runtime_test)
+        self.assertIn("bionic_install_service_multiplier( ordinary_installer ) == 2", runtime_test)
+
+        workflow = (ROOT / ".github/workflows/windows-release.yml").read_text(encoding="utf-8")
+        self.assertIn("bionics_test.cpp", workflow)
+        self.assertIn('"[bionics][progression]"', workflow)
+
+
 if __name__ == "__main__": unittest.main()

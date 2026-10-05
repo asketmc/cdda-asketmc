@@ -54,5 +54,21 @@
         "material_restriction": [ "wood" ]
       }
     ]
+  },
+  {
+    "id": "test_bio_zero_difficulty",
+    "type": "bionic",
+    "name": { "str": "Zero-difficulty test bionic" },
+    "description": "Test-only bionic for validating invalid manual-install difficulty handling.",
+    "occupied_bodyparts": [ [ "torso", 1 ] ]
+  },
+  {
+    "id": "test_bio_zero_difficulty",
+    "copy-from": "bionic_general",
+    "type": "BIONIC_ITEM",
+    "name": { "str": "zero-difficulty test CBM" },
+    "description": "Test-only CBM for validating invalid manual-install difficulty handling.",
+    "price": 0,
+    "difficulty": 0
   }
 ]
