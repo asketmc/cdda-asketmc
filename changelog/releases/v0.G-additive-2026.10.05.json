@@ -1,0 +1,40 @@
+{
+  "baseline": false,
+  "baseline_entries": [],
+  "changes": [
+    {
+      "fragment_sha256": "de5be855bbdc8f190d5622f752262487ec6dcb28e76366e704ab513056047049",
+      "pr": 35
+    },
+    {
+      "fragment_sha256": "545e071bd144dccaec0239732732262c8ad19402ec49a80393614bc9bb60f8d4",
+      "pr": 32
+    },
+    {
+      "fragment_sha256": "84c0481a320f48af065316d10c7cc5a754cd740c1f597e4700120097c5631fed",
+      "pr": 33
+    },
+    {
+      "fragment_sha256": "d38a8df713b718dbfddc166c5b8158be3cf96b73bea5fe41eaae08edb3fe6fda",
+      "pr": 34
+    },
+    {
+      "fragment_sha256": "1f887d3eb3f1d53c2db7e76ce6b7a3f7038ed7434b40bbe364251a5204b086e1",
+      "pr": 36
+    },
+    {
+      "fragment_sha256": "af760c7766809eb8537fd9b8e21f2ac0b90ed218f9ae9b2f5aa41fa1d36c1bde",
+      "pr": 37
+    }
+  ],
+  "date": "2026-10-05",
+  "known_limits": [],
+  "previous_release": "v0.G-additive-2026.08.29.2",
+  "schema": 1,
+  "tag": "v0.G-additive-2026.10.05",
+  "title": "CDDA 0.G Additive 2026.10.05",
+  "validation": [
+    "The tag workflow must reproduce identical executable and ZIP hashes from two clean release builds.",
+    "The exact staged archive must pass checksum, metadata, extraction, and --check-mods dda validation before publication."
+  ]
+}
