@@ -22,6 +22,8 @@
 #include "type_id.h"
 
 static const skill_id skill_throw( "throw" );
+static const bionic_id bio_power_storage( "bio_power_storage" );
+static const bionic_id bio_railgun( "bio_railgun" );
 
 TEST_CASE( "throwing distance test", "[throwing], [balance]" )
 {
@@ -29,6 +31,69 @@ TEST_CASE( "throwing distance test", "[throwing], [balance]" )
     item grenade( "grenade" );
     CHECK( thrower.throw_range( grenade ) >= 30 );
     CHECK( thrower.throw_range( grenade ) <= 35 );
+}
+
+TEST_CASE( "railgun requires and consumes its trigger power", "[throwing][bionic]" )
+{
+    for( const char *item_id : { "pipe", "lc_cavalry_sabre", "lc_chainmail_hands" } ) {
+        DYNAMIC_SECTION( "Railgun enhances ferric item " << item_id ) {
+            clear_map();
+            standard_npc thrower( "Railgun thrower", tripoint( 60, 60, 0 ), {}, 4, 10, 10, 10,
+                                  10 );
+            const item thrown( item_id );
+            const int unassisted_range = thrower.throw_range( thrown );
+            const int unassisted_damage = thrower.thrown_item_adjusted_damage( thrown );
+
+            thrower.add_bionic( bio_power_storage );
+            thrower.set_power_level( 11_kJ );
+            give_and_activate_bionic( thrower, bio_railgun );
+            REQUIRE( thrower.get_power_level() == 10_kJ );
+
+            CHECK( thrower.throw_range( thrown ) > unassisted_range );
+            CHECK( thrower.thrown_item_adjusted_damage( thrown ) > unassisted_damage );
+            const dealt_projectile_attack powered_throw =
+                thrower.throw_item( tripoint( 61, 60, 0 ), thrown );
+            CHECK( powered_throw.proj.proj_effects.count( "LIGHTNING" ) == 1 );
+            CHECK( thrower.get_power_level() == 0_kJ );
+
+            thrower.set_power_level( 9_kJ );
+            CHECK( thrower.throw_range( thrown ) == unassisted_range );
+            CHECK( thrower.thrown_item_adjusted_damage( thrown ) == unassisted_damage );
+            const dealt_projectile_attack unpowered_throw =
+                thrower.throw_item( tripoint( 61, 60, 0 ), thrown );
+            CHECK( unpowered_throw.proj.proj_effects.count( "LIGHTNING" ) == 0 );
+            CHECK( thrower.get_power_level() == 9_kJ );
+        }
+    }
+}
+
+TEST_CASE( "powered mech throw assist suppresses Railgun consistently", "[throwing][bionic]" )
+{
+    clear_map();
+    standard_npc thrower( "Mounted Railgun thrower", tripoint( 60, 60, 0 ), {}, 4, 10, 10, 10,
+                          10 );
+    const item thrown( "pipe" );
+    thrower.add_bionic( bio_power_storage );
+    thrower.set_power_level( 11_kJ );
+    give_and_activate_bionic( thrower, bio_railgun );
+    REQUIRE( thrower.get_power_level() == 10_kJ );
+
+    monster &mech = spawn_test_monster( "mon_mech_lifter", tripoint( 61, 60, 0 ) );
+    thrower.mount_creature( mech );
+    REQUIRE( thrower.is_mounted() );
+
+    const int powered_range = thrower.throw_range( thrown );
+    const int powered_damage = thrower.thrown_item_adjusted_damage( thrown );
+    thrower.set_power_level( 9_kJ );
+    CHECK( thrower.throw_range( thrown ) == powered_range );
+    CHECK( thrower.thrown_item_adjusted_damage( thrown ) == powered_damage );
+
+    thrower.set_power_level( 10_kJ );
+    const dealt_projectile_attack assisted_throw =
+        thrower.throw_item( thrower.pos() + tripoint_east, thrown );
+    CHECK( assisted_throw.proj.proj_effects.count( "LIGHTNING" ) == 0 );
+    CHECK( thrower.get_power_level() == 10_kJ );
+    thrower.forced_dismount();
 }
 
 struct throw_test_data {

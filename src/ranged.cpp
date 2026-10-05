@@ -111,15 +111,7 @@ static const fault_id fault_gun_blackpowder( "fault_gun_blackpowder" );
 static const fault_id fault_gun_chamber_spent( "fault_gun_chamber_spent" );
 static const fault_id fault_gun_dirt( "fault_gun_dirt" );
 
-static const material_id material_budget_steel( "budget_steel" );
-static const material_id material_case_hardened_steel( "case_hardened_steel" );
 static const material_id material_glass( "glass" );
-static const material_id material_high_steel( "high_steel" );
-static const material_id material_iron( "iron" );
-static const material_id material_low_steel( "low_steel" );
-static const material_id material_med_steel( "med_steel" );
-static const material_id material_steel( "steel" );
-static const material_id material_tempered_steel( "tempered_steel" );
 
 static const proficiency_id proficiency_prof_bow_basic( "prof_bow_basic" );
 static const proficiency_id proficiency_prof_bow_expert( "prof_bow_expert" );
@@ -136,8 +128,6 @@ static const trait_id trait_BRAWLER( "BRAWLER" );
 static const trait_id trait_PYROMANIA( "PYROMANIA" );
 
 static const trap_str_id tr_practice_target( "tr_practice_target" );
-
-static const std::set<material_id> ferric = { material_iron, material_steel, material_budget_steel, material_case_hardened_steel, material_high_steel, material_low_steel, material_med_steel, material_tempered_steel };
 
 // Maximum duration of aim-and-fire loop, in turns
 static constexpr int AIF_DURATION_LIMIT = 10;
@@ -1157,8 +1147,7 @@ static int throwing_skill_adjusted( const Character &guy )
 int Character::thrown_item_adjusted_damage( const item &thrown ) const
 {
     const cata::optional<int> throw_assist = character_throw_assist( *this );
-    const bool do_railgun = has_active_bionic( bio_railgun ) && thrown.made_of_any( ferric ) &&
-                            !throw_assist;
+    const bool do_railgun = railgun_eligible_throw( thrown );
 
     // The damage dealt due to item's weight, player's strength, and skill level
     // Up to str/2 or weight/100g (lower), so 10 str is 5 damage before multipliers
@@ -1235,8 +1224,7 @@ dealt_projectile_attack Character::throw_item( const tripoint &target, const ite
     damage_instance &impact = proj.impact;
     std::set<std::string> &proj_effects = proj.proj_effects;
 
-    const bool do_railgun = has_active_bionic( bio_railgun ) && thrown.made_of_any( ferric ) &&
-                            !throw_assist;
+    const bool do_railgun = railgun_eligible_throw( thrown );
 
     impact.add_damage( damage_type::BASH, std::min( weight / 100.0_gram,
                        static_cast<double>( thrown_item_adjusted_damage( thrown ) ) ) );

@@ -215,70 +215,54 @@ jobs:
             "CROSS=${cross}" \
             "CCACHE=${cache_mode}" RELEASE=1 TILES=1 SOUND=1 LOCALIZE=0 RUNTESTS=1 \
             LINTJSON=0 ASTYLE=0 WARNINGS=-w BACKTRACE=1 LIBBACKTRACE=1 PCH=0 \
-            TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp mapgen_helpers.cpp options_helpers.cpp player_helpers.cpp stringmaker.cpp advanced_inventory_test.cpp butchery_progress_test.cpp climbing_test.cpp mapgen_spawn_data_test.cpp npc_hostility_test.cpp submap_load_test.cpp vehicle_power_test.cpp" \
+            TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp mapgen_helpers.cpp options_helpers.cpp player_helpers.cpp stringmaker.cpp advanced_inventory_test.cpp butchery_progress_test.cpp climbing_test.cpp mapgen_spawn_data_test.cpp npc_hostility_test.cpp submap_load_test.cpp throwing_test.cpp vehicle_power_test.cpp" \
             tests
           test_bin="tests/${first_prefix}cata_test.exe"
           test -s "${test_bin}"
           wine_bin="$(command -v wine || command -v wine64)"
-          WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
-            --user-dir=climbing-test-user --rng-seed 1 --reporter junit \
-            --out climbing-test-results.xml "[climbing][z-level]"
-          WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
-            --user-dir=npc-hostility-test-user --rng-seed 1 --reporter junit \
-            --out npc-hostility-test-results.xml "[npc][morale][hostility]"
-          WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
-            --user-dir=inventory-test-user --rng-seed 1 --reporter junit \
-            --out inventory-test-results.xml "[advanced_inventory][backport],[inventory][sorting][backport],[inventory][numeric][backport]"
-          WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
-            --user-dir=butchery-test-user --rng-seed 1 --reporter junit \
-            --out butchery-test-results.xml "[butchery][progress]"
-          run_progression_catch() {
-            local label="$1" user_dir="$2" output="$3" filter="$4" status=0
+          run_focused_catch() {
+            local label="$1"
+            local user_dir="$2"
+            local output="$3"
+            local filter="$4"
+            local status=0
             set +e
             WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
-              --user-dir="${user_dir}" --rng-seed 1 --reporter junit --out "${output}" "${filter}"
+              --user-dir="${user_dir}" --rng-seed 1 --reporter junit \
+              --out "${output}" "${filter}"
             status=$?
             set -e
-            if (( status )); then
-              python3 - "${label}" "${output}" <<'PY'
+            python3 - "${label}" "${output}" "${status}" <<'PY'
           import pathlib
           import sys
           import xml.etree.ElementTree as ET
 
-          label, path = sys.argv[1], pathlib.Path(sys.argv[2])
+          label, path, status = sys.argv[1], pathlib.Path(sys.argv[2]), int(sys.argv[3])
           if not path.is_file():
-              raise SystemExit(f"focused {label} gate produced no JUnit output")
+              raise SystemExit(f"focused {label} gate exited {status} without JUnit output")
           root = ET.parse(path).getroot()
-          for failure in root.findall(".//failure") + root.findall(".//error"):
+          cases = root.findall(".//testcase")
+          failures = root.findall(".//failure") + root.findall(".//error")
+          for failure in failures:
               print(f"focused {label}: {failure.get('message', '')}\n{failure.text or ''}")
+          if not cases:
+              raise SystemExit(f"focused {label} gate discovered zero test cases")
+          if failures:
+              raise SystemExit(f"focused {label} gate reported {len(failures)} failures")
+          if status:
+              raise SystemExit(f"focused {label} gate exited {status}")
+          print(f"focused {label} gate passed {len(cases)} test cases")
           PY
-              return "${status}"
-            fi
           }
-          run_progression_catch "mapgen spawn data" mapgen-spawn-test-user mapgen-spawn-test-results.xml "[mapgen][monster][progression]"
-          run_progression_catch "submap spawn data" submap-spawn-test-user submap-spawn-test-results.xml "[submap][load][spawn_data][progression]"
-          run_progression_catch "solar power" solar-power-test-user solar-power-test-results.xml "[vehicle][power][progression]"
-          python3 - <<'PY'
-          import xml.etree.ElementTree as ET
 
-          for label, path in (
-              ("climbing", "climbing-test-results.xml"),
-              ("NPC hostility", "npc-hostility-test-results.xml"),
-              ("inventory transfer", "inventory-test-results.xml"),
-              ("butchery progress", "butchery-test-results.xml"),
-              ("mapgen spawn data", "mapgen-spawn-test-results.xml"),
-              ("submap spawn data", "submap-spawn-test-results.xml"),
-              ("solar power", "solar-power-test-results.xml"),
-          ):
-              root = ET.parse(path).getroot()
-              cases = root.findall(".//testcase")
-              failures = root.findall(".//failure") + root.findall(".//error")
-              if not cases:
-                  raise SystemExit(f"focused {label} gate discovered zero test cases")
-              if failures:
-                  raise SystemExit(f"focused {label} gate reported {len(failures)} failures")
-              print(f"focused {label} gate passed {len(cases)} test cases")
-          PY
+          run_focused_catch "climbing" climbing-test-user climbing-test-results.xml "[climbing][z-level]"
+          run_focused_catch "NPC hostility" npc-hostility-test-user npc-hostility-test-results.xml "[npc][morale][hostility]"
+          run_focused_catch "inventory transfer" inventory-test-user inventory-test-results.xml "[advanced_inventory][backport],[inventory][sorting][backport],[inventory][numeric][backport]"
+          run_focused_catch "butchery progress" butchery-test-user butchery-test-results.xml "[butchery][progress]"
+          run_focused_catch "mapgen spawn data" mapgen-spawn-test-user mapgen-spawn-test-results.xml "[mapgen][monster][progression]"
+          run_focused_catch "submap spawn data" submap-spawn-test-user submap-spawn-test-results.xml "[submap][load][spawn_data][progression]"
+          run_focused_catch "Railgun power" railgun-test-user railgun-test-results.xml "[throwing][bionic]"
+          run_focused_catch "solar power" solar-power-test-user solar-power-test-results.xml "[vehicle][power][progression]"
 
           cp BUILD_MANIFEST.txt "${output_dir}/BUILD_MANIFEST.txt"
           if [[ "${RELEASE_BUILD}" == "true" ]]; then
