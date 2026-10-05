@@ -32,6 +32,7 @@ static const activity_id ACT_CRACKING( "ACT_CRACKING" );
 static const activity_id ACT_EBOOKSAVE( "ACT_EBOOKSAVE" );
 static const activity_id ACT_HACKSAW( "ACT_HACKSAW" );
 static const activity_id ACT_MULTIPLE_BUTCHER( "ACT_MULTIPLE_BUTCHER" );
+static const activity_id ACT_MULTIPLE_DISSECT( "ACT_MULTIPLE_DISSECT" );
 static const activity_id ACT_NULL( "ACT_NULL" );
 static const activity_id ACT_OXYTORCH( "ACT_OXYTORCH" );
 static const activity_id ACT_PRYING( "ACT_PRYING" );
@@ -129,6 +130,25 @@ TEST_CASE( "lost butchery corpse target loads as a quiet invalid location",
         } );
         CHECK( debug_message.find( "lost its target item" ) != std::string::npos );
     }
+}
+
+TEST_CASE( "lost bulk-dissection target resumes its saved multi activity",
+           "[activity][butchery][dissection][serialization]" )
+{
+    avatar &they = get_avatar();
+    clear_avatar();
+    JsonObject saved_activity = json_loader::from_string(
+                                    R"({"type":"ACT_DISSECT","actor":null,"targets":[{"type":"map","pos":[60,60,0],"idx":-1}]})" ).get_object();
+    they.activity.deserialize( saved_activity );
+    they.backlog.emplace_front( ACT_MULTIPLE_DISSECT );
+
+    const std::string debug_message = capture_debugmsg_during( [&they]() {
+        activity_handlers::butcher_finish( &they.activity, &they );
+    } );
+
+    CHECK( debug_message.empty() );
+    CHECK( they.activity.id() == ACT_MULTIPLE_DISSECT );
+    CHECK( they.backlog.empty() );
 }
 
 static const mtype_id mon_test_non_shearable( "mon_test_non_shearable" );

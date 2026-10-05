@@ -15,8 +15,10 @@
 #include "map.h"
 #include "map_helpers.h"
 #include "mtype.h"
+#include "npc.h"
 #include "player_activity.h"
 #include "player_helpers.h"
+#include "point.h"
 
 static const activity_id ACT_BLEED( "ACT_BLEED" );
 static const activity_id ACT_BUTCHER( "ACT_BUTCHER" );
@@ -24,12 +26,21 @@ static const activity_id ACT_BUTCHER_FULL( "ACT_BUTCHER_FULL" );
 static const activity_id ACT_DISMEMBER( "ACT_DISMEMBER" );
 static const activity_id ACT_DISSECT( "ACT_DISSECT" );
 static const activity_id ACT_FIELD_DRESS( "ACT_FIELD_DRESS" );
+static const activity_id ACT_MULTIPLE_DISSECT( "ACT_MULTIPLE_DISSECT" );
 static const activity_id ACT_QUARTER( "ACT_QUARTER" );
 static const activity_id ACT_SKIN( "ACT_SKIN" );
 
+static const faction_id faction_your_followers( "your_followers" );
+
 static const itype_id itype_knife_butcher( "knife_butcher" );
+static const itype_id itype_knife_steak( "knife_steak" );
+static const itype_id itype_misc_repairkit( "misc_repairkit" );
 static const itype_id itype_scalpel( "scalpel" );
+static const mtype_id mon_test_CBM( "mon_test_CBM" );
 static const mtype_id mon_test_bovine( "mon_test_bovine" );
+static const mtype_id mon_zombie( "mon_zombie" );
+static const skill_id skill_firstaid( "firstaid" );
+static const skill_id skill_speech( "speech" );
 static const skill_id skill_survival( "survival" );
 
 static item_location add_test_corpse( const tripoint &pos )
@@ -58,6 +69,123 @@ static player_activity set_up_activity( avatar &you, const activity_id &id,
     REQUIRE_FALSE( act.index );
     REQUIRE( act.moves_total > 0 );
     return act;
+}
+
+TEST_CASE( "dissection speed uses medical skill stats and fine cutting quality",
+           "[butchery][dissection][speed]" )
+{
+    avatar &you = get_avatar();
+    item corpse = item::make_corpse( mon_zombie );
+
+    SECTION( "First Aid 8 and a scalpel reduce a medium dissection to about 23 minutes" ) {
+        prepare_butcher( you );
+        you.set_skill_level( skill_firstaid, 8 );
+
+        CHECK( you.get_per() == 8 );
+        CHECK( you.get_dex() == 8 );
+        CHECK( butcher_time_to_cut( you, corpse, butcher_type::DISSECT ) == 142586 );
+    }
+
+    SECTION( "fine cutting quality follows the BN speed curve" ) {
+        prepare_butcher( you, itype_knife_steak );
+        CHECK( butcher_time_to_cut( you, corpse, butcher_type::DISSECT ) == 281250 );
+
+        prepare_butcher( you, itype_misc_repairkit );
+        CHECK( butcher_time_to_cut( you, corpse, butcher_type::DISSECT ) == 225000 );
+
+        prepare_butcher( you, itype_scalpel );
+        CHECK( butcher_time_to_cut( you, corpse, butcher_type::DISSECT ) == 180000 );
+    }
+
+    SECTION( "perception dexterity and quartering remain multiplicative" ) {
+        prepare_butcher( you );
+        you.per_max = 10;
+        you.dex_max = 10;
+        CHECK( butcher_time_to_cut( you, corpse, butcher_type::DISSECT ) == 173010 );
+
+        corpse.set_flag( flag_QUARTERED );
+        CHECK( butcher_time_to_cut( you, corpse, butcher_type::DISSECT ) == 43253 );
+    }
+}
+
+TEST_CASE( "dissection speed counts nearby followers as assistants",
+           "[butchery][dissection][speed][npc]" )
+{
+    avatar &you = get_avatar();
+    item corpse = item::make_corpse( mon_zombie );
+    const auto add_assistant = [&you]() -> npc & {
+        npc &assistant = spawn_npc( you.pos().xy() + point_east, "test_talker" );
+        clear_character( assistant );
+        assistant.set_fac( faction_your_followers );
+        assistant.set_attitude( NPCATT_FOLLOW );
+        REQUIRE( you.get_num_crafting_helpers( 3 ) == 1 );
+        return assistant;
+    };
+
+    SECTION( "one assistant speeds dissection and speech improves the help" ) {
+        prepare_butcher( you );
+        add_assistant();
+        CHECK( butcher_time_to_cut( you, corpse, butcher_type::DISSECT ) == 137615 );
+
+        you.set_skill_level( skill_speech, 10 );
+        CHECK( butcher_time_to_cut( you, corpse, butcher_type::DISSECT ) == 123119 );
+    }
+
+    SECTION( "an NPC butcher does not borrow the player's helpers" ) {
+        prepare_butcher( you, itype_knife_butcher );
+        const int alone = butcher_time_to_cut( you, corpse, butcher_type::QUICK );
+        npc &assistant = add_assistant();
+        item npc_knife( itype_knife_butcher );
+        REQUIRE( assistant.wield( npc_knife ) );
+
+        CHECK( butcher_time_to_cut( you, corpse, butcher_type::QUICK ) < alone );
+        CHECK( butcher_time_to_cut( assistant, corpse, butcher_type::QUICK ) == alone );
+    }
+}
+
+TEST_CASE( "bulk dissection marks its yields for the assigned worker",
+           "[butchery][dissection][activity]" )
+{
+    avatar &you = get_avatar();
+    prepare_butcher( you );
+    map &here = get_map();
+    item &corpse = here.add_item( you.pos(), item::make_corpse( mon_test_CBM ) );
+    player_activity act( ACT_DISSECT, 0, true );
+    act.targets.emplace_back( map_cursor( you.pos() ), &corpse );
+
+    // Dissects the corpse, then returns how many yields are reserved for the worker
+    // and how many are not.
+    const auto dissect = [&]() {
+        for( int i = 0; i < 10 && !act.is_null(); ++i ) {
+            activity_handlers::butcher_finish( &act, &you );
+        }
+        REQUIRE( act.is_null() );
+        you.activity.set_to_null();
+
+        std::pair<int, int> yields( 0, 0 );
+        for( const item &it : here.i_at( you.pos() ) ) {
+            if( it.has_var( "activity_var" ) && it.get_var( "activity_var" ) == you.name ) {
+                ++yields.first;
+            } else {
+                ++yields.second;
+            }
+        }
+        return yields;
+    };
+
+    SECTION( "a plain dissection leaves its yields unreserved" ) {
+        REQUIRE( you.backlog.empty() );
+        const std::pair<int, int> yields = dissect();
+        CHECK( yields.first == 0 );
+        CHECK( yields.second > 0 );
+    }
+
+    SECTION( "a dissection inside the bulk activity reserves its yields" ) {
+        you.backlog.emplace_front( ACT_MULTIPLE_DISSECT );
+        const std::pair<int, int> yields = dissect();
+        CHECK( yields.first > 0 );
+        CHECK( yields.second == 0 );
+    }
 }
 
 TEST_CASE( "corpse processing activities save independent progress",

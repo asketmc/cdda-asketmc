@@ -74,7 +74,7 @@ enum class do_activity_reason : int {
     NEEDS_CHOPPING,         // There is wood there to be chopped
     NEEDS_TREE_CHOPPING,    // There is a tree there that needs to be chopped
     NEEDS_BIG_BUTCHERING,   // There is at least one corpse there to butcher, and it's a big one
-    NEEDS_BUTCHERING,       // THere is at least one corpse there to butcher, and there's no need for additional tools
+    NEEDS_BUTCHERING,       // There is at least one corpse there to butcher, and there's no need for additional tools
     ALREADY_WORKING,        // somebody is already working there
     NEEDS_VEH_DECONST,       // There is a vehicle part there that we can deconstruct, given the right tools.
     NEEDS_VEH_REPAIR,       // There is a vehicle part there that can be repaired, given the right tools.
@@ -83,7 +83,8 @@ enum class do_activity_reason : int {
     NEEDS_MOP,               // This spot can be mopped, if a mop is present.
     NEEDS_FISHING,           // This spot can be fished, if the right tool is present.
     NEEDS_CRAFT,             // There is at least one item to craft.
-    NEEDS_DISASSEMBLE        // There is at least one item to disassemble.
+    NEEDS_DISASSEMBLE,       // There is at least one item to disassemble.
+    NEEDS_CUT_FINE           // There is at least one corpse there to dissect
 
 };
 

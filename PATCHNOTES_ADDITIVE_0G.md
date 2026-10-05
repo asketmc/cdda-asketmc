@@ -13,6 +13,24 @@ The matching Windows Tiles+Sound package is published under GitHub Releases.
 - Finished work clears its marker and produces its normal result once. Starting
   a quick method does not block switching to a finer method later.
 
+## Faster and bulk dissection
+
+- Dissection time now benefits from First Aid, perception, dexterity, fine-cutting
+  tool quality, and up to three nearby crafting helpers. A medium corpse with
+  First Aid 8, PER/DEX 8, and a normal scalpel takes about 23 minutes 46 seconds
+  before other setup requirements.
+- The zone activity menu can dissect every eligible corpse in nearby corpse-loot
+  zones and automatically fetch a fine-cutting tool. Followers can be assigned
+  the same job through dialogue; corpses are locked per worker so two followers
+  do not claim the same target.
+- A loaded dissection whose target vanished quietly resumes its bulk-dissection
+  backlog instead of falsely completing the whole job. NPC CBM discovery messages
+  identify the follower rather than speaking as the player.
+- BN #8361's activity-specific reality-bubble shrink was not transplanted. It
+  requires BN #8252's runtime-sized map, pathfinding, light, scent, minimap, and
+  submap-loader architecture; this 0.G base uses fixed-size caches, so copying
+  only the visible option/activity fields would be unsafe.
+
 ## Supported ledge descent
 
 - A ledge can be climbed down safely when the same one-level route is climbable

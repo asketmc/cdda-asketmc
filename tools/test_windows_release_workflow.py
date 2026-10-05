@@ -125,6 +125,8 @@ class WindowsReleaseWorkflowContractTest(unittest.TestCase):
         self.assertIn('run_focused_catch "NPC hostility"', self.workflow)
         self.assertIn('run_focused_catch "inventory transfer"', self.workflow)
         self.assertIn('run_focused_catch "butchery progress"', self.workflow)
+        self.assertIn('run_focused_catch "dissection"', self.workflow)
+        self.assertIn('"[butchery][dissection]"', self.workflow)
         self.assertIn('run_focused_catch "mapgen spawn data"', self.workflow)
         self.assertIn('run_focused_catch "submap spawn data"', self.workflow)
         self.assertIn('run_focused_catch "Railgun power"', self.workflow)

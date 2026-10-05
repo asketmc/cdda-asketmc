@@ -129,6 +129,7 @@ static const activity_id ACT_JACKHAMMER( "ACT_JACKHAMMER" );
 static const activity_id ACT_MEND_ITEM( "ACT_MEND_ITEM" );
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 static const activity_id ACT_MULTIPLE_BUTCHER( "ACT_MULTIPLE_BUTCHER" );
+static const activity_id ACT_MULTIPLE_DISSECT( "ACT_MULTIPLE_DISSECT" );
 static const activity_id ACT_MULTIPLE_CHOP_PLANKS( "ACT_MULTIPLE_CHOP_PLANKS" );
 static const activity_id ACT_MULTIPLE_CHOP_TREES( "ACT_MULTIPLE_CHOP_TREES" );
 static const activity_id ACT_MULTIPLE_CONSTRUCTION( "ACT_MULTIPLE_CONSTRUCTION" );
@@ -202,6 +203,7 @@ static const quality_id qual_CUT_FINE( "CUT_FINE" );
 
 static const skill_id skill_computer( "computer" );
 static const skill_id skill_firstaid( "firstaid" );
+static const skill_id skill_speech( "speech" );
 static const skill_id skill_survival( "survival" );
 
 static const species_id species_HUMAN( "HUMAN" );
@@ -231,6 +233,7 @@ activity_handlers::do_turn_functions = {
     { ACT_MULTIPLE_MINE, multiple_mine_do_turn },
     { ACT_MULTIPLE_MOP, multiple_mop_do_turn },
     { ACT_MULTIPLE_BUTCHER, multiple_butcher_do_turn },
+    { ACT_MULTIPLE_DISSECT, multiple_butcher_do_turn },
     { ACT_MULTIPLE_FARM, multiple_farm_do_turn },
     { ACT_FETCH_REQUIRED, fetch_do_turn },
     { ACT_BUILD, build_do_turn },
@@ -366,7 +369,14 @@ static bool check_butcher_dissect( const int roll )
     return !failed;
 }
 
-static bool butcher_dissect_item( item &what, const tripoint &pos,
+static bool is_bulk_corpse_activity( const Character &you )
+{
+    return !you.backlog.empty() &&
+           ( you.backlog.front().id() == ACT_MULTIPLE_BUTCHER ||
+             you.backlog.front().id() == ACT_MULTIPLE_DISSECT );
+}
+
+static bool butcher_dissect_item( item &what, Character &you,
                                   const time_point &age, const int roll )
 {
     if( roll < 0 ) {
@@ -376,11 +386,20 @@ static bool butcher_dissect_item( item &what, const tripoint &pos,
     map &here = get_map();
     if( what.is_bionic() && !success ) {
         item burnt_out_cbm( itype_burnt_out_bionic, age );
-        add_msg( m_good, _( "You discover a %s!" ), burnt_out_cbm.tname() );
-        here.add_item( pos, burnt_out_cbm );
+        if( is_bulk_corpse_activity( you ) ) {
+            burnt_out_cbm.set_var( "activity_var", you.name );
+        }
+        you.add_msg_player_or_npc( m_good, _( "You discover a %s!" ),
+                                   _( "<npcname> discovers a %s!" ), burnt_out_cbm.tname() );
+        here.add_item( you.pos(), burnt_out_cbm );
     } else if( success ) {
-        add_msg( m_good, _( "You discover a %s!" ), what.tname() );
-        here.add_item( pos, what );
+        item discovered = what;
+        if( is_bulk_corpse_activity( you ) ) {
+            discovered.set_var( "activity_var", you.name );
+        }
+        you.add_msg_player_or_npc( m_good, _( "You discover a %s!" ),
+                                   _( "<npcname> discovers a %s!" ), discovered.tname() );
+        here.add_item( you.pos(), discovered );
     }
     return success;
 }
@@ -602,6 +621,46 @@ static void set_up_butchery( player_activity &act, Character &you, butcher_type 
     act.index = false;
 }
 
+static double dissection_speed_factor( Character &you, int tool_quality )
+{
+    const auto bounded_bonus = []( double bonus, double minimum = -75.0,
+                                   double maximum = 100.0 ) {
+        return clamp( bonus, minimum, maximum ) / 100.0;
+    };
+    const auto bounded_factor = []( double factor ) {
+        return clamp( factor, 0.25, 2.0 );
+    };
+
+    const int firstaid = you.get_skill_level( skill_firstaid );
+    double firstaid_bonus = 0.0;
+    if( firstaid != 0 ) {
+        firstaid_bonus = 0.02 * std::pow( firstaid, 3 ) -
+                         0.5 * std::pow( firstaid, 2 ) + 6.0 * firstaid;
+    }
+    const double skill_factor = bounded_factor( 1.0 + bounded_bonus( firstaid_bonus ) );
+
+    const double perception_factor = bounded_factor( 1.0 + bounded_bonus( you.get_per() - 8 ) );
+    const double dexterity_factor = bounded_factor( 1.0 + bounded_bonus( you.get_dex() - 8 ) );
+
+    const int fine_cutting = std::max( 0, tool_quality );
+    const double tool_bonus = 2.0 * std::pow( fine_cutting, 3 ) -
+                              10.0 * std::pow( fine_cutting, 2 ) +
+                              32.0 * fine_cutting - 60.0;
+    const double tool_factor = bounded_factor( 1.0 + bounded_bonus( tool_bonus ) );
+
+    const int assistants = you.get_num_crafting_helpers( 3 );
+    double assistant_factor = 1.0;
+    if( assistants > 0 ) {
+        double assistant_bonus = 0.5 * std::pow( assistants, 3 ) -
+                                 7.0 * std::pow( assistants, 2 ) +
+                                 45.0 * assistants;
+        assistant_bonus *= 0.8 + 0.04 * you.get_skill_level( skill_speech );
+        assistant_factor += bounded_bonus( assistant_bonus, 0.0, 200.0 );
+    }
+
+    return skill_factor * perception_factor * dexterity_factor * tool_factor * assistant_factor;
+}
+
 int butcher_time_to_cut( Character &you, const item &corpse_item, const butcher_type action )
 {
     const mtype &corpse = *corpse_item.get_mtype();
@@ -630,6 +689,17 @@ int butcher_time_to_cut( Character &you, const item &corpse_item, const butcher_
             debugmsg( "ERROR: Invalid creature_size on %s", corpse.nname() );
             time_to_cut = 450; // default to medium
             break;
+    }
+
+    if( action == butcher_type::DISSECT ) {
+        // BN #6146 uses a 30 minute medium-corpse baseline, then lets medical skill,
+        // perception, dexterity, fine-cutting quality, and up to three helpers speed it up.
+        double dissection_moves = time_to_cut * 100.0 * 4.0;
+        if( corpse_item.has_flag( flag_QUARTERED ) ) {
+            dissection_moves /= 4.0;
+        }
+        return std::max( 1, static_cast<int>( std::round(
+                             dissection_moves / dissection_speed_factor( you, factor ) ) ) );
     }
 
     // At factor 0, base 100 time_to_cut remains 100. At factor 50, it's 50 , at factor 75 it's 25
@@ -663,7 +733,7 @@ int butcher_time_to_cut( Character &you, const item &corpse_item, const butcher_
             }
             break;
         case butcher_type::DISSECT:
-            time_to_cut *= 6;
+            // Handled above because dissection has its own speed-factor model.
             break;
         case butcher_type::NUM_TYPES:
             debugmsg( "ERROR: Invalid butcher_type" );
@@ -673,7 +743,7 @@ int butcher_time_to_cut( Character &you, const item &corpse_item, const butcher_
     if( corpse_item.has_flag( flag_QUARTERED ) ) {
         time_to_cut /= 4;
     }
-    time_to_cut *= ( 1.0f - ( get_player_character().get_num_crafting_helpers( 3 ) / 10.0f ) );
+    time_to_cut *= ( 1.0f - ( you.get_num_crafting_helpers( 3 ) / 10.0f ) );
     return time_to_cut;
 }
 
@@ -802,7 +872,7 @@ static std::vector<item> create_charge_items( const itype *drop, int count,
         for( const fault_id &flt : entry.faults ) {
             obj.faults.emplace( flt );
         }
-        if( !you.backlog.empty() && you.backlog.front().id() == ACT_MULTIPLE_BUTCHER ) {
+        if( is_bulk_corpse_activity( you ) ) {
             obj.set_var( "activity_var", you.name );
         }
         objs.push_back( obj );
@@ -863,7 +933,7 @@ static bool butchery_drops_harvest( item *corpse_item, const mtype &mt, Characte
             roll = roll < 0 ? 0 : roll;
             add_msg_debug( debugmode::DF_ACT_BUTCHER, "Roll penalty for corpse damage = %s",
                            0 - corpse_item->damage_level() );
-            butcher_dissect_item( *item, you.pos(), calendar::turn, roll );
+            butcher_dissect_item( *item, you, calendar::turn, roll );
         }
         if( dissectable_num > 0 ) {
             practice += dissectable_practice / dissectable_num;
@@ -1061,7 +1131,7 @@ static bool butchery_drops_harvest( item *corpse_item, const mtype &mt, Characte
                 for( const fault_id &flt : entry.faults ) {
                     obj.faults.emplace( flt );
                 }
-                if( !you.backlog.empty() && you.backlog.front().id() == ACT_MULTIPLE_BUTCHER ) {
+                if( is_bulk_corpse_activity( you ) ) {
                     obj.set_var( "activity_var", you.name );
                 }
                 for( int i = 0; i != roll; ++i ) {
@@ -1102,7 +1172,7 @@ static bool butchery_drops_harvest( item *corpse_item, const mtype &mt, Characte
             ruined_parts.set_mtype( &mt );
             ruined_parts.set_item_temperature( corpse_item->temperature );
             ruined_parts.set_rot( corpse_item->get_rot() );
-            if( !you.backlog.empty() && you.backlog.front().id() == ACT_MULTIPLE_BUTCHER ) {
+            if( is_bulk_corpse_activity( you ) ) {
                 ruined_parts.set_var( "activity_var", you.name );
             }
             here.add_item_or_charges( you.pos(), ruined_parts );
@@ -1170,6 +1240,7 @@ void activity_handlers::butcher_finish( player_activity *act, Character *you )
     if( !target || !target->is_corpse() ) {
         you->add_msg_if_player( m_info, _( "There's no corpse to butcher!" ) );
         act->set_to_null();
+        resume_for_multi_activities( *you );
         return;
     }
 

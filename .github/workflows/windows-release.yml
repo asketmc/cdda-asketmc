@@ -259,6 +259,7 @@ jobs:
           run_focused_catch "NPC hostility" npc-hostility-test-user npc-hostility-test-results.xml "[npc][morale][hostility]"
           run_focused_catch "inventory transfer" inventory-test-user inventory-test-results.xml "[advanced_inventory][backport],[inventory][sorting][backport],[inventory][numeric][backport]"
           run_focused_catch "butchery progress" butchery-test-user butchery-test-results.xml "[butchery][progress]"
+          run_focused_catch "dissection" dissection-test-user dissection-test-results.xml "[butchery][dissection]"
           run_focused_catch "mapgen spawn data" mapgen-spawn-test-user mapgen-spawn-test-results.xml "[mapgen][monster][progression]"
           run_focused_catch "submap spawn data" submap-spawn-test-user submap-spawn-test-results.xml "[submap][load][spawn_data][progression]"
           run_focused_catch "Railgun power" railgun-test-user railgun-test-results.xml "[throwing][bionic]"
