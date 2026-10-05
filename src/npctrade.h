@@ -47,6 +47,7 @@ namespace npc_trading
 {
 bool pay_npc( npc &np, int cost );
 
+int bionic_install_service_multiplier( const Character &installer );
 int bionic_install_price( Character &installer, Character &patient, item_location const &bionic );
 int adjusted_price( item const *it, int amount, Character const &buyer, Character const &seller );
 int trading_price( Character const &buyer, Character const &seller,

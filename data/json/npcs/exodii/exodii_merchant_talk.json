@@ -149,7 +149,7 @@
       {
         "//": "Governs the special CBM stock availability and restock, also adds a little extra faction rep.",
         "condition": { "not": { "u_has_effect": "u_exodii_interaction_timer_long" } },
-        "effect": [ { "u_add_effect": "u_exodii_interaction_timer_long", "duration": "7 days" }, { "u_add_faction_trust": 1 } ]
+        "effect": [ { "u_add_effect": "u_exodii_interaction_timer_long", "duration": "3 days" }, { "u_add_faction_trust": 1 } ]
       }
     ],
     "responses": [

@@ -81,6 +81,15 @@ namespace MapExtras
 {
 using FunctionMap = std::unordered_map<map_extra_id, map_extra_pointer>;
 
+struct military_turret_loadout {
+    mtype_id monster;
+    int ammo_min;
+    int ammo_max;
+};
+
+military_turret_loadout military_turret_for_roll( int roll );
+void add_military_turrets( map &m, const point &riot, int z, int roll );
+
 map_extra_pointer get_function( const map_extra_id &name );
 FunctionMap all_functions();
 std::vector<map_extra_id> get_all_function_names();

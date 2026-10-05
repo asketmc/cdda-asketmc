@@ -99,7 +99,7 @@
         "'f**|--------------------------------------------------------------|**f'",
         "'f**|qq  c|c c|c c|c |      f cc fTTf cc f      |XXXX5XXXXXXXXXXXXX|**f'",
         "'f**|-   c|c c|c c|c | mmmm f    ffff    f mmmm |XM    )!!!!!!!!!QX|**f'",
-        "'f**|qq  c|c c|c c|c | mm/m G            G m/mm |XM    )!UUUUUUPPPX|**f'",
+        "'f**|qq  c|c c|c c|c | mm/m G     i      G m/mm |XM    )!UUUUUUPPPX|**f'",
         "'f**|qq  c|c c|c c|c | mmmm f     h      f mmmm |XM    )!UUUUUUPPPX|**f'",
         "'f**|-   -|- -|- -|- |      f    x7x     f      |X     )!!!!!!!!!PX|**f'",
         "'f**|qq              |------4NN--------NN4------|X  XXXXXXXXXXXXXXX|**f'",
@@ -206,6 +206,7 @@
       "furniture": {
         "#": [ "f_bench" ],
         "/": [ "f_active_backup_generator" ],
+        "i": [ "f_compact_ASRG_containment" ],
         "0": [ "f_console" ],
         "5": [ "f_console" ],
         "6": [ "f_console" ],
@@ -312,7 +313,11 @@
         { "group": "prison_armor", "x": 39, "y": 26, "chance": 50, "repeat": [ 1, 2 ] }
       ],
       "liquids": { "T": { "liquid": "water_clean", "amount": [ 200, 600 ] } },
-      "fields": { "U": { "field": "fd_nuke_gas", "intensity": 3, "age": 990 }, "/": { "field": "fd_shock_vent" } },
+      "fields": {
+        "U": { "field": "fd_nuke_gas", "intensity": 3, "age": 990 },
+        "/": { "field": "fd_shock_vent" },
+        "i": { "field": "fd_shock_vent" }
+      },
       "monster": { "!": { "monster": "mon_hazmatbot", "chance": 5 } },
       "monsters": {
         "h": { "monster": "GROUP_ZOMBIE", "chance": 50 },

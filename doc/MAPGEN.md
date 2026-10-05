@@ -566,11 +566,15 @@ This places "mon_secubot" at random coordinate (7-18, 7-18). The monster is plac
 repeated by random number of times `[1-3]`. The monster will spawn with 20-30 5.56x45mm rounds.
 
 ### "spawn_data" for monsters
-This optional object can have two fields:
+This optional object can have four fields:
 | Field       | Description
 | ---         | ---
 | ammo        | A list of objects, each of which has an `"ammo_id"` field and a `"qty"` list of two integers. The monster will spawn with items of "ammo_id", with at least the first number in the "qty" and no more than the second.
+| ammo_qty    | A quantity or ascending two-integer range applied to every ammunition pool in the loaded monster type's `starting_ammo`. This preserves ammunition overrides from active mods. It cannot be combined with `ammo`.
 | patrol      | A list of objects, each of which has an `"x"` field and a `"y"` field. Either value can be a range or a single number. The x,y co-ordinates define a patrol point as a relative mapsquare point offset from the (0, 0) local mapsquare of the overmap terrain tile that the monster spawns in. Patrol points are converted to absolute mapsquare tripoints inside the monster generator.
+| hp_percent  | Initial hit points as a percentage of maximum, from 1 through 100. May be one integer or an ascending two-integer range. Defaults to 100.
+
+All `spawn_data` fields are retained if the pending spawn is saved before the monster is generated.
 
 Monsters with a patrol point list will move to each patrol point, in order, whenever they have no more pressing action to take on their turn. Upon reaching the last point in the patrol point list, the monster will continue on to the first point in the list.
 

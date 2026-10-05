@@ -1494,6 +1494,10 @@ class Character : public Creature, public visitable
         bool has_enough_anesth( const itype &cbm, Character &patient ) const;
         bool has_enough_anesth( const itype &cbm ) const;
         void consume_anesth_requirement( const itype &cbm, Character &patient );
+        /** Whether the opt-in generic manual route is enabled and the skill floor is met. */
+        ret_val<void> can_use_manual_bionic_installation() const;
+        /** Apply improvised-surgery pain and report whether the character actually gained pain. */
+        bool apply_manual_bionic_installation_pain( int difficulty );
         /**Has the required equipment for manual installation*/
         bool has_installation_requirement( const bionic_id &bid ) const;
         void consume_installation_requirement( const bionic_id &bid );
@@ -1951,6 +1955,8 @@ class Character : public Creature, public visitable
         int thrown_item_adjusted_damage( const item &thrown ) const;
         // calculates the total damage possible from a thrown item, without resistances and such.
         int thrown_item_total_damage_raw( const item &thrown ) const;
+        /** Whether this throw can receive the Railgun range, damage, and projectile effects. */
+        bool railgun_eligible_throw( const item &thrown ) const;
         /** Maximum thrown range with a given item, taking all active effects into account. */
         int throw_range( const item & ) const;
         /** Dispersion of a thrown item, against a given target, taking into account whether or not the throw was blind. */

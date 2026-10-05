@@ -1146,6 +1146,7 @@
       "gaspumps": { "p": { "fuel": "jp8", "amount": [ 200000, 1000000 ] } },
       "place_loot": [
         { "group": "mil_base_hmg", "x": 65, "y": 46, "chance": 10, "magazine": 100 },
+        { "group": "bionics_mil", "x": 26, "y": 15, "chance": 25 },
         { "group": "SUS_janitors_closet", "x": 22, "y": 26, "chance": 90, "repeat": [ 1, 2 ] },
         { "item": "morphine", "x": 28, "y": 25, "chance": 50, "repeat": [ 20, 60 ] },
         { "item": "tramadol", "x": 28, "y": 25, "chance": 50, "repeat": [ 20, 60 ] },

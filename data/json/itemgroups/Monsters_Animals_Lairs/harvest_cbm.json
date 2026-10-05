@@ -189,6 +189,7 @@
     "items": [
       [ "bio_flashbang", 50 ],
       [ "bio_pitch_perfect", 10 ],
+      [ "bio_railgun", 3 ],
       [ "bio_laser", 20 ],
       [ "bio_shotgun", 50 ],
       [ "bio_shockwave", 1 ],

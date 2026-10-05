@@ -59,6 +59,7 @@ jobs:
             tools.test_inventory_transfer_qol \
             tools.test_h6_antigrind \
             tools.test_h6_backup_generator \
+            tools.test_progression_backports \
             tools.test_windows_audio_recovery \
             tools.gfx_tools.test_backport_tileset_release \
             tools.gfx_tools.test_build_ultica_hires \

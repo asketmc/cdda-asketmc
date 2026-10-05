@@ -8,12 +8,18 @@
 #include "bionics.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "faction.h"
 #include "game.h"
 #include "item.h"
 #include "item_pocket.h"
+#include "itype.h"
+#include "iuse.h"
 #include "map_helpers.h"
 #include "npc.h"
+#include "npctrade.h"
+#include "options_helpers.h"
 #include "pimpl.h"
+#include "player_activity.h"
 #include "player_helpers.h"
 #include "ret_val.h"
 #include "type_id.h"
@@ -30,10 +36,19 @@ static const bionic_id bio_fuel_wood( "bio_fuel_wood" );
 static const bionic_id bio_power_storage( "bio_power_storage" );
 // Change to some other weapon CBM if bio_surgical_razor is ever removed
 static const bionic_id bio_surgical_razor( "bio_surgical_razor" );
+static const faction_id faction_exodii( "exodii" );
+static const faction_id faction_free_merchants( "free_merchants" );
 // Any item that can be wielded
+static const flag_id json_flag_FILTHY( "FILTHY" );
+static const flag_id json_flag_NO_STERILE( "NO_STERILE" );
 static const flag_id json_flag_PSEUDO( "PSEUDO" );
 static const itype_id itype_solarpack_on( "solarpack_on" );
 static const itype_id itype_test_backpack( "test_backpack" );
+static const skill_id skill_electronics( "electronics" );
+static const skill_id skill_firstaid( "firstaid" );
+static const skill_id skill_mechanics( "mechanics" );
+static const activity_id ACT_OPERATION( "ACT_OPERATION" );
+static const trait_id trait_NOPAIN( "NOPAIN" );
 
 static void clear_bionics( Character &you )
 {
@@ -605,4 +620,127 @@ TEST_CASE( "fueled bionics", "[bionics] [item]" )
 
     clear_bionics( dummy );
     calendar::turn = calendar::turn_zero;
+}
+
+TEST_CASE( "manual CBM installation is an opt-in expert route",
+           "[bionics][manual_install][progression]" )
+{
+    avatar &installer = get_avatar();
+    clear_avatar();
+    item cbm( "bio_adrenaline" );
+    const use_function *install_action = cbm.type->get_use( "install_bionic" );
+    REQUIRE( install_action != nullptr );
+
+    installer.set_skill_level( skill_electronics, 8 );
+    installer.set_skill_level( skill_firstaid, 6 );
+    installer.set_skill_level( skill_mechanics, 4 );
+
+    SECTION( "the route is unavailable by default" ) {
+        override_option manual_install( "MANUAL_BIONIC_INSTALLATION", "false" );
+        CHECK_FALSE( installer.can_use_manual_bionic_installation().success() );
+        CHECK_FALSE( install_action->can_call( installer, cbm, false, installer.pos() ).success() );
+    }
+
+    SECTION( "every skill floor is mandatory" ) {
+        override_option manual_install( "MANUAL_BIONIC_INSTALLATION", "true" );
+        REQUIRE( installer.can_use_manual_bionic_installation().success() );
+        REQUIRE( install_action->can_call( installer, cbm, false, installer.pos() ).success() );
+
+        SECTION( "electronics below 8" ) {
+            installer.set_skill_level( skill_electronics, 7 );
+            CHECK_FALSE( installer.can_use_manual_bionic_installation().success() );
+            CHECK_FALSE( install_action->can_call( installer, cbm, false, installer.pos() ).success() );
+        }
+
+        SECTION( "health care below 6" ) {
+            installer.set_skill_level( skill_firstaid, 5 );
+            CHECK_FALSE( installer.can_use_manual_bionic_installation().success() );
+            CHECK_FALSE( install_action->can_call( installer, cbm, false, installer.pos() ).success() );
+        }
+
+        SECTION( "mechanics below 4" ) {
+            installer.set_skill_level( skill_mechanics, 3 );
+            CHECK_FALSE( installer.can_use_manual_bionic_installation().success() );
+            CHECK_FALSE( install_action->can_call( installer, cbm, false, installer.pos() ).success() );
+        }
+    }
+
+    SECTION( "the opt-in route does not bypass implant sterility" ) {
+        override_option manual_install( "MANUAL_BIONIC_INSTALLATION", "true" );
+        REQUIRE( install_action->can_call( installer, cbm, false, installer.pos() ).success() );
+
+        SECTION( "filthy implant" ) {
+            cbm.set_flag( json_flag_FILTHY );
+            CHECK_FALSE( install_action->can_call( installer, cbm, false, installer.pos() ).success() );
+        }
+
+        SECTION( "non-sterile implant" ) {
+            cbm.set_flag( json_flag_NO_STERILE );
+            CHECK_FALSE( install_action->can_call( installer, cbm, false, installer.pos() ).success() );
+        }
+    }
+
+    SECTION( "the improvised route always retains failure risk" ) {
+        override_option manual_install( "MANUAL_BIONIC_INSTALLATION", "true" );
+        const int uncapped = bionic_success_chance( false, 100, 1, installer );
+        REQUIRE( uncapped > 95 );
+        CHECK( bionic_success_chance( false, 100, 1, installer, 95 ) == 95 );
+    }
+
+    SECTION( "zero-difficulty implants without a procedure are rejected safely" ) {
+        override_option manual_install( "MANUAL_BIONIC_INSTALLATION", "true" );
+        item zero_difficulty_cbm( "test_bio_zero_difficulty" );
+        const use_function *zero_install_action =
+            zero_difficulty_cbm.type->get_use( "install_bionic" );
+        REQUIRE( zero_install_action != nullptr );
+        CHECK_FALSE( zero_install_action->can_call( installer, zero_difficulty_cbm, false,
+                     installer.pos() ).success() );
+        CHECK( bionic_success_chance( false, 100, 0, installer, 95 ) == 95 );
+    }
+
+    SECTION( "surgery-start pain cannot cancel the operation it just started" ) {
+        override_option manual_install( "MANUAL_BIONIC_INSTALLATION", "true" );
+        REQUIRE( installer.install_bionics( *cbm.type, installer, false ) );
+        REQUIRE( installer.activity.id() == ACT_OPERATION );
+        REQUIRE_FALSE( installer.activity.is_interruptible() );
+        const int pain_before = installer.get_pain();
+
+        CHECK( installer.apply_manual_bionic_installation_pain( cbm.type->bionic->difficulty ) );
+
+        CHECK( installer.activity.id() == ACT_OPERATION );
+        CHECK( installer.get_pain() > pain_before );
+        installer.cancel_activity();
+    }
+
+    SECTION( "pain-immune installers do not gain pain or report a painful start" ) {
+        override_option manual_install( "MANUAL_BIONIC_INSTALLATION", "true" );
+        installer.set_mutation( trait_NOPAIN );
+        REQUIRE( installer.install_bionics( *cbm.type, installer, false ) );
+        REQUIRE( installer.activity.id() == ACT_OPERATION );
+        const int pain_before = installer.get_pain();
+
+        CHECK_FALSE( installer.apply_manual_bionic_installation_pain( cbm.type->bionic->difficulty ) );
+
+        CHECK( installer.activity.id() == ACT_OPERATION );
+        CHECK( installer.get_pain() == pain_before );
+        installer.cancel_activity();
+    }
+}
+
+TEST_CASE( "Exodii retain the least expensive deterministic CBM service",
+           "[bionics][exodii][progression]" )
+{
+    g->faction_manager_ptr->create_if_needed();
+
+    standard_npc rubik( "Rubik" );
+    rubik.set_fac( faction_exodii );
+    REQUIRE( rubik.get_fac_id() == faction_exodii );
+    CHECK( npc_trading::bionic_install_service_multiplier( rubik ) == 1 );
+
+    standard_npc ordinary_installer( "Ordinary installer" );
+    ordinary_installer.set_fac( faction_free_merchants );
+    REQUIRE( ordinary_installer.get_fac_id() == faction_free_merchants );
+    CHECK( npc_trading::bionic_install_service_multiplier( ordinary_installer ) == 2 );
+
+    CHECK( npc_trading::bionic_install_service_multiplier( get_player_character() ) == 2 );
 }

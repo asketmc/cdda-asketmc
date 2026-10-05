@@ -876,6 +876,70 @@ ready-to-install implants.
 
 </details>
 
+## Classic exploration and practical solar power
+
+- Standard solar panels produce 90 W while retaining seasonal, cloud, time-of-day, and obstruction effects; derived panels keep their proportional tiers.
+- Compact ASRG power returns to the irradiator. Ordinary outposts and shipwrecks retain fuel-burning backup generators.
+- Ordinary LMOEs are more discoverable and guarantee one hidden survival-firearm cache per underground layout; No Hope retains its scarcity override. Occupied and quest LMOEs are unchanged.
+- Classic, central, and ice labs are more likely but remain unique map specials. The autodoc finale guarantees one common CBM roll; existing maps are untouched.
+
+## Dangerous military salvage sites
+
+- Military field and road extras remain rare but are discoverable again.
+- Military roadblocks can field damaged, partly loaded M249, M240, or M2 CROWS turrets; military outposts may add two damaged M249s inside the retained perimeter lights.
+- Police roadblocks still use riot-control platforms.
+
+## Independent CBM scavenging
+
+- Scientists, technicians, military zombies, bio-operators, and Exodii
+  zomborgs retain the fork's skill-scaled dissection route.  Recovered implants
+  are filthy, non-sterile, unpackaged, and salvaged.  Each dissection salvage
+  entry is capped at five CBMs.
+- Hospitals, mines, science loot, and Robofac trade again have low-weight
+  thematic CBM entries.  These complement corpse salvage and Exodii stock
+  instead of replacing either route.
+- Bionic basements guarantee one common CBM cache.  Bunkers and military bases
+  have rare military caches; mortuaries, police evidence rooms, prison autodocs,
+  and electronics stores have sparse common-CBM caches.
+- Banks, generic vaults, random loot, survivor lairs, storage units, and fire
+  towers do not receive broad CBM restoration.
+
+## Classic CBM utility
+
+- The Integrated Multitool again supplies hammer, saw, wrench, wheel-fastening,
+  screwdriver, cutting, prying, nail-pulling, and drilling qualities in both its
+  stowed and extended forms.  Its existing welding and repair actions remain.
+- The Railgun returns as a separate active CBM without removing Throwing Assist.
+  Ferric throws gain range, damage, and lightning only when at least 10 kJ is
+  available; each enhanced throw consumes the full 10 kJ trigger cost.
+- Railgun implants can be found through rare military pools, elite
+  bio-operators, zomborg salvage, and tier-three Exodii stock.  Installation
+  data remains in the autodoc installation-program pool.
+
+## Optional expert CBM self-installation
+
+- The bundled **Manual Bionic Installation** mod is disabled by default. When
+  selected for a world, it opens an improvised route for positive-difficulty
+  CBMs that lack a dedicated manual procedure; existing dedicated procedures
+  and zero-difficulty implants remain unchanged.
+- The route requires electronics 8, health care 6, mechanics 4, fine surgical
+  tools, a charged soldering or repair tool, solder, disinfectant, sterile
+  dressings, and the normal difficulty- and body-weight-scaled anesthetic.
+- Filthy, non-sterile, and already-deployed CBMs remain unusable. Improvised
+  surgery causes pain unless the installer is pain-immune and never exceeds
+  95% success, preserving the existing damage and faulty-install consequences
+  when it fails.
+
+## Faster but still gated Exodii service
+
+- Rubik restocks and can award the recurring interaction trust point every
+  three days. CBM stock tiers unlock at Exodii trust 1, 8, 16, and 30.
+- Locked higher-tier stock can accumulate before access, but Rubik still
+  refuses to sell it until the matching trust threshold is reached.
+- Exodii installation uses a one-times implant-price service multiplier; other
+  installers retain the two-times multiplier. Item ownership and trading costs
+  still apply, and independent scavenging remains available.
+
 ## Optional mod: Useful Helicopters Experimental
 
 This is installed but **not enabled by default**. Enabling the mod adds:

@@ -930,6 +930,7 @@
     "type": "palette",
     "id": "empty_bunker_items",
     "items": {
+      "!": [ { "item": "cannedfood", "chance": 10, "repeat": [ 1, 5 ] }, { "item": "pasta", "chance": 10, "repeat": [ 1, 3 ] } ],
       "b": [ { "item": "manuals", "chance": 10 }, { "item": "textbooks", "chance": 10 } ],
       "B": { "item": "bed", "chance": 70, "repeat": [ 1, 2 ] },
       "c": { "item": "hardware", "chance": 10 },

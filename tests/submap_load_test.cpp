@@ -1245,7 +1245,7 @@ TEST_CASE( "submap_cosmetics_load", "[submap][load]" )
     REQUIRE( sm.cosmetics.size() == 5 );
 }
 
-TEST_CASE( "submap_spawns_load", "[submap][load]" )
+TEST_CASE( "submap_spawns_load", "[submap][load][spawn_data][progression]" )
 {
     submap sm;
     load_from_jsin( sm, submap_spawns );
@@ -1291,6 +1291,9 @@ TEST_CASE( "submap_spawns_load", "[submap][load]" )
     CHECK( nw.type.str() == "mon_fish_eel" );
     CHECK( !nw.friendly );
     CHECK( nw.name == "Bob" );
+    CHECK( nw.data.ammo.empty() );
+    CHECK( nw.data.ammo_qty.val == -1 );
+    CHECK( nw.data.hp_percent.val == 100 );
     CHECK( ne.count == 1 );
     CHECK( ne.type.str() == "mon_cockatrice" );
     CHECK( !ne.friendly );
@@ -1310,6 +1313,65 @@ TEST_CASE( "submap_spawns_load", "[submap][load]" )
 
     // Also, check we have no other spawns
     CHECK( sm.spawns.size() == 5 );
+}
+
+TEST_CASE( "submap spawn_data round-trips", "[submap][load][spawn_data][progression]" )
+{
+    static const itype_id itype_556( "556" );
+    static const mtype_id mon_turret_bmg( "mon_turret_bmg" );
+    static const mtype_id mon_turret_rifle( "mon_turret_rifle" );
+
+    submap original;
+    original.set_all_ter( t_dirt );
+    original.spawns.emplace_back( mon_turret_rifle, 1, point( 5, 5 ), -1, -1, false, "default" );
+
+    spawn_data loaded_ammo;
+    loaded_ammo.ammo_qty = jmapgen_int( 80, 240 );
+    loaded_ammo.hp_percent = jmapgen_int( 30, 70 );
+    loaded_ammo.patrol_points_rel_ms = { point( -12, 4 ), point( 24, 18 ) };
+    original.spawns.emplace_back( mon_turret_rifle, 1, corner_nw, -1, -1, false,
+                                  "damaged rifle turret", loaded_ammo );
+
+    spawn_data explicit_ammo;
+    explicit_ammo.ammo.emplace( itype_556, jmapgen_int( 20, 60 ) );
+    explicit_ammo.hp_percent = jmapgen_int( 45 );
+    original.spawns.emplace_back( mon_turret_bmg, 1, corner_se, -1, -1, false,
+                                  "damaged heavy turret", explicit_ammo );
+
+    std::ostringstream saved;
+    JsonOut json( saved );
+    json.start_object();
+    json.member( "version", savegame_version );
+    original.store( json );
+    json.end_object();
+
+    JsonArray stored = json_loader::from_string( saved.str() ).get_object().get_array( "spawns" );
+    CHECK( stored.get_array( 0 ).size() == 8 );
+    CHECK( stored.get_array( 1 ).size() == 9 );
+    CHECK( stored.get_array( 2 ).size() == 9 );
+
+    submap restored;
+    load_from_jsin( restored, json_loader::from_string( saved.str() ) );
+    REQUIRE( restored.spawns.size() == 3 );
+    CHECK( restored.spawns[0].data.is_default() );
+
+    const spawn_data &restored_loaded = restored.spawns[1].data;
+    CHECK( restored_loaded.ammo.empty() );
+    CHECK( restored_loaded.ammo_qty.val == 80 );
+    CHECK( restored_loaded.ammo_qty.valmax == 240 );
+    CHECK( restored_loaded.hp_percent.val == 30 );
+    CHECK( restored_loaded.hp_percent.valmax == 70 );
+    REQUIRE( restored_loaded.patrol_points_rel_ms.size() == 2 );
+    CHECK( restored_loaded.patrol_points_rel_ms[0] == point( -12, 4 ) );
+    CHECK( restored_loaded.patrol_points_rel_ms[1] == point( 24, 18 ) );
+
+    const spawn_data &restored_explicit = restored.spawns[2].data;
+    REQUIRE( restored_explicit.ammo.count( itype_556 ) == 1 );
+    CHECK( restored_explicit.ammo.at( itype_556 ).val == 20 );
+    CHECK( restored_explicit.ammo.at( itype_556 ).valmax == 60 );
+    CHECK( restored_explicit.ammo_qty.val == -1 );
+    CHECK( restored_explicit.hp_percent.val == 45 );
+    CHECK( restored_explicit.hp_percent.valmax == 45 );
 }
 
 TEST_CASE( "submap_vehicle_load", "[submap][load]" )

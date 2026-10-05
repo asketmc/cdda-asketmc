@@ -1689,7 +1689,7 @@
     "damage_modifier": 10,
     "durability": 20,
     "description": "A solar panel.",
-    "epower": 50,
+    "epower": 90,
     "item": "solar_panel",
     "location": "on_roof",
     "requirements": {
