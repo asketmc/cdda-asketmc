@@ -25,6 +25,7 @@
 #include "type_id.h"
 #include "units.h"
 
+static const bionic_id bio_adrenaline( "bio_adrenaline" );
 static const bionic_id bio_batteries( "bio_batteries" );
 // Change to some other weapon CBM if bio_blade is ever removed
 static const bionic_id bio_blade( "bio_blade" );
@@ -38,6 +39,7 @@ static const bionic_id bio_power_storage( "bio_power_storage" );
 static const bionic_id bio_surgical_razor( "bio_surgical_razor" );
 static const faction_id faction_exodii( "exodii" );
 static const faction_id faction_free_merchants( "free_merchants" );
+static const fault_id fault_bionic_salvaged( "fault_bionic_salvaged" );
 // Any item that can be wielded
 static const flag_id json_flag_FILTHY( "FILTHY" );
 static const flag_id json_flag_NO_STERILE( "NO_STERILE" );
@@ -743,4 +745,58 @@ TEST_CASE( "Exodii retain the least expensive deterministic CBM service",
     CHECK( npc_trading::bionic_install_service_multiplier( ordinary_installer ) == 2 );
 
     CHECK( npc_trading::bionic_install_service_multiplier( get_player_character() ) == 2 );
+}
+
+TEST_CASE( "manual CBM installation refuses ineligible implants",
+           "[bionics][manual_install][progression]" )
+{
+    avatar &installer = get_avatar();
+    clear_avatar();
+    override_option manual_install( "MANUAL_BIONIC_INSTALLATION", "true" );
+    installer.set_skill_level( skill_electronics, 8 );
+    installer.set_skill_level( skill_firstaid, 6 );
+    installer.set_skill_level( skill_mechanics, 4 );
+
+    item cbm( "bio_adrenaline" );
+    const use_function *install_action = cbm.type->get_use( "install_bionic" );
+    REQUIRE( install_action != nullptr );
+    REQUIRE( install_action->can_call( installer, cbm, false, installer.pos() ).success() );
+
+    SECTION( "implants salvaged from corpses" ) {
+        cbm.faults.insert( fault_bionic_salvaged );
+        CHECK_FALSE( install_action->can_call( installer, cbm, false, installer.pos() ).success() );
+    }
+
+    SECTION( "bionics that are already installed" ) {
+        installer.add_bionic( bio_adrenaline );
+        REQUIRE( installer.has_bionic( bio_adrenaline ) );
+        CHECK_FALSE( install_action->can_call( installer, cbm, false, installer.pos() ).success() );
+    }
+}
+
+TEST_CASE( "manual CBM installation helpers stay closed outside the opt-in route",
+           "[bionics][manual_install][progression]" )
+{
+    avatar &installer = get_avatar();
+    clear_avatar();
+    installer.set_skill_level( skill_electronics, 8 );
+    installer.set_skill_level( skill_firstaid, 6 );
+    installer.set_skill_level( skill_mechanics, 4 );
+
+    SECTION( "the option is disabled" ) {
+        override_option manual_install( "MANUAL_BIONIC_INSTALLATION", "false" );
+        CHECK_FALSE( installer.has_installation_requirement( bio_adrenaline ) );
+    }
+
+    SECTION( "a skill floor is unmet" ) {
+        override_option manual_install( "MANUAL_BIONIC_INSTALLATION", "true" );
+        installer.set_skill_level( skill_electronics, 7 );
+        CHECK_FALSE( installer.has_installation_requirement( bio_adrenaline ) );
+    }
+
+    SECTION( "the implant has no positive difficulty" ) {
+        override_option manual_install( "MANUAL_BIONIC_INSTALLATION", "true" );
+        const item zero_difficulty_cbm( "test_bio_zero_difficulty" );
+        CHECK_FALSE( installer.can_install_bionics( *zero_difficulty_cbm.type, installer, false ) );
+    }
 }

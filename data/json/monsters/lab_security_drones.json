@@ -232,6 +232,7 @@
     "update_mapgen_id": "lab_security_corridor_e",
     "method": "json",
     "object": {
+      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
       "place_terrain": [
         { "ter": "t_thconc_r", "x": 17, "y": 4 },
         { "ter": "t_thconc_r", "x": 17, "y": 6 },
@@ -245,6 +246,7 @@
     "update_mapgen_id": "lab_security_corridor_f",
     "method": "json",
     "object": {
+      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
       "place_terrain": [
         { "ter": "t_thconc_r", "x": 17, "y": 13 },
         { "ter": "t_thconc_r", "x": 17, "y": 15 },
@@ -412,6 +414,7 @@
     "update_mapgen_id": "lab_security_corridor_c",
     "method": "json",
     "object": {
+      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
       "place_terrain": [
         { "ter": "t_thconc_r", "x": 19, "y": 8 },
         { "ter": "t_thconc_r", "x": 19, "y": 10 },
@@ -425,6 +428,7 @@
     "update_mapgen_id": "lab_security_corridor_d",
     "method": "json",
     "object": {
+      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
       "place_terrain": [
         { "ter": "t_thconc_r", "x": 19, "y": 17 },
         { "ter": "t_thconc_r", "x": 19, "y": 19 },

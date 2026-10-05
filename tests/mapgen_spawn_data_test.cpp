@@ -105,3 +105,84 @@ TEST_CASE( "mapgen monster uses spawn_data", "[mapgen][monster][progression]" )
     REQUIRE( turret->ammo.count( itype_556 ) == 1 );
     CHECK( turret->ammo.at( itype_556 ) == 80 );
 }
+
+TEST_CASE( "default spawn_data preserves baseline monster state", "[mapgen][monster][progression]" )
+{
+    map &here = get_map();
+    clear_map();
+    clear_avatar();
+    const int z = get_avatar().posz();
+    const tripoint plain_pos( 12, 6, z );
+    const tripoint explicit_pos( 18, 12, z );
+    here.add_spawn( mon_turret_rifle, 1, plain_pos );
+    spawn_data explicit_ammo;
+    explicit_ammo.ammo.emplace( itype_556, jmapgen_int( 7 ) );
+    here.add_spawn( mon_turret_rifle, 1, explicit_pos, false, -1, -1, "NONE", explicit_ammo );
+    here.spawn_monsters( true );
+
+    const monster *plain = get_creature_tracker().creature_at<monster>( plain_pos );
+    REQUIRE( plain != nullptr );
+    CHECK( plain->get_hp() == plain->get_hp_max() );
+    REQUIRE( plain->type->starting_ammo.count( itype_556 ) == 1 );
+    REQUIRE( plain->ammo.count( itype_556 ) == 1 );
+    CHECK( plain->ammo.size() == plain->type->starting_ammo.size() );
+    CHECK( plain->ammo.at( itype_556 ) == plain->type->starting_ammo.at( itype_556 ) );
+
+    const monster *armed = get_creature_tracker().creature_at<monster>( explicit_pos );
+    REQUIRE( armed != nullptr );
+    CHECK( armed->get_hp() == armed->get_hp_max() );
+    CHECK( armed->ammo.size() == 1 );
+    REQUIRE( armed->ammo.count( itype_556 ) == 1 );
+    CHECK( armed->ammo.at( itype_556 ) == 7 );
+}
+
+TEST_CASE( "spawn_data parses accepted values and resets between loads",
+           "[mapgen][monster][progression]" )
+{
+    spawn_data data;
+    const auto load = [&data]( const std::string & source ) {
+        const JsonObject object = json_loader::from_string( source ).get_object();
+        data.deserialize( object );
+    };
+
+    load( R"({ "ammo_qty": [ 80, 240 ], "hp_percent": [ 30, 70 ] })" );
+    CHECK_FALSE( data.is_default() );
+    CHECK( data.ammo_qty.val == 80 );
+    CHECK( data.ammo_qty.valmax == 240 );
+    CHECK( data.hp_percent.val == 30 );
+    CHECK( data.hp_percent.valmax == 70 );
+
+    load( R"({ "ammo_qty": 0, "hp_percent": 100 })" );
+    CHECK_FALSE( data.is_default() );
+    CHECK( data.ammo_qty.val == 0 );
+    CHECK( data.ammo_qty.valmax == 0 );
+    CHECK( data.hp_percent.val == 100 );
+    CHECK( data.hp_percent.valmax == 100 );
+
+    load( R"({ "hp_percent": [ 1 ] })" );
+    CHECK( data.hp_percent.val == 1 );
+    CHECK( data.hp_percent.valmax == 1 );
+    CHECK( data.ammo_qty.val == -1 );
+    CHECK( data.ammo_qty.valmax == -1 );
+
+    load( "{}" );
+    CHECK( data.is_default() );
+    CHECK( data.hp_percent.val == 100 );
+    CHECK( data.hp_percent.valmax == 100 );
+}
+
+TEST_CASE( "spawn_data rejects out of bound ranges", "[mapgen][monster][progression]" )
+{
+    spawn_data data;
+    const auto check_rejected = [&data]( const std::string & source ) {
+        const JsonObject object = json_loader::from_string( source ).get_object();
+        CHECK_THROWS_AS( data.deserialize( object ), JsonError );
+    };
+    check_rejected( R"({ "hp_percent": 0 })" );
+    check_rejected( R"({ "hp_percent": 101 })" );
+    check_rejected( R"({ "hp_percent": [ 70, 30 ] })" );
+    check_rejected( R"({ "hp_percent": [ 30, 101 ] })" );
+    check_rejected( R"({ "hp_percent": [ 1, 2, 3 ] })" );
+    check_rejected( R"({ "ammo_qty": [ 240, 80 ] })" );
+    check_rejected( R"({ "ammo_qty": [] })" );
+}

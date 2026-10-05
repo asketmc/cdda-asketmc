@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "pr": 35,
+  "entries": [
+    {
+      "id": "lab-security-mapgen-loot-preservation",
+      "category": "Bugfixes",
+      "audience": "players",
+      "summary": "Lab-security corridor updates no longer report mapgen errors when recoloring a tile that contains loot.",
+      "compatibility": "save-compatible",
+      "details": [
+        "The corridor floor markings now preserve existing loose items, furniture, and traps."
+      ]
+    }
+  ]
+}
