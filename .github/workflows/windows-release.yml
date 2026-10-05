@@ -215,7 +215,7 @@ jobs:
             "CROSS=${cross}" \
             "CCACHE=${cache_mode}" RELEASE=1 TILES=1 SOUND=1 LOCALIZE=0 RUNTESTS=1 \
             LINTJSON=0 ASTYLE=0 WARNINGS=-w BACKTRACE=1 LIBBACKTRACE=1 PCH=0 \
-            TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp player_helpers.cpp advanced_inventory_test.cpp butchery_progress_test.cpp climbing_test.cpp npc_hostility_test.cpp" \
+            TEST_SOURCES="test_main.cpp fake_messages.cpp map_helpers.cpp mapgen_helpers.cpp options_helpers.cpp player_helpers.cpp stringmaker.cpp advanced_inventory_test.cpp butchery_progress_test.cpp climbing_test.cpp mapgen_spawn_data_test.cpp npc_hostility_test.cpp submap_load_test.cpp vehicle_power_test.cpp" \
             tests
           test_bin="tests/${first_prefix}cata_test.exe"
           test -s "${test_bin}"
@@ -232,6 +232,32 @@ jobs:
           WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
             --user-dir=butchery-test-user --rng-seed 1 --reporter junit \
             --out butchery-test-results.xml "[butchery][progress]"
+          run_progression_catch() {
+            local label="$1" user_dir="$2" output="$3" filter="$4" status=0
+            set +e
+            WINEDEBUG=-all timeout 10m "${wine_bin}" "${test_bin}" \
+              --user-dir="${user_dir}" --rng-seed 1 --reporter junit --out "${output}" "${filter}"
+            status=$?
+            set -e
+            if (( status )); then
+              python3 - "${label}" "${output}" <<'PY'
+          import pathlib
+          import sys
+          import xml.etree.ElementTree as ET
+
+          label, path = sys.argv[1], pathlib.Path(sys.argv[2])
+          if not path.is_file():
+              raise SystemExit(f"focused {label} gate produced no JUnit output")
+          root = ET.parse(path).getroot()
+          for failure in root.findall(".//failure") + root.findall(".//error"):
+              print(f"focused {label}: {failure.get('message', '')}\n{failure.text or ''}")
+          PY
+              return "${status}"
+            fi
+          }
+          run_progression_catch "mapgen spawn data" mapgen-spawn-test-user mapgen-spawn-test-results.xml "[mapgen][monster][progression]"
+          run_progression_catch "submap spawn data" submap-spawn-test-user submap-spawn-test-results.xml "[submap][load][spawn_data][progression]"
+          run_progression_catch "solar power" solar-power-test-user solar-power-test-results.xml "[vehicle][power][progression]"
           python3 - <<'PY'
           import xml.etree.ElementTree as ET
 
@@ -240,6 +266,9 @@ jobs:
               ("NPC hostility", "npc-hostility-test-results.xml"),
               ("inventory transfer", "inventory-test-results.xml"),
               ("butchery progress", "butchery-test-results.xml"),
+              ("mapgen spawn data", "mapgen-spawn-test-results.xml"),
+              ("submap spawn data", "submap-spawn-test-results.xml"),
+              ("solar power", "solar-power-test-results.xml"),
           ):
               root = ET.parse(path).getroot()
               cases = root.findall(".//testcase")

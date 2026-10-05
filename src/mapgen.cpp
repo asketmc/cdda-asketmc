@@ -851,11 +851,105 @@ jmapgen_int::jmapgen_int( const JsonObject &jo, const std::string &tag, const in
         if( !sparray.empty() ) {
             val = sparray.get_int( 0 );
         }
-        if( sparray.size() >= 2 ) {
+        if( sparray.size() == 2 ) {
             valmax = sparray.get_int( 1 );
         }
     } else if( jo.has_member( tag ) ) {
         val = valmax = jo.get_int( tag );
+    }
+}
+
+static void write_jmapgen_int( JsonOut &jsout, const jmapgen_int &value )
+{
+    jsout.start_array();
+    jsout.write( value.val );
+    if( value.valmax != value.val ) {
+        jsout.write( value.valmax );
+    }
+    jsout.end_array();
+}
+
+void spawn_data::serialize( JsonOut &jsout ) const
+{
+    jsout.start_object();
+    if( !ammo.empty() ) {
+        jsout.member( "ammo" );
+        jsout.start_array();
+        for( const std::pair<const itype_id, jmapgen_int> &entry : ammo ) {
+            jsout.start_object();
+            jsout.member( "ammo_id", entry.first.str() );
+            jsout.member( "qty" );
+            write_jmapgen_int( jsout, entry.second );
+            jsout.end_object();
+        }
+        jsout.end_array();
+    }
+    if( ammo_qty.val >= 0 ) {
+        jsout.member( "ammo_qty" );
+        write_jmapgen_int( jsout, ammo_qty );
+    }
+    if( !patrol_points_rel_ms.empty() ) {
+        jsout.member( "patrol" );
+        jsout.start_array();
+        for( const point &patrol_point : patrol_points_rel_ms ) {
+            jsout.start_object();
+            jsout.member( "x", patrol_point.x );
+            jsout.member( "y", patrol_point.y );
+            jsout.end_object();
+        }
+        jsout.end_array();
+    }
+    if( hp_percent.val != 100 || hp_percent.valmax != 100 ) {
+        jsout.member( "hp_percent" );
+        write_jmapgen_int( jsout, hp_percent );
+    }
+    jsout.end_object();
+}
+
+bool spawn_data::is_default() const
+{
+    return ammo.empty() && ammo_qty.val == -1 && ammo_qty.valmax == -1 &&
+           patrol_points_rel_ms.empty() && hp_percent.val == 100 && hp_percent.valmax == 100;
+}
+
+void spawn_data::deserialize( const JsonObject &jo )
+{
+    ammo.clear();
+    ammo_qty = jmapgen_int( -1 );
+    patrol_points_rel_ms.clear();
+    hp_percent = jmapgen_int( 100 );
+
+    const bool has_explicit_ammo = jo.has_member( "ammo" );
+    if( has_explicit_ammo ) {
+        const JsonArray &ammos = jo.get_array( "ammo" );
+        for( const JsonObject adata : ammos ) {
+            const jmapgen_int qty( adata, "qty" );
+            ammo.emplace( itype_id( adata.get_string( "ammo_id" ) ), qty );
+        }
+    }
+    if( jo.has_member( "ammo_qty" ) ) {
+        if( has_explicit_ammo ) {
+            jo.throw_error_at( "ammo_qty", "ammo_qty cannot be combined with explicit ammo" );
+        }
+        ammo_qty = jmapgen_int( jo, "ammo_qty" );
+        if( ammo_qty.val < 0 || ammo_qty.val > ammo_qty.valmax ) {
+            jo.throw_error_at( "ammo_qty", "expected a non-negative integer or ascending range" );
+        }
+    }
+    if( jo.has_array( "patrol" ) ) {
+        const JsonArray &patrol_pts = jo.get_array( "patrol" );
+        for( const JsonObject p_pt : patrol_pts ) {
+            const jmapgen_int ptx( p_pt, "x" );
+            const jmapgen_int pty( p_pt, "y" );
+            patrol_points_rel_ms.emplace_back( ptx.get(), pty.get() );
+        }
+    }
+    if( jo.has_member( "hp_percent" ) ) {
+        hp_percent = jmapgen_int( jo, "hp_percent" );
+    }
+    if( hp_percent.val < 1 || hp_percent.valmax > 100 ||
+        hp_percent.val > hp_percent.valmax ) {
+        jo.throw_error_at( "hp_percent", "expected 1-100 or an ascending range within 1-100" );
     }
 }
 
@@ -2299,21 +2393,7 @@ class jmapgen_monster : public jmapgen_piece
 
             if( jsi.has_object( "spawn_data" ) ) {
                 const JsonObject &sd = jsi.get_object( "spawn_data" );
-                if( sd.has_array( "ammo" ) ) {
-                    const JsonArray &ammos = sd.get_array( "ammo" );
-                    for( const JsonObject adata : ammos ) {
-                        data.ammo.emplace( itype_id( adata.get_string( "ammo_id" ) ),
-                                           jmapgen_int( adata, "qty" ) );
-                    }
-                }
-                if( sd.has_array( "patrol" ) ) {
-                    const JsonArray &patrol_pts = sd.get_array( "patrol" );
-                    for( const JsonObject p_pt : patrol_pts ) {
-                        jmapgen_int ptx = jmapgen_int( p_pt, "x" );
-                        jmapgen_int pty = jmapgen_int( p_pt, "y" );
-                        data.patrol_points_rel_ms.emplace_back( ptx.get(), pty.get() );
-                    }
-                }
+                data.deserialize( sd );
             }
         }
 
