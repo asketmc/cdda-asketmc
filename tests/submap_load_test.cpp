@@ -1423,3 +1423,56 @@ TEST_CASE( "submap_computer_load", "[submap][load]" )
     REQUIRE( sm.has_computer( point_south ) );
     REQUIRE( sm.has_computer( {3, 5} ) );
 }
+
+TEST_CASE( "submap spawn_data saved format loads", "[submap][load][spawn_data][progression]" )
+{
+    static const itype_id itype_556( "556" );
+    static const mtype_id mon_turret_bmg( "mon_turret_bmg" );
+    static const mtype_id mon_turret_rifle( "mon_turret_rifle" );
+
+    // Hand-written so the on-disk key names and legacy eight-value arrays are pinned
+    // independently of submap::store.
+    const std::string saved_spawns = R"json({
+        "version": 33,
+        "spawns": [
+            [ "mon_turret_rifle", 1, 1, 2, -1, -1, false, "NONE" ],
+            [ "mon_turret_rifle", 1, 3, 4, -1, -1, false, "NONE",
+              { "ammo_qty": [ 80, 240 ], "hp_percent": [ 30, 70 ] } ],
+            [ "mon_turret_bmg", 1, 5, 6, -1, -1, false, "NONE",
+              { "ammo": [ { "ammo_id": "556", "qty": [ 20, 60 ] } ], "hp_percent": 45,
+                "patrol": [ { "x": 1, "y": 2 }, { "x": -3, "y": 4 } ] } ],
+            [ "mon_turret_rifle", 1, 7, 8, -1, -1, false, "NONE", { } ]
+        ]
+    })json";
+
+    submap sm;
+    load_from_jsin( sm, json_loader::from_string( saved_spawns ) );
+    REQUIRE( sm.spawns.size() == 4 );
+
+    CHECK( sm.spawns[0].type == mon_turret_rifle );
+    CHECK( sm.spawns[0].pos == point( 1, 2 ) );
+    CHECK( sm.spawns[0].data.is_default() );
+
+    const spawn_data &ranged = sm.spawns[1].data;
+    CHECK( sm.spawns[1].type == mon_turret_rifle );
+    CHECK( ranged.ammo.empty() );
+    CHECK( ranged.ammo_qty.val == 80 );
+    CHECK( ranged.ammo_qty.valmax == 240 );
+    CHECK( ranged.hp_percent.val == 30 );
+    CHECK( ranged.hp_percent.valmax == 70 );
+    CHECK( ranged.patrol_points_rel_ms.empty() );
+
+    const spawn_data &explicit_ammo = sm.spawns[2].data;
+    CHECK( sm.spawns[2].type == mon_turret_bmg );
+    REQUIRE( explicit_ammo.ammo.count( itype_556 ) == 1 );
+    CHECK( explicit_ammo.ammo.at( itype_556 ).val == 20 );
+    CHECK( explicit_ammo.ammo.at( itype_556 ).valmax == 60 );
+    CHECK( explicit_ammo.ammo_qty.val == -1 );
+    CHECK( explicit_ammo.hp_percent.val == 45 );
+    CHECK( explicit_ammo.hp_percent.valmax == 45 );
+    REQUIRE( explicit_ammo.patrol_points_rel_ms.size() == 2 );
+    CHECK( explicit_ammo.patrol_points_rel_ms[0] == point( 1, 2 ) );
+    CHECK( explicit_ammo.patrol_points_rel_ms[1] == point( -3, 4 ) );
+
+    CHECK( sm.spawns[3].data.is_default() );
+}
